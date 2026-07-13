@@ -10,3 +10,6 @@ pc-app/config.yaml
 # Editeurs
 .vscode/
 .idea/
+
+# Base memoire locale ruflo/claude-flow (index vectoriel, sqlite - runtime, pas du code)
+.swarm/
