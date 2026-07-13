@@ -1,0 +1,82 @@
+# Exemples d'automations Home Assistant pour le Stream Deck.
+#
+# Le Stream Deck utilise l'integration ESPHome native : des qu'il est appaire
+# (Parametres > Appareils et services > l'appareil est decouvert
+# automatiquement en Wi-Fi), toutes ses entites apparaissent normalement sous
+# le prefixe "streamdeck_" (a verifier/ajuster dans l'UI HA - les entity_id
+# exacts ci-dessous sont des exemples a adapter).
+#
+# A coller/adapter dans configuration.yaml (ou via l'UI Automatisations).
+
+automation:
+# Les entites "event:" d'ESPHome apparaissent dans HA comme des entites du
+# domaine "event" (event.xxx). Leur etat est un horodatage qui change a
+# CHAQUE occurrence (meme type d'evenement repete inclus) : un trigger
+# "state" classique sur l'entite se declenche donc bien a chaque fois, le
+# type precis se lit dans trigger.to_state.attributes.event_type.
+
+automation:
+  # Bouton d'action 1 de l'ecran -> bascule une lumiere du salon
+  - alias: "Stream Deck - Action 1 : lumiere salon"
+    trigger:
+      - platform: state
+        entity_id: event.streamdeck_bouton_d_action_ecran  # a verifier dans HA
+    condition:
+      - "{{ trigger.to_state.attributes.event_type == 'action_1' }}"
+    action:
+      - service: light.toggle
+        target:
+          entity_id: light.salon
+
+  # Encodeur 1 (rotation) -> volume d'un media_player
+  - alias: "Stream Deck - Encodeur 1 : volume media player"
+    trigger:
+      - platform: state
+        entity_id: event.streamdeck_encodeur_1_evenement
+    action:
+      - choose:
+          - conditions: "{{ trigger.to_state.attributes.event_type == 'clockwise' }}"
+            sequence:
+              - service: media_player.volume_up
+                target:
+                  entity_id: media_player.salon
+          - conditions: "{{ trigger.to_state.attributes.event_type == 'anticlockwise' }}"
+            sequence:
+              - service: media_player.volume_down
+                target:
+                  entity_id: media_player.salon
+          - conditions: "{{ trigger.to_state.attributes.event_type == 'press' }}"
+            sequence:
+              - service: media_player.volume_mute
+                target:
+                  entity_id: media_player.salon
+                data:
+                  is_volume_muted: true
+
+  # Pousser l'etat d'une entite HA vers l'ecran (widget "Statut PC" reutilise
+  # ici comme bandeau d'info generique)
+  - alias: "Stream Deck - afficher la temperature exterieure"
+    trigger:
+      - platform: state
+        entity_id: sensor.temperature_exterieure
+    action:
+      - service: text.set_value
+        target:
+          entity_id: text.streamdeck_statut_pc
+        data:
+          value: "Dehors: {{ states('sensor.temperature_exterieure') }} deg C"
+
+  # Alerte visuelle : allumer le retroeclairage a fond si une porte reste
+  # ouverte (le "Retroeclairage ecran" est une light: standard ESPHome)
+  - alias: "Stream Deck - alerte porte ouverte"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.porte_entree
+        to: "on"
+        for: "00:05:00"
+    action:
+      - service: light.turn_on
+        target:
+          entity_id: light.streamdeck_retroeclairage_ecran
+        data:
+          brightness_pct: 100

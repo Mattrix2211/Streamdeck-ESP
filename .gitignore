@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Config locale contenant des secrets
+pc-app/config.yaml
+
+# Editeurs
+.vscode/
+.idea/
