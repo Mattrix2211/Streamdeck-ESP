@@ -12,4 +12,7 @@ pc-app/config.yaml
 .idea/
 
 # Base memoire locale ruflo/claude-flow (index vectoriel, sqlite - runtime, pas du code)
+# Sans slash de tete : peut apparaitre dans n'importe quel sous-dossier
+# ou une commande esphome/ruflo a ete lancee.
 .swarm/
+.claude-flow/
