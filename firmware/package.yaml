@@ -244,11 +244,13 @@ font:
     id: font_mono_bold
     size: 22
 
-image:
-  - file: images/logo.png
-    id: img_logo
-    resize: 48x48
-    type: RGB565
+# Pas d'image externe ici volontairement : les chemins de fichiers dans un
+# package importe via `packages: url:` (Home Assistant) se resolvent par
+# rapport au fichier LOCAL qui importe le package, pas par rapport a ce
+# fichier recupere sur GitHub - une image externe casserait donc la
+# compilation cote HA a chaque fois sans copie manuelle. Le logo requin du
+# design system (firmware/images/logo.png) reste disponible dans le repo
+# pour un usage web/print, mais n'est pas affiche sur cet ecran.
 
 # ---------------------------------------------------------------------------
 # Interface LVGL - palette design system :
@@ -266,7 +268,7 @@ lvgl:
     - id: home_page
       bg_color: 0x0B1929
       widgets:
-        # Barre du haut : logo, titre, pastille d'etat
+        # Barre du haut : titre, pastille d'etat
         - obj:
             height: 64
             width: 100%
@@ -280,13 +282,10 @@ lvgl:
               flex_align_cross: center
               flex_align_main: start
             widgets:
-              - image:
-                  src: img_logo
               - label:
                   text: "STREAM DECK"
                   text_font: font_title
                   text_color: 0xFFFFFF
-                  x: 12
               - obj:
                   id: status_dot
                   width: 14
