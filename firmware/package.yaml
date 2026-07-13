@@ -1,0 +1,462 @@
+# Package partage du Stream Deck : tout le hardware + l'UI, RIEN de secret
+# et RIEN de specifique a un appareil (pas de nom, wifi, cle API...).
+#
+# Ce fichier est concu pour etre importe via `packages:` (voir
+# firmware/ha-device.yaml.example) depuis Home Assistant / ESPHome Builder,
+# ou inclus localement (voir firmware/streamdeck.yaml) si vous flashez
+# directement depuis un PC avec la CLI ESPHome.
+#
+# Carte  : Guition JC1060P470C_I_W (ESP32-P4 + ESP32-C6, ecran IPS 7" 1024x600,
+#          tactile capacitif GT911, Wi-Fi/BT via le C6 en co-processeur SDIO)
+# Design : palette + typographies du design system perso (Space Grotesk /
+#          Inter / JetBrains Mono, dark-first, accent Signal #00B4D8)
+#
+# Deux canaux de controle utilisent la MEME API native ESPHome (chiffree) :
+#   - Home Assistant s'y connecte nativement (entites auto-decouvertes)
+#   - L'appli compagnon PC (pc-app/) s'y connecte aussi, via aioesphomeapi,
+#     exactement comme le ferait Home Assistant.
+#
+# Reperes materiels (issus des photos produit + d'une config communautaire
+# verifiee pour cette carte) : reset LCD, bus SDIO du C6, bus I2C tactile et
+# retroeclairage utilisent des GPIO internes non sortis sur le header. Les
+# encodeurs ci-dessous n'utilisent QUE des GPIO confirmes disponibles sur le
+# header d'extension (colonne gauche GPIO1-5/20/32/33, colonne droite
+# GPIO45-47). GPIO5 du header est volontairement evite : il correspond au
+# reset interne de la dalle. Verifiez ce mapping contre le schema exact de
+# votre revision de carte avant de souder quoi que ce soit.
+
+esp32:
+  flash_size: 16MB
+  cpu_frequency: 360MHZ
+  framework:
+    type: esp-idf
+    advanced:
+      enable_idf_experimental_features: true
+    sdkconfig_options:
+      CONFIG_SPIRAM_XIP_FROM_PSRAM: "y"  # evite le flash blanc pendant l'OTA
+
+# Le P4 n'a pas de radio: le C6 embarque le Wi-Fi/BT et sert de co-processeur
+# "hosted" relie en SDIO.
+esp32_hosted:
+  variant: esp32c6
+  reset_pin: GPIO54
+  cmd_pin: GPIO19
+  clk_pin: GPIO18
+  d0_pin: GPIO14
+  d1_pin: GPIO15
+  d2_pin: GPIO16
+  d3_pin: GPIO17
+  active_high: true
+
+psram:
+  mode: hex
+  speed: 200MHz
+
+# Alimente le PHY MIPI-DSI de l'ecran (obligatoire sur ESP32-P4)
+esp_ldo:
+  - channel: 3
+    voltage: 2.5V
+
+# ---------------------------------------------------------------------------
+# Tactile GT911 (bus I2C interne, pas sur le header)
+# ---------------------------------------------------------------------------
+i2c:
+  - id: bus_a
+    sda: GPIO7
+    scl: GPIO8
+    frequency: 400kHz
+
+touchscreen:
+  - platform: gt911
+    id: my_touchscreen
+    i2c_id: bus_a
+    reset_pin: GPIO22
+    interrupt_pin: GPIO21
+    transform:
+      swap_xy: true
+      mirror_y: true
+
+# ---------------------------------------------------------------------------
+# Retroeclairage
+# ---------------------------------------------------------------------------
+output:
+  - platform: ledc
+    pin: GPIO23
+    id: gpio_backlight_pwm
+
+light:
+  - platform: monochromatic
+    output: gpio_backlight_pwm
+    name: "Retroeclairage ecran"
+    id: display_backlight
+    restore_mode: ALWAYS_ON
+    default_transition_length: 0s
+
+# ---------------------------------------------------------------------------
+# Dalle MIPI-DSI - le modele JC1060P470 est fourni nativement par ESPHome
+# (timings corrects deja integres, pas besoin de les redefinir)
+# ---------------------------------------------------------------------------
+display:
+  - platform: mipi_dsi
+    id: my_display
+    model: JC1060P470
+    reset_pin:
+      number: GPIO5
+    update_interval: never
+    auto_clear_enabled: false
+
+binary_sensor:
+  - platform: status
+    name: "Stream Deck en ligne"
+    id: status_online
+    on_state:
+      - lvgl.obj.update:
+          id: status_dot
+          bg_color: !lambda "return x ? Color(0x16, 0xB8, 0x4E) : Color(0xE6, 0x39, 0x46);"
+
+  # --- Boutons des encodeurs rotatifs (clic sur l'axe) ---
+  - platform: gpio
+    id: encoder1_button
+    name: "Encodeur 1 - bouton"
+    pin:
+      number: GPIO3
+      mode: INPUT_PULLUP
+      inverted: true
+    on_press:
+      - event.trigger: { id: encoder1_event, event_type: "press" }
+  - platform: gpio
+    id: encoder2_button
+    name: "Encodeur 2 - bouton"
+    pin:
+      number: GPIO32
+      mode: INPUT_PULLUP
+      inverted: true
+    on_press:
+      - event.trigger: { id: encoder2_event, event_type: "press" }
+  - platform: gpio
+    id: encoder3_button
+    name: "Encodeur 3 - bouton"
+    pin:
+      number: GPIO46
+      mode: INPUT_PULLUP
+      inverted: true
+    on_press:
+      - event.trigger: { id: encoder3_event, event_type: "press" }
+
+# ---------------------------------------------------------------------------
+# Encodeurs rotatifs - 3 par defaut, ajustables selon ce que vous avez achete.
+# Pour en ajouter/retirer : dupliquer un bloc sensor+binary_sensor+event avec
+# des GPIO libres (il reste GPIO47 sur le header dans ce mapping).
+# ---------------------------------------------------------------------------
+sensor:
+  - platform: rotary_encoder
+    id: encoder1_value
+    name: "Encodeur 1"
+    pin_a: GPIO1
+    pin_b: GPIO2
+    on_clockwise:
+      - event.trigger: { id: encoder1_event, event_type: "clockwise" }
+    on_anticlockwise:
+      - event.trigger: { id: encoder1_event, event_type: "anticlockwise" }
+    on_value:
+      - lvgl.label.update:
+          id: lbl_encoder1
+          text: !lambda "return to_string((int) x);"
+  - platform: rotary_encoder
+    id: encoder2_value
+    name: "Encodeur 2"
+    pin_a: GPIO4
+    pin_b: GPIO20
+    on_clockwise:
+      - event.trigger: { id: encoder2_event, event_type: "clockwise" }
+    on_anticlockwise:
+      - event.trigger: { id: encoder2_event, event_type: "anticlockwise" }
+    on_value:
+      - lvgl.label.update:
+          id: lbl_encoder2
+          text: !lambda "return to_string((int) x);"
+  - platform: rotary_encoder
+    id: encoder3_value
+    name: "Encodeur 3"
+    pin_a: GPIO33
+    pin_b: GPIO45
+    on_clockwise:
+      - event.trigger: { id: encoder3_event, event_type: "clockwise" }
+    on_anticlockwise:
+      - event.trigger: { id: encoder3_event, event_type: "anticlockwise" }
+    on_value:
+      - lvgl.label.update:
+          id: lbl_encoder3
+          text: !lambda "return to_string((int) x);"
+
+# ---------------------------------------------------------------------------
+# Entites "event" - consommees a la fois par Home Assistant (declencheurs
+# d'automation natifs) et par l'appli PC (aioesphomeapi) pour mapper vers des
+# actions locales (raccourcis, media, volume, lancement d'appli...).
+# ---------------------------------------------------------------------------
+event:
+  - platform: template
+    id: encoder1_event
+    name: "Encodeur 1 - evenement"
+    event_types: ["clockwise", "anticlockwise", "press"]
+  - platform: template
+    id: encoder2_event
+    name: "Encodeur 2 - evenement"
+    event_types: ["clockwise", "anticlockwise", "press"]
+  - platform: template
+    id: encoder3_event
+    name: "Encodeur 3 - evenement"
+    event_types: ["clockwise", "anticlockwise", "press"]
+  - platform: template
+    id: action_button_event
+    name: "Bouton d'action ecran"
+    event_types: ["action_1", "action_2", "action_3", "action_4", "action_5", "action_6"]
+
+# Texte pousse par l'appli PC (titre en cours, volume, notification...) et
+# affiche sur l'ecran. Ecrit via l'API native (text_command), pas de HTTP.
+text:
+  - platform: template
+    id: pc_status_text
+    name: "Statut PC"
+    mode: text
+    optimistic: true
+    initial_value: "PC hors ligne"
+    max_length: 64
+    on_value:
+      - lvgl.label.update:
+          id: lbl_pc_status
+          text: !lambda "return x;"
+
+# ---------------------------------------------------------------------------
+# Polices Google Fonts du design system (telechargees et converties au build)
+# ---------------------------------------------------------------------------
+font:
+  - file: "gfonts://Space Grotesk@600"
+    id: font_title
+    size: 26
+  - file: "gfonts://Inter"
+    id: font_body
+    size: 16
+  - file: "gfonts://JetBrains Mono@500"
+    id: font_mono
+    size: 15
+  - file: "gfonts://JetBrains Mono@700"
+    id: font_mono_bold
+    size: 22
+
+image:
+  - file: images/logo.png
+    id: img_logo
+    resize: 48x48
+    type: RGB565
+
+# ---------------------------------------------------------------------------
+# Interface LVGL - palette design system :
+#   fond   navy   #0B1929   surface ocean #0F2942   bordure slate #1A3A52
+#   accent signal #00B4D8   texte secondaire mist #8FAFC7
+#   statut ok green-tech #16B84E   statut danger red #E63946
+# ---------------------------------------------------------------------------
+lvgl:
+  displays: my_display
+  touchscreens: my_touchscreen
+  color_depth: 16
+  byte_order: little_endian
+  buffer_size: 100%
+  pages:
+    - id: home_page
+      bg_color: 0x0B1929
+      widgets:
+        # Barre du haut : logo, titre, pastille d'etat
+        - obj:
+            height: 64
+            width: 100%
+            align: top_mid
+            bg_opa: transp
+            border_width: 0
+            pad_all: 8
+            layout:
+              type: flex
+              flex_flow: row
+              flex_align_cross: center
+              flex_align_main: start
+            widgets:
+              - image:
+                  src: img_logo
+              - label:
+                  text: "STREAM DECK"
+                  text_font: font_title
+                  text_color: 0xFFFFFF
+                  x: 12
+              - obj:
+                  id: status_dot
+                  width: 14
+                  height: 14
+                  radius: 7
+                  x: 200
+                  bg_color: 0xE63946
+                  border_width: 0
+
+        # Grille d'actions (2 lignes x 3 boutons) - a renommer/remapper cote
+        # appli PC dans pc-app/actions.yaml
+        - obj:
+            height: 260
+            width: 100%
+            y: 70
+            bg_opa: transp
+            border_width: 0
+            pad_all: 8
+            layout:
+              type: flex
+              flex_flow: row_wrap
+              flex_align_cross: center
+              flex_align_main: space_evenly
+            widgets:
+              - button:
+                  width: 300
+                  height: 110
+                  bg_color: 0x0F2942
+                  border_color: 0x1A3A52
+                  border_width: 1
+                  radius: 12
+                  text: "Action 1"
+                  text_font: font_body
+                  on_click:
+                    - event.trigger: { id: action_button_event, event_type: "action_1" }
+              - button:
+                  width: 300
+                  height: 110
+                  bg_color: 0x0F2942
+                  border_color: 0x1A3A52
+                  border_width: 1
+                  radius: 12
+                  text: "Action 2"
+                  text_font: font_body
+                  on_click:
+                    - event.trigger: { id: action_button_event, event_type: "action_2" }
+              - button:
+                  width: 300
+                  height: 110
+                  bg_color: 0x0F2942
+                  border_color: 0x1A3A52
+                  border_width: 1
+                  radius: 12
+                  text: "Action 3"
+                  text_font: font_body
+                  on_click:
+                    - event.trigger: { id: action_button_event, event_type: "action_3" }
+              - button:
+                  width: 300
+                  height: 110
+                  bg_color: 0x0F2942
+                  border_color: 0x1A3A52
+                  border_width: 1
+                  radius: 12
+                  text: "Action 4"
+                  text_font: font_body
+                  on_click:
+                    - event.trigger: { id: action_button_event, event_type: "action_4" }
+              - button:
+                  width: 300
+                  height: 110
+                  bg_color: 0x0F2942
+                  border_color: 0x1A3A52
+                  border_width: 1
+                  radius: 12
+                  text: "Action 5"
+                  text_font: font_body
+                  on_click:
+                    - event.trigger: { id: action_button_event, event_type: "action_5" }
+              - button:
+                  width: 300
+                  height: 110
+                  bg_color: 0x0F2942
+                  border_color: 0x1A3A52
+                  border_width: 1
+                  radius: 12
+                  text: "Action 6"
+                  text_font: font_body
+                  on_click:
+                    - event.trigger: { id: action_button_event, event_type: "action_6" }
+
+        # Bas d'ecran : 3 cartes encodeurs + statut PC
+        - obj:
+            height: 140
+            width: 100%
+            y: 340
+            bg_opa: transp
+            border_width: 0
+            pad_all: 8
+            layout:
+              type: flex
+              flex_flow: row
+              flex_align_cross: center
+              flex_align_main: space_evenly
+            widgets:
+              - obj:
+                  width: 300
+                  height: 90
+                  bg_color: 0x0F2942
+                  border_color: 0x1A3A52
+                  border_width: 1
+                  radius: 12
+                  pad_all: 8
+                  widgets:
+                    - label:
+                        text: "ENCODEUR 1"
+                        text_font: font_mono
+                        text_color: 0x8FAFC7
+                        align: top_left
+                    - label:
+                        id: lbl_encoder1
+                        text: "0"
+                        text_font: font_mono_bold
+                        text_color: 0x00B4D8
+                        align: bottom_left
+              - obj:
+                  width: 300
+                  height: 90
+                  bg_color: 0x0F2942
+                  border_color: 0x1A3A52
+                  border_width: 1
+                  radius: 12
+                  pad_all: 8
+                  widgets:
+                    - label:
+                        text: "ENCODEUR 2"
+                        text_font: font_mono
+                        text_color: 0x8FAFC7
+                        align: top_left
+                    - label:
+                        id: lbl_encoder2
+                        text: "0"
+                        text_font: font_mono_bold
+                        text_color: 0x00B4D8
+                        align: bottom_left
+              - obj:
+                  width: 300
+                  height: 90
+                  bg_color: 0x0F2942
+                  border_color: 0x1A3A52
+                  border_width: 1
+                  radius: 12
+                  pad_all: 8
+                  widgets:
+                    - label:
+                        text: "ENCODEUR 3"
+                        text_font: font_mono
+                        text_color: 0x8FAFC7
+                        align: top_left
+                    - label:
+                        id: lbl_encoder3
+                        text: "0"
+                        text_font: font_mono_bold
+                        text_color: 0x00B4D8
+                        align: bottom_left
+
+        - label:
+            id: lbl_pc_status
+            text: "PC hors ligne"
+            text_font: font_mono
+            text_color: 0x6B8BA4
+            align: bottom_mid
+            y: -8
