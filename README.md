@@ -15,17 +15,27 @@ docs/              Architecture et guide de cablage des encodeurs
 
 ## Demarrage rapide
 
-1. **Firmware**
+Le hardware/l'UI vivent dans `firmware/package.yaml` (aucun secret, aucune
+identite d'appareil). Deux facons de l'utiliser :
+
+1. **Depuis un PC, en ligne de commande** (le depot est clone en local) :
    ```bash
    cd firmware
    cp secrets.yaml.example secrets.yaml   # remplir wifi + generer une cle API
    pip install esphome
-   esphome run streamdeck.yaml
+   esphome run streamdeck.yaml            # inclut package.yaml en local
    ```
-2. **Appli PC** : voir `pc-app/README.md`.
-3. **Home Assistant** : l'appareil est decouvert automatiquement (integration
-   ESPHome native, meme cle API que dans `firmware/secrets.yaml`). Exemples
-   d'automations dans `home-assistant/example_automations.yaml`.
+2. **Depuis l'add-on ESPHome Builder de Home Assistant** (pas besoin de
+   cloner le depot) : collez `firmware/ha-device.yaml.example` dans
+   l'editeur de l'appareil, avec vos identifiants Wi-Fi et une cle API.
+   Ce fichier recupere `package.yaml` directement depuis GitHub
+   (`packages: url/file/ref/refresh: 0s`) a chaque compilation : pour
+   mettre a jour le firmware plus tard, il suffit de recompiler depuis HA,
+   sans rien recopier.
+3. **Appli PC** : voir `pc-app/README.md`.
+4. **Home Assistant** : l'appareil est decouvert automatiquement (integration
+   ESPHome native, meme cle API que dans le fichier utilise ci-dessus).
+   Exemples d'automations dans `home-assistant/example_automations.yaml`.
 
 Details d'architecture : `docs/ARCHITECTURE.md`. Cablage des encodeurs et
 mapping des GPIO : `docs/WIRING.md`.
@@ -33,7 +43,7 @@ mapping des GPIO : `docs/WIRING.md`.
 ## Materiel
 
 - Ecran Guition JC1060P470C_I_W (ESP32-P4 + ESP32-C6, tactile GT911)
-- 3 encodeurs rotatifs (type KY-040) par defaut, ajustable dans le firmware
+- 3 encodeurs rotatifs par defaut, ajustable dans `firmware/package.yaml`
   et `docs/WIRING.md`
 
 ## Design
@@ -41,7 +51,9 @@ mapping des GPIO : `docs/WIRING.md`.
 L'interface reprend le design system personnel
 [`mattrix2211/design-system`](https://github.com/mattrix2211/design-system) :
 palette dark-first (fond navy, accent signal `#00B4D8`), Space Grotesk /
-Inter / JetBrains Mono, logo requin-marteau sur l'ecran d'accueil.
+Inter / JetBrains Mono. Pas de logo image sur l'ecran (voir
+`firmware/package.yaml` : un fichier importe depuis GitHub ne peut pas
+referencer une image locale de facon fiable), juste le titre en texte.
 
 ## A propos de `ruflo`
 
