@@ -116,7 +116,20 @@ function resolveCliBinCandidates() {
       }
     } catch { /* ignore */ }
   } catch { /* ignore */ }
-  return candidates.filter((p) => { try { return fs.existsSync(p); } catch { return false; } });
+  return candidates.filter((p) => {
+    try {
+      if (!fs.existsSync(p)) return false;
+      // A candidate's bin/cli.js can exist on disk while its compiled
+      // dist/ never got built (Claude Code's own plugin marketplace just
+      // git-clones the repo — no install/build step — so every marketplace
+      // install is a source-only checkout by construction). Importing
+      // dist/src/index.js from bin/cli.js then throws MODULE_NOT_FOUND on
+      // every real command; only --version happens to survive it. Check
+      // for the compiled entrypoint too so a doomed candidate is skipped
+      // up front instead of wasting a spawn-and-fail on every render.
+      return fs.existsSync(path.join(path.dirname(p), '..', 'dist', 'src', 'index.js'));
+    } catch { return false; }
+  });
 }
 
 // Return { fresh, promoFresh, data }. 'fresh' is true only if within the TTL
@@ -584,9 +597,28 @@ function getCostFromStdin() {
   return null;
 }
 
-// Read package version from the first package.json we find.
+// Compares dotted-numeric version strings (e.g. "3.27.1" vs "3.27.10").
+// Returns >0 if a>b, <0 if a<b, 0 if equal-as-far-as-parseable. Deliberately
+// simple (no prerelease/build-metadata handling) — this only orders local
+// package.json versions against each other, never anything untrusted from
+// a payload, so a full semver implementation would be dead weight here.
+function compareVersions(a, b) {
+  const pa = String(a).split('.').map((n) => parseInt(n, 10));
+  const pb = String(b).split('.').map((n) => parseInt(n, 10));
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const na = Number.isFinite(pa[i]) ? pa[i] : 0;
+    const nb = Number.isFinite(pb[i]) ? pb[i] : 0;
+    if (na !== nb) return na - nb;
+  }
+  return 0;
+}
+
 function getPkgVersion() {
-  let ver = '3.6';
+  // Baked in at generation time from the real running CLI's own resolved
+  // version (see generateStatuslineScript()'s doc comment) — correct even
+  // when this renders via a pure npx invocation with no local install for
+  // the candidate scan below to find.
+  let ver = "3.28.0";
   try {
     const home = os.homedir();
     const pkgPaths = [
@@ -616,11 +648,24 @@ function getPkgVersion() {
         );
       }
     } catch { /* ignore */ }
+    // Pick the HIGHEST version among every candidate that exists, not the
+    // first one found. The marketplace plugin path is probed first (list
+    // order above), but Claude Code's own plugin marketplace mechanism
+    // syncs on its own git-pull cadence, independent of npm publishes — a
+    // freshly-published npm version can sit alongside a stale marketplace
+    // checkout for a while (observed live: marketplace one release behind
+    // right after a publish). Taking the first EXISTING candidate meant the
+    // header could show a stale version even when a newer install (e.g.
+    // node_modules/@claude-flow/cli from a plain npm install) was sitting right there.
+    let found = false;
     for (const p of pkgPaths) {
       if (!fs.existsSync(p)) continue;
       try {
         const pkg = JSON.parse(fs.readFileSync(p, 'utf-8'));
-        if (pkg && typeof pkg.version === 'string' && pkg.version.length > 0) { ver = pkg.version; break; }
+        if (pkg && typeof pkg.version === 'string' && pkg.version.length > 0) {
+          if (!found || compareVersions(pkg.version, ver) > 0) ver = pkg.version;
+          found = true;
+        }
       } catch { /* ignore */ }
     }
   } catch { /* ignore */ }

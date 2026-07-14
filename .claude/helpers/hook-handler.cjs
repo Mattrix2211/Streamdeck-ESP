@@ -23,6 +23,18 @@ const helpersDir = __dirname;
 // statusline-generator.ts's resolveCliBin() candidate list. Used only to
 // spawn the detached funnel-refresh helper below; failures are silent (no
 // candidate found just means the refresh never fires this session).
+//
+// Verifies dist/src/index.js exists alongside bin/cli.js, not just the bin
+// itself — Claude Code's own plugin marketplace mechanism installs by
+// `git clone`/`git pull` with no build step, so `~/.claude/plugins/
+// marketplaces/ruflo` is a SOURCE-ONLY checkout by construction: bin/cli.js
+// is present on disk but importing dist/src/index.js throws
+// ERR_MODULE_NOT_FOUND on every real command (confirmed live — only
+// `--version` happens to survive it, since it reads package.json directly).
+// Without this check, resolveCliBinForHook() picked that doomed candidate
+// first every time and spawnDetachedFunnelRefresh() below had no fallback,
+// so the promo/disclosure row could never populate for any marketplace
+// install, on any OS.
 function resolveCliBinForHook() {
   try {
     const home = os.homedir();
@@ -38,7 +50,11 @@ function resolveCliBinForHook() {
       path.join(helpersDir, '..', '..', 'bin', 'cli.js'),
     ];
     for (const p of candidates) {
-      if (fs.existsSync(p)) return p;
+      try {
+        if (fs.existsSync(p) && fs.existsSync(path.join(path.dirname(p), '..', 'dist', 'src', 'index.js'))) {
+          return p;
+        }
+      } catch (e) { /* try next candidate */ }
     }
   } catch (e) { /* ignore */ }
   return null;
@@ -54,12 +70,22 @@ function resolveCliBinForHook() {
 // session-restore's own process has already exited, so it actually gets a
 // chance to write the cache. Never awaited here — must not add to
 // SessionStart's own timeout budget.
-function spawnDetachedFunnelRefresh() {
+//
+// No usable local candidate (resolveCliBinForHook() returned null) falls
+// back to npx: this call is detached/unref'd, so a slower npx cold-start
+// costs nothing perceptible — unlike the statusline's own synchronous
+// render path, where local-first exists purely for per-render latency.
+// `--prefer-offline` avoids a registry round trip for the tarball when
+// already cached while still resolving the current `@latest` version.
+function spawnDetachedHookRefresh(subcommand) {
   try {
-    const cliBin = resolveCliBinForHook();
-    if (!cliBin) return;
     const { spawn } = require('child_process');
-    const child = spawn(process.execPath, [cliBin, 'hooks', 'refresh-funnel', '--quiet'], {
+    const cliBin = resolveCliBinForHook();
+    const cmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+    const spawnArgs = cliBin
+      ? [process.execPath, [cliBin, 'hooks', subcommand, '--quiet']]
+      : [cmd, ['--prefer-offline', '@claude-flow/cli', 'hooks', subcommand, '--quiet']];
+    const child = spawn(spawnArgs[0], spawnArgs[1], {
       detached: true,
       stdio: 'ignore',
       env: process.env,
@@ -68,24 +94,18 @@ function spawnDetachedFunnelRefresh() {
   } catch (e) { /* best-effort only */ }
 }
 
-// Same detached/unref'd pattern as spawnDetachedFunnelRefresh() above, for
+function spawnDetachedFunnelRefresh() {
+  spawnDetachedHookRefresh('refresh-funnel');
+}
+
+// Same fallback-aware pattern as spawnDetachedFunnelRefresh() above, for
 // ADR-316's co-pilot advisor tip. Safe to call on EVERY session-restore:
 // refresh-advisor's own action checks consent + a 24h TTL BEFORE spending
 // anything, so an unconsented or already-fresh install is a fast no-op file
 // read, never a network call. Never awaited here — must not add to
 // SessionStart's own timeout budget.
 function spawnDetachedAdvisorRefresh() {
-  try {
-    const cliBin = resolveCliBinForHook();
-    if (!cliBin) return;
-    const { spawn } = require('child_process');
-    const child = spawn(process.execPath, [cliBin, 'hooks', 'refresh-advisor', '--quiet'], {
-      detached: true,
-      stdio: 'ignore',
-      env: process.env,
-    });
-    child.unref();
-  } catch (e) { /* best-effort only */ }
+  spawnDetachedHookRefresh('refresh-advisor');
 }
 
 // Safe require with stdout suppression - the helper modules have CLI
