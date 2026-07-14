@@ -11,36 +11,37 @@ from __future__ import annotations
 
 import asyncio
 
-from aioesphomeapi import APIClient, TextInfo
+from aioesphomeapi import APIClient, SelectInfo, TextInfo
 
-LABEL_ENTITY_NAMES = [
-    "Action 1 - libelle",
-    "Action 2 - libelle",
-    "Action 3 - libelle",
-    "Action 4 - libelle",
-    "Action 5 - libelle",
-    "Action 6 - libelle",
-]
+LABEL_ENTITY_NAMES = [f"Action {i} - libelle" for i in range(1, 13)]
+SHAPE_ENTITY_NAME = "Forme des boutons"
 
 
-async def push_labels(host: str, port: int, api_key: str, labels: list[str]) -> None:
-    """Connexion ponctuelle : se connecte, pousse chaque libelle, se
-    deconnecte. Leve une exception aioesphomeapi si la connexion echoue -
-    a l'appelant de l'afficher proprement (voir receiver.py)."""
+async def push_labels(host: str, port: int, api_key: str, labels: list[str], shape: str | None = None) -> None:
+    """Connexion ponctuelle : se connecte, pousse chaque libelle (et la forme
+    des boutons si fournie), se deconnecte. Leve une exception aioesphomeapi
+    si la connexion echoue - a l'appelant de l'afficher proprement (voir
+    receiver.py)."""
     client = APIClient(host, port, "", noise_psk=api_key or None)
     await client.connect(login=False)
     try:
         entities, _services = await client.list_entities_services()
         name_to_key = {
-            ent.name: ent.key for ent in entities if isinstance(ent, TextInfo) and ent.name in LABEL_ENTITY_NAMES
+            ent.name: ent.key
+            for ent in entities
+            if isinstance(ent, (TextInfo, SelectInfo)) and ent.name in (*LABEL_ENTITY_NAMES, SHAPE_ENTITY_NAME)
         }
         for name, value in zip(LABEL_ENTITY_NAMES, labels):
             key = name_to_key.get(name)
             if key is not None and value:
                 client.text_command(key, value[:24])
-        # text_command() ecrit sur le transport sans attendre confirmation -
-        # laisse une marge pour que les 6 envois partent reellement avant de
-        # fermer la connexion juste apres.
+        if shape:
+            key = name_to_key.get(SHAPE_ENTITY_NAME)
+            if key is not None:
+                client.select_command(key, shape)
+        # text_command()/select_command() ecrivent sur le transport sans
+        # attendre confirmation - laisse une marge pour que les envois
+        # partent reellement avant de fermer la connexion juste apres.
         await asyncio.sleep(0.3)
     finally:
         await client.disconnect()

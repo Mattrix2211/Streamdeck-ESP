@@ -83,8 +83,8 @@ SCREEN_PAGE_TEMPLATE = """
   .card { background: var(--ocean); border: 1px solid var(--slate); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
   .card h2 { font-family: 'Space Grotesk', sans-serif; font-size: 16px; margin: 0 0 12px; }
   label { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--mist); display: block; margin-top: 10px; }
-  input[type=text] { background: var(--navy); border: 1px solid var(--slate); border-radius: 8px; color: #fff; padding: 8px 10px; font-family: 'Inter'; font-size: 14px; width: 100%; margin-top: 4px; }
-  input:focus { outline: none; border-color: var(--signal); }
+  input[type=text], select { background: var(--navy); border: 1px solid var(--slate); border-radius: 8px; color: #fff; padding: 8px 10px; font-family: 'Inter'; font-size: 14px; width: 100%; margin-top: 4px; }
+  input:focus, select:focus { outline: none; border-color: var(--signal); }
   button { background: var(--signal); color: var(--navy); border: none; border-radius: 8px; padding: 12px 24px; font-family: 'Space Grotesk'; font-weight: 700; font-size: 15px; cursor: pointer; margin-top: 8px; }
   button:hover { background: #48CAE4; }
   .banner-ok { background: rgba(22,184,78,.08); border: 1px solid rgba(22,184,78,.3); color: var(--green-tech); padding: 10px 16px; border-radius: 8px; margin-bottom: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
@@ -95,9 +95,9 @@ SCREEN_PAGE_TEMPLATE = """
 <body>
 <div class="page">
   <h1>PERSONNALISER L'ECRAN</h1>
-  <p class="sub">Change les libelles des 6 boutons directement sur l'ecran (sans reflasher).</p>
+  <p class="sub">Change les libelles des 12 boutons et leur forme directement sur l'ecran (sans reflasher).</p>
   {% if error %}<div class="banner-err">Echec de l'envoi : {{ error }}</div>{% endif %}
-  {% if saved %}<div class="banner-ok">Libelles envoyes a l'ecran.</div>{% endif %}
+  {% if saved %}<div class="banner-ok">Envoye a l'ecran.</div>{% endif %}
   <form method="post" action="{{ url_for('screen_save') }}">
     <div class="card">
       <h2>Connexion a l'ecran</h2>
@@ -107,6 +107,13 @@ SCREEN_PAGE_TEMPLATE = """
       <input type="text" name="device_port" value="{{ device.port or 6053 }}">
       <label>Cle API (meme valeur que firmware/secrets.yaml)</label>
       <input type="text" name="device_api_key" value="{{ device.api_key or '' }}">
+    </div>
+    <div class="card">
+      <h2>Forme des boutons</h2>
+      <select name="shape">
+        <option value="carre" {% if shape != "rond" %}selected{% endif %}>Carre</option>
+        <option value="rond" {% if shape == "rond" %}selected{% endif %}>Rond</option>
+      </select>
     </div>
     <div class="card">
       <h2>Libelles des boutons</h2>
@@ -123,7 +130,7 @@ SCREEN_PAGE_TEMPLATE = """
 </html>
 """
 
-DEFAULT_LABELS = [f"Action {i}" for i in range(1, 7)]
+DEFAULT_LABELS = [f"Action {i}" for i in range(1, 13)]
 
 
 @app.route("/screen", methods=["GET"])
@@ -133,6 +140,7 @@ def screen_form():
         SCREEN_PAGE_TEMPLATE,
         device=config.get("device") or {},
         labels=config.get("labels") or DEFAULT_LABELS,
+        shape=config.get("shape", "carre"),
         saved=request.args.get("saved") == "1",
         error=request.args.get("error"),
     )
@@ -146,15 +154,17 @@ def screen_save():
         "port": int(request.form.get("device_port") or 6053),
         "api_key": request.form.get("device_api_key", "").strip(),
     }
-    labels = [request.form.get(f"label_{i}", "").strip() or f"Action {i + 1}" for i in range(6)]
+    labels = [request.form.get(f"label_{i}", "").strip() or f"Action {i + 1}" for i in range(12)]
+    shape = request.form.get("shape", "carre")
     config["device"] = device
     config["labels"] = labels
+    config["shape"] = shape
     save_config(_config_path, config)
 
     try:
-        asyncio.run(screen_labels.push_labels(device["host"], device["port"], device["api_key"], labels))
+        asyncio.run(screen_labels.push_labels(device["host"], device["port"], device["api_key"], labels, shape))
     except Exception as exc:
-        LOG.exception("Echec de l'envoi des libelles a l'ecran")
+        LOG.exception("Echec de l'envoi vers l'ecran")
         return redirect(url_for("screen_form", error=str(exc)))
     return redirect(url_for("screen_form", saved="1"))
 

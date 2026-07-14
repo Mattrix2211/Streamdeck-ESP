@@ -64,9 +64,9 @@ python -m streamdeck_companion.receiver
 
 Accessible depuis le menu de l'icone de la barre des taches ("Personnaliser
 l'ecran"), ou directement `http://127.0.0.1:8765/screen` dans un navigateur.
-Change le texte affiche sur les 6 boutons de l'ecran, sans reflasher le
-firmware. Necessite l'adresse et la cle API du Stream Deck (memes valeurs
-que `firmware/secrets.yaml`).
+Change le texte affiche sur les 12 boutons de l'ecran et leur forme
+(carre/rond), sans reflasher le firmware. Necessite l'adresse et la cle API
+du Stream Deck (memes valeurs que `firmware/secrets.yaml`).
 
 ## Types d'actions (`type`/`target` envoyes par Home Assistant)
 

@@ -250,7 +250,12 @@ event:
   - platform: template
     id: action_button_event
     name: "Bouton d'action ecran"
-    event_types: ["action_1", "action_2", "action_3", "action_4", "action_5", "action_6"]
+    event_types:
+      [
+        "action_1", "action_2", "action_3", "action_4",
+        "action_5", "action_6", "action_7", "action_8",
+        "action_9", "action_10", "action_11", "action_12",
+      ]
 
 # Texte pousse par l'appli PC (titre en cours, volume, notification...) et
 # affiche sur l'ecran. Ecrit via l'API native (text_command), pas de HTTP.
@@ -324,6 +329,89 @@ text:
     max_length: 24
     on_value:
       - lvgl.button.update: { id: btn_action6, text: !lambda "return x;" }
+  - platform: template
+    id: action_7_label
+    name: "Action 7 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Action 7"
+    max_length: 24
+    on_value:
+      - lvgl.button.update: { id: btn_action7, text: !lambda "return x;" }
+  - platform: template
+    id: action_8_label
+    name: "Action 8 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Action 8"
+    max_length: 24
+    on_value:
+      - lvgl.button.update: { id: btn_action8, text: !lambda "return x;" }
+  - platform: template
+    id: action_9_label
+    name: "Action 9 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Action 9"
+    max_length: 24
+    on_value:
+      - lvgl.button.update: { id: btn_action9, text: !lambda "return x;" }
+  - platform: template
+    id: action_10_label
+    name: "Action 10 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Action 10"
+    max_length: 24
+    on_value:
+      - lvgl.button.update: { id: btn_action10, text: !lambda "return x;" }
+  - platform: template
+    id: action_11_label
+    name: "Action 11 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Action 11"
+    max_length: 24
+    on_value:
+      - lvgl.button.update: { id: btn_action11, text: !lambda "return x;" }
+  - platform: template
+    id: action_12_label
+    name: "Action 12 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Action 12"
+    max_length: 24
+    on_value:
+      - lvgl.button.update: { id: btn_action12, text: !lambda "return x;" }
+
+# ---------------------------------------------------------------------------
+# Forme des boutons - modifiable a chaud (carre ou rond) depuis Home
+# Assistant (service select.select_option) ou l'appli PC. Les 12 boutons
+# sont des carres exacts (110x110) : radius 12 = coins arrondis (carre),
+# radius 999 = LVGL plafonne au maximum possible -> cercle parfait.
+# ---------------------------------------------------------------------------
+select:
+  - platform: template
+    id: button_shape
+    name: "Forme des boutons"
+    optimistic: true
+    options: ["carre", "rond"]
+    initial_option: "carre"
+    on_value:
+      - lambda: |-
+          int r = (x == "rond") ? 999 : 12;
+          lv_obj_set_style_radius(id(btn_action1), r, 0);
+          lv_obj_set_style_radius(id(btn_action2), r, 0);
+          lv_obj_set_style_radius(id(btn_action3), r, 0);
+          lv_obj_set_style_radius(id(btn_action4), r, 0);
+          lv_obj_set_style_radius(id(btn_action5), r, 0);
+          lv_obj_set_style_radius(id(btn_action6), r, 0);
+          lv_obj_set_style_radius(id(btn_action7), r, 0);
+          lv_obj_set_style_radius(id(btn_action8), r, 0);
+          lv_obj_set_style_radius(id(btn_action9), r, 0);
+          lv_obj_set_style_radius(id(btn_action10), r, 0);
+          lv_obj_set_style_radius(id(btn_action11), r, 0);
+          lv_obj_set_style_radius(id(btn_action12), r, 0);
 
 # ---------------------------------------------------------------------------
 # Polices Google Fonts du design system (telechargees et converties au build)
@@ -393,24 +481,28 @@ lvgl:
                   bg_color: 0xE63946
                   border_width: 0
 
-        # Grille d'actions (2 lignes x 3 boutons) - a renommer/remapper cote
-        # appli PC dans pc-app/actions.yaml
+        # Grille d'actions : 12 boutons carres (4 colonnes x 3 lignes).
+        # Forme (carre/rond) pilotee par l'entite select "button_shape".
         - obj:
-            height: 260
-            width: 100%
-            y: 70
+            id: action_grid
+            height: 380
+            width: 520
+            y: 68
+            align: top_mid
             bg_opa: transp
             border_width: 0
-            pad_all: 8
+            pad_all: 0
             layout:
               type: flex
               flex_flow: row_wrap
-              flex_align_cross: center
-              flex_align_main: space_evenly
+              flex_align_cross: start
+              flex_align_main: start
+              pad_row: 14
+              pad_column: 14
             widgets:
               - button:
                   id: btn_action1
-                  width: 300
+                  width: 110
                   height: 110
                   bg_color: 0x0F2942
                   border_color: 0x1A3A52
@@ -422,7 +514,7 @@ lvgl:
                     - event.trigger: { id: action_button_event, event_type: "action_1" }
               - button:
                   id: btn_action2
-                  width: 300
+                  width: 110
                   height: 110
                   bg_color: 0x0F2942
                   border_color: 0x1A3A52
@@ -434,7 +526,7 @@ lvgl:
                     - event.trigger: { id: action_button_event, event_type: "action_2" }
               - button:
                   id: btn_action3
-                  width: 300
+                  width: 110
                   height: 110
                   bg_color: 0x0F2942
                   border_color: 0x1A3A52
@@ -446,7 +538,7 @@ lvgl:
                     - event.trigger: { id: action_button_event, event_type: "action_3" }
               - button:
                   id: btn_action4
-                  width: 300
+                  width: 110
                   height: 110
                   bg_color: 0x0F2942
                   border_color: 0x1A3A52
@@ -458,7 +550,7 @@ lvgl:
                     - event.trigger: { id: action_button_event, event_type: "action_4" }
               - button:
                   id: btn_action5
-                  width: 300
+                  width: 110
                   height: 110
                   bg_color: 0x0F2942
                   border_color: 0x1A3A52
@@ -470,7 +562,7 @@ lvgl:
                     - event.trigger: { id: action_button_event, event_type: "action_5" }
               - button:
                   id: btn_action6
-                  width: 300
+                  width: 110
                   height: 110
                   bg_color: 0x0F2942
                   border_color: 0x1A3A52
@@ -480,15 +572,87 @@ lvgl:
                   text_font: font_body
                   on_click:
                     - event.trigger: { id: action_button_event, event_type: "action_6" }
+              - button:
+                  id: btn_action7
+                  width: 110
+                  height: 110
+                  bg_color: 0x0F2942
+                  border_color: 0x1A3A52
+                  border_width: 1
+                  radius: 12
+                  text: "Action 7"
+                  text_font: font_body
+                  on_click:
+                    - event.trigger: { id: action_button_event, event_type: "action_7" }
+              - button:
+                  id: btn_action8
+                  width: 110
+                  height: 110
+                  bg_color: 0x0F2942
+                  border_color: 0x1A3A52
+                  border_width: 1
+                  radius: 12
+                  text: "Action 8"
+                  text_font: font_body
+                  on_click:
+                    - event.trigger: { id: action_button_event, event_type: "action_8" }
+              - button:
+                  id: btn_action9
+                  width: 110
+                  height: 110
+                  bg_color: 0x0F2942
+                  border_color: 0x1A3A52
+                  border_width: 1
+                  radius: 12
+                  text: "Action 9"
+                  text_font: font_body
+                  on_click:
+                    - event.trigger: { id: action_button_event, event_type: "action_9" }
+              - button:
+                  id: btn_action10
+                  width: 110
+                  height: 110
+                  bg_color: 0x0F2942
+                  border_color: 0x1A3A52
+                  border_width: 1
+                  radius: 12
+                  text: "Action 10"
+                  text_font: font_body
+                  on_click:
+                    - event.trigger: { id: action_button_event, event_type: "action_10" }
+              - button:
+                  id: btn_action11
+                  width: 110
+                  height: 110
+                  bg_color: 0x0F2942
+                  border_color: 0x1A3A52
+                  border_width: 1
+                  radius: 12
+                  text: "Action 11"
+                  text_font: font_body
+                  on_click:
+                    - event.trigger: { id: action_button_event, event_type: "action_11" }
+              - button:
+                  id: btn_action12
+                  width: 110
+                  height: 110
+                  bg_color: 0x0F2942
+                  border_color: 0x1A3A52
+                  border_width: 1
+                  radius: 12
+                  text: "Action 12"
+                  text_font: font_body
+                  on_click:
+                    - event.trigger: { id: action_button_event, event_type: "action_12" }
 
         # Bas d'ecran : 3 cartes encodeurs + statut PC
         - obj:
-            height: 140
+            height: 90
             width: 100%
-            y: 340
+            y: 462
             bg_opa: transp
             border_width: 0
-            pad_all: 8
+            pad_all: 4
             layout:
               type: flex
               flex_flow: row
@@ -498,7 +662,7 @@ lvgl:
               - obj:
                   id: encoder1_card
                   width: 300
-                  height: 90
+                  height: 75
                   bg_color: 0x0F2942
                   border_color: 0x1A3A52
                   border_width: 1
@@ -519,7 +683,7 @@ lvgl:
               - obj:
                   id: encoder2_card
                   width: 300
-                  height: 90
+                  height: 75
                   bg_color: 0x0F2942
                   border_color: 0x1A3A52
                   border_width: 1
@@ -540,7 +704,7 @@ lvgl:
               - obj:
                   id: encoder3_card
                   width: 300
-                  height: 90
+                  height: 75
                   bg_color: 0x0F2942
                   border_color: 0x1A3A52
                   border_width: 1
