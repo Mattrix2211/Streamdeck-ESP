@@ -32,8 +32,6 @@ esp32:
     type: esp-idf
     advanced:
       enable_idf_experimental_features: true
-    sdkconfig_options:
-      CONFIG_SPIRAM_XIP_FROM_PSRAM: "y"  # evite le flash blanc pendant l'OTA
 
 # Le P4 n'a pas de radio: le C6 embarque le Wi-Fi/BT et sert de co-processeur
 # "hosted" relie en SDIO.
