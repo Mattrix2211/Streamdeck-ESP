@@ -1,6 +1,5 @@
 """Execution des actions locales declenchees par le Stream Deck."""
 
-import os
 import platform
 import subprocess
 import webbrowser
@@ -49,12 +48,16 @@ def _send_keys(keys: list) -> None:
 
 
 def _launch(target: str) -> None:
-    if SYSTEM == "Darwin":
-        subprocess.Popen(["open", target])
-    elif SYSTEM == "Windows":
-        os.startfile(target)  # noqa: S606 - cible definie par l'utilisateur dans config.yaml
+    # shell=True (plutot que os.startfile/Popen liste) pour supporter les
+    # cibles avec arguments (ex: Discord se lance via
+    # "%LOCALAPPDATA%\Discord\Update.exe --processStart Discord.exe" sur
+    # Windows, un jeu peut avoir des flags de lancement...). La cible vient
+    # de la config de l'utilisateur (Home Assistant/receiver_config.yaml),
+    # pas d'une entree distante non authentifiee.
+    if SYSTEM == "Darwin" and not target.strip().startswith("open "):
+        subprocess.Popen(["open", target])  # noqa: S603
     else:
-        subprocess.Popen(target.split())
+        subprocess.Popen(target, shell=True)  # noqa: S602,S607
 
 
 def _media(name: str) -> None:

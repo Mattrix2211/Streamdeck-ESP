@@ -6,9 +6,16 @@
 # le prefixe "streamdeck_" (a verifier/ajuster dans l'UI HA - les entity_id
 # exacts ci-dessous sont des exemples a adapter).
 #
-# A coller/adapter dans configuration.yaml (ou via l'UI Automatisations).
-
-automation:
+# Pour les actions qui doivent s'executer SUR LE PC (lancer une appli,
+# raccourci clavier, media...), voir d'abord rest_command.yaml.snippet
+# (a coller une seule fois dans configuration.yaml) - les automations
+# ci-dessous l'utilisent via rest_command.streamdeck_pc_action.
+#
+# A coller/adapter dans configuration.yaml (ou via l'UI Automatisations,
+# qui reste la facon la plus simple de creer/modifier ces automations :
+# menu Parametres > Automatisations > Creer, puis "Modifier en YAML"
+# pour coller un des blocs ci-dessous si besoin).
+#
 # Les entites "event:" d'ESPHome apparaissent dans HA comme des entites du
 # domaine "event" (event.xxx). Leur etat est un horodatage qui change a
 # CHAQUE occurrence (meme type d'evenement repete inclus) : un trigger
@@ -16,20 +23,47 @@ automation:
 # type precis se lit dans trigger.to_state.attributes.event_type.
 
 automation:
-  # Bouton d'action 1 de l'ecran -> bascule une lumiere du salon
-  - alias: "Stream Deck - Action 1 : lumiere salon"
+  # Bouton d'action 1 de l'ecran -> lance Discord sur le PC
+  - alias: "Stream Deck - Action 1 : Discord"
     trigger:
       - platform: state
         entity_id: event.streamdeck_bouton_d_action_ecran  # a verifier dans HA
     condition:
       - "{{ trigger.to_state.attributes.event_type == 'action_1' }}"
     action:
-      - service: light.toggle
-        target:
-          entity_id: light.salon
+      - service: rest_command.streamdeck_pc_action
+        data:
+          type: "launch"
+          target: "%LOCALAPPDATA%\\Discord\\Update.exe --processStart Discord.exe"
 
-  # Encodeur 1 (rotation) -> volume d'un media_player
-  - alias: "Stream Deck - Encodeur 1 : volume media player"
+  # Bouton d'action 2 -> lance un jeu Steam (App ID a adapter)
+  - alias: "Stream Deck - Action 2 : jeu Steam"
+    trigger:
+      - platform: state
+        entity_id: event.streamdeck_bouton_d_action_ecran
+    condition:
+      - "{{ trigger.to_state.attributes.event_type == 'action_2' }}"
+    action:
+      - service: rest_command.streamdeck_pc_action
+        data:
+          type: "url"
+          target: "steam://rungameid/570"  # exemple : Dota 2
+
+  # Bouton d'action 3 -> capture d'ecran (raccourci clavier)
+  - alias: "Stream Deck - Action 3 : capture d'ecran"
+    trigger:
+      - platform: state
+        entity_id: event.streamdeck_bouton_d_action_ecran
+    condition:
+      - "{{ trigger.to_state.attributes.event_type == 'action_3' }}"
+    action:
+      - service: rest_command.streamdeck_pc_action
+        data:
+          type: "keys"
+          target: ["ctrl", "shift", "s"]
+
+  # Encodeur 1 (rotation) -> volume du PC (et non d'un media_player HA)
+  - alias: "Stream Deck - Encodeur 1 : volume PC"
     trigger:
       - platform: state
         entity_id: event.streamdeck_encodeur_1_evenement
@@ -37,21 +71,16 @@ automation:
       - choose:
           - conditions: "{{ trigger.to_state.attributes.event_type == 'clockwise' }}"
             sequence:
-              - service: media_player.volume_up
-                target:
-                  entity_id: media_player.salon
+              - service: rest_command.streamdeck_pc_action
+                data: { type: "media", target: "vol_up" }
           - conditions: "{{ trigger.to_state.attributes.event_type == 'anticlockwise' }}"
             sequence:
-              - service: media_player.volume_down
-                target:
-                  entity_id: media_player.salon
+              - service: rest_command.streamdeck_pc_action
+                data: { type: "media", target: "vol_down" }
           - conditions: "{{ trigger.to_state.attributes.event_type == 'press' }}"
             sequence:
-              - service: media_player.volume_mute
-                target:
-                  entity_id: media_player.salon
-                data:
-                  is_volume_muted: true
+              - service: rest_command.streamdeck_pc_action
+                data: { type: "media", target: "mute" }
 
   # Pousser l'etat d'une entite HA vers l'ecran (widget "Statut PC" reutilise
   # ici comme bandeau d'info generique)

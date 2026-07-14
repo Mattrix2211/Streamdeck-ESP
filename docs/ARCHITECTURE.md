@@ -12,52 +12,63 @@
                          API native ESPHome (chiffree,
                          Noise Protocol, port 6053)
                                       |
-                +---------------------+---------------------+
-                |                                           |
-     +----------v-----------+                    +----------v-----------+
-     |   Home Assistant       |                    |   Appli PC (Python)    |
-     |   (aioesphomeapi,       |                    |   (aioesphomeapi,      |
-     |    integration native)  |                    |    streamdeck_companion)|
-     +--------------------------+                    +-------------------------+
-                                                                 |
-                                                        actions locales :
-                                                        raccourcis clavier,
-                                                        lancement d'applis,
-                                                        media/volume
+                         +------------v-------------+
+                         |     Home Assistant        |
+                         |  (integration ESPHome      |
+                         |   native + automatisations  |
+                         |   visuelles)                |
+                         +------------+---------------+
+                                      |
+                         appel REST (rest_command),
+                         token partage
+                                      |
+                         +------------v-------------+
+                         |  Recepteur PC (Python)    |
+                         |  streamdeck_companion/     |
+                         |  receiver.py + tray.py     |
+                         +------------+---------------+
+                                      |
+                            actions locales : raccourcis
+                            clavier, lancement d'appli/jeu,
+                            media, url
 ```
 
-## Pourquoi une seule API pour PC et Home Assistant
+## Home Assistant comme cerveau unique
 
-Home Assistant et l'appli PC parlent tous les deux le meme protocole natif
-ESPHome (chiffre via une cle Noise partagee, `firmware/secrets.yaml` /
-`pc-app/config.yaml`). Consequences :
+Toute la configuration (quel bouton/encodeur declenche quelle action) se
+fait dans Home Assistant : c'est lui qui garde la connexion a l'ecran
+(integration ESPHome native, deja en place) et qui decide, via ses
+automatisations - creables entierement dans son interface web, sans YAML a
+ecrire pour chaque bouton - d'appeler le PC. Consequences :
 
-- Un seul port a ouvrir/securiser (6053), pas de serveur HTTP additionnel
-  sur l'appareil.
-- Les entites (boutons, encodeurs, statut) sont definies une seule fois
-  dans `firmware/streamdeck.yaml` et vues de la meme facon des deux cotes.
-- L'appli PC peut evoluer independamment de Home Assistant (elle n'a pas
-  besoin d'un serveur HA pour fonctionner - connexion directe au Stream Deck).
+- Le PC n'a plus besoin de se connecter au Stream Deck (fini les soucis
+  d'IP/mDNS/port/cle API cote PC) : il attend juste que HA l'appelle.
+- Un seul service `rest_command` a definir une fois dans `configuration.yaml`
+  (`home-assistant/rest_command.yaml.snippet`) ; chaque automation
+  (bouton/encodeur) l'appelle juste avec des donnees differentes.
+- Le recepteur PC (`streamdeck_companion/receiver.py`) est minuscule :
+  un seul endpoint HTTP protege par un token, qui execute l'action recue.
 
 ## Flux "bouton -> PC"
 
 1. L'utilisateur touche un bouton sur l'ecran (LVGL) ou tourne un encodeur.
 2. Le firmware declenche une entite `event:` (`event.trigger`).
-3. L'appli PC recoit l'etat via `subscribe_states()`, retrouve l'action
-   mappee dans `pc-app/config.yaml` et l'execute localement
-   (`streamdeck_companion/actions.py`).
-4. En parallele, Home Assistant peut ecouter la meme entite `event:` pour
-   declencher ses propres automations (`home-assistant/example_automations.yaml`).
+3. Home Assistant recoit l'etat (entite `event.xxx`), une automation
+   verifie le `event_type` et appelle `rest_command.streamdeck_pc_action`
+   avec `{type, target}`.
+4. Le recepteur PC recoit l'appel HTTP (`POST /run`, token verifie) et
+   execute l'action localement (`streamdeck_companion/actions.py`).
 
-## Flux "PC -> ecran"
+## Flux "PC/HA -> ecran"
 
-1. L'appli PC appelle `client.text_command(key, texte)` sur l'entite `text:`
-   `pc_status_text`.
-2. Le firmware met a jour le label LVGL correspondant (`on_value` de
-   `text.pc_status_text`).
-3. Home Assistant peut faire la meme chose via le service
-   `text.set_value` (voir `home-assistant/example_automations.yaml`), pour
-   afficher n'importe quelle information HA sur l'ecran.
+- **Statut / info generique** : Home Assistant appelle directement le
+  service `text.set_value` sur l'entite `text.streamdeck_statut_pc` (voir
+  `home-assistant/example_automations.yaml`) - aucun code PC necessaire.
+- **Libelles des boutons** : la page "Personnaliser l'ecran" du recepteur PC
+  (`streamdeck_companion/screen_labels.py`) se connecte ponctuellement a
+  l'ecran (pas une connexion permanente) pour pousser les nouveaux textes
+  vers les entites `text.action_N_libelle`, qui mettent a jour les boutons
+  LVGL correspondants (`on_value` -> `lvgl.button.update`).
 
 ## Design
 

@@ -32,10 +32,13 @@ identite d'appareil). Deux facons de l'utiliser :
    (`packages: url/file/ref/refresh: 0s`) a chaque compilation : pour
    mettre a jour le firmware plus tard, il suffit de recompiler depuis HA,
    sans rien recopier.
-3. **Appli PC** : voir `pc-app/README.md`.
-4. **Home Assistant** : l'appareil est decouvert automatiquement (integration
+3. **Home Assistant** : l'appareil est decouvert automatiquement (integration
    ESPHome native, meme cle API que dans le fichier utilise ci-dessus).
-   Exemples d'automations dans `home-assistant/example_automations.yaml`.
+   C'est **le seul endroit ou vous configurez** quel bouton/encodeur fait
+   quoi (automatisations visuelles) - voir `home-assistant/rest_command.yaml.snippet`
+   et `home-assistant/example_automations.yaml`.
+4. **Appli PC** (execute les actions demandees par Home Assistant - lancer
+   une appli/jeu, raccourci clavier, media) : voir `pc-app/README.md`.
 
 Details d'architecture : `docs/ARCHITECTURE.md`. Cablage des encodeurs et
 mapping des GPIO : `docs/WIRING.md`.

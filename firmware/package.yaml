@@ -267,6 +267,64 @@ text:
           id: lbl_pc_status
           text: !lambda "return x;"
 
+  # Libelles des boutons d'action - modifiables a chaud (sans reflasher)
+  # depuis Home Assistant (service text.set_value) ou depuis la page
+  # "Personnaliser l'ecran" de l'appli PC (pc-app/streamdeck_companion).
+  - platform: template
+    id: action_1_label
+    name: "Action 1 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Action 1"
+    max_length: 24
+    on_value:
+      - lvgl.button.update: { id: btn_action1, text: !lambda "return x;" }
+  - platform: template
+    id: action_2_label
+    name: "Action 2 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Action 2"
+    max_length: 24
+    on_value:
+      - lvgl.button.update: { id: btn_action2, text: !lambda "return x;" }
+  - platform: template
+    id: action_3_label
+    name: "Action 3 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Action 3"
+    max_length: 24
+    on_value:
+      - lvgl.button.update: { id: btn_action3, text: !lambda "return x;" }
+  - platform: template
+    id: action_4_label
+    name: "Action 4 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Action 4"
+    max_length: 24
+    on_value:
+      - lvgl.button.update: { id: btn_action4, text: !lambda "return x;" }
+  - platform: template
+    id: action_5_label
+    name: "Action 5 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Action 5"
+    max_length: 24
+    on_value:
+      - lvgl.button.update: { id: btn_action5, text: !lambda "return x;" }
+  - platform: template
+    id: action_6_label
+    name: "Action 6 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Action 6"
+    max_length: 24
+    on_value:
+      - lvgl.button.update: { id: btn_action6, text: !lambda "return x;" }
+
 # ---------------------------------------------------------------------------
 # Polices Google Fonts du design system (telechargees et converties au build)
 # ---------------------------------------------------------------------------
@@ -351,6 +409,7 @@ lvgl:
               flex_align_main: space_evenly
             widgets:
               - button:
+                  id: btn_action1
                   width: 300
                   height: 110
                   bg_color: 0x0F2942
@@ -362,6 +421,7 @@ lvgl:
                   on_click:
                     - event.trigger: { id: action_button_event, event_type: "action_1" }
               - button:
+                  id: btn_action2
                   width: 300
                   height: 110
                   bg_color: 0x0F2942
@@ -373,6 +433,7 @@ lvgl:
                   on_click:
                     - event.trigger: { id: action_button_event, event_type: "action_2" }
               - button:
+                  id: btn_action3
                   width: 300
                   height: 110
                   bg_color: 0x0F2942
@@ -384,6 +445,7 @@ lvgl:
                   on_click:
                     - event.trigger: { id: action_button_event, event_type: "action_3" }
               - button:
+                  id: btn_action4
                   width: 300
                   height: 110
                   bg_color: 0x0F2942
@@ -395,6 +457,7 @@ lvgl:
                   on_click:
                     - event.trigger: { id: action_button_event, event_type: "action_4" }
               - button:
+                  id: btn_action5
                   width: 300
                   height: 110
                   bg_color: 0x0F2942
@@ -406,6 +469,7 @@ lvgl:
                   on_click:
                     - event.trigger: { id: action_button_event, event_type: "action_5" }
               - button:
+                  id: btn_action6
                   width: 300
                   height: 110
                   bg_color: 0x0F2942

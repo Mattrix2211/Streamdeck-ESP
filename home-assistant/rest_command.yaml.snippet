@@ -1,0 +1,16 @@
+# A ajouter UNE SEULE FOIS dans configuration.yaml (redemarrer HA apres
+# modification). Definit le service "rest_command.streamdeck_pc_action" que
+# vos automations appelleront pour executer une action sur le PC (voir
+# example_automations.yaml).
+#
+# Remplacez l'IP par celle du PC (visible dans les infos reseau Windows),
+# et le token par celui de pc-app/receiver_config.yaml (meme valeur).
+
+rest_command:
+  streamdeck_pc_action:
+    url: "http://192.168.1.XX:8765/run"
+    method: POST
+    headers:
+      X-Auth-Token: "REMPLACER_PAR_LE_TOKEN_DE_RECEIVER_CONFIG_YAML"
+      Content-Type: "application/json"
+    payload: '{"type": "{{ type }}", "target": {{ target | tojson }}}'

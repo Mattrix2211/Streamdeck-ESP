@@ -1,9 +1,15 @@
 # Appli compagnon PC
 
-Se connecte au Stream Deck via l'API native ESPHome chiffree (le meme
-protocole que celui utilise par Home Assistant - `aioesphomeapi`), ecoute les
-boutons et encodeurs, execute des actions locales, et pousse un statut texte
-affiche sur l'ecran.
+Petit programme qui tourne en fond sur votre PC (icone dans la barre des
+taches, pas de fenetre de terminal), et execute des actions locales
+(raccourci clavier, lancement d'appli/jeu, media, url) quand Home Assistant
+le lui demande.
+
+**Toute la configuration se fait dans Home Assistant** (automatisations
+visuelles, menus deroulants) : quel bouton/encodeur declenche quelle action.
+Ce programme ne fait qu'executer ce que Home Assistant lui envoie - il ne se
+connecte pas lui-meme au Stream Deck (c'est Home Assistant qui garde cette
+connexion, deja en place).
 
 ## Installation
 
@@ -12,46 +18,63 @@ cd pc-app
 python3 -m venv .venv
 source .venv/bin/activate   # .venv\Scripts\activate sur Windows
 pip install -r requirements.txt
-cp config.yaml.example config.yaml
+cp receiver_config.yaml.example receiver_config.yaml
 ```
 
-Editez `config.yaml` :
-- `connection.host` : IP ou nom mDNS du Stream Deck (`streamdeck.local`)
-- `connection.api_encryption_key` : **la meme cle** que `api_encryption_key`
-  dans `firmware/secrets.yaml`
-- `actions` : mapping evenement -> action locale (voir les exemples fournis)
+Editez `receiver_config.yaml` :
+- `token` : generez-en un avec `python3 -c "import secrets; print(secrets.token_urlsafe(24))"`
+  (protege ce PC : sans lui, n'importe qui sur le reseau local pourrait
+  demander l'execution d'une action)
+- `port` : 8765 par defaut, changez si deja utilise
 
-## Lancer
+## Lancer au quotidien (recommande)
+
+Icone de barre des taches, pas de terminal a garder ouvert :
+
+```powershell
+pythonw -m streamdeck_companion.tray
+```
+
+Pour qu'elle demarre automatiquement a l'ouverture de session Windows :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File install_startup.ps1
+```
+
+Clic droit sur l'icone dans la barre des taches pour : personnaliser
+l'ecran, ouvrir Home Assistant, ou quitter.
+
+## Lancer manuellement (sans icone, avec logs dans le terminal)
 
 ```bash
-python -m streamdeck_companion.app
+python -m streamdeck_companion.receiver
 ```
 
-## Interface web de configuration
+## Cote Home Assistant
 
-Plutot que d'editer `config.yaml` a la main, une petite page web locale
-permet de choisir visuellement l'action de chaque bouton/encodeur :
+1. Collez `home-assistant/rest_command.yaml.snippet` dans `configuration.yaml`
+   (une seule fois), en remplacant l'IP par celle de ce PC et le token par
+   celui de `receiver_config.yaml`. Redemarrez Home Assistant.
+2. Creez vos automatisations (menu **Parametres > Automatisations**, ou en
+   YAML) : trigger = l'entite `event.streamdeck_...` du bouton/encodeur,
+   action = service `rest_command.streamdeck_pc_action` avec `type`/`target`.
+   Exemples complets dans `home-assistant/example_automations.yaml`.
 
-```bash
-python -m streamdeck_companion.webui
-```
+## Personnaliser l'ecran (libelles des boutons)
 
-Puis ouvrez http://127.0.0.1:5000 dans un navigateur. Les changements sont
-appliques par l'appli compagnon (`app.py`) **sans redemarrage** (elle relit
-`config.yaml` toutes les 2 secondes). Seuls les identifiants de connexion
-(host/cle API) necessitent un vrai redemarrage de `app.py` pour prendre effet.
+Accessible depuis le menu de l'icone de la barre des taches ("Personnaliser
+l'ecran"), ou directement `http://127.0.0.1:8765/screen` dans un navigateur.
+Change le texte affiche sur les 6 boutons de l'ecran, sans reflasher le
+firmware. Necessite l'adresse et la cle API du Stream Deck (memes valeurs
+que `firmware/secrets.yaml`).
 
-Note : sauvegarder depuis cette page reecrit entierement `config.yaml` (les
-commentaires eventuels sont perdus). Si vous preferez un fichier annote a la
-main, editez-le directement plutot que via cette interface.
-
-## Types d'actions disponibles dans `config.yaml`
+## Types d'actions (`type`/`target` envoyes par Home Assistant)
 
 | type     | target                          | effet                                    |
 |----------|----------------------------------|-------------------------------------------|
 | `keys`   | liste de touches (ex `["ctrl","c"]`) | envoie une combinaison clavier         |
-| `launch` | chemin ou commande               | lance une application                     |
-| `url`    | URL                               | ouvre l'URL dans le navigateur par defaut  |
+| `launch` | chemin ou commande (arguments acceptes) | lance une application/un jeu (ex: `"steam://rungameid/570"` en type `url`, ou une commande complete en `launch`) |
+| `url`    | URL ou URI (`steam://...`, `discord://...`) | ouverte via le gestionnaire par defaut du systeme |
 | `media`  | `play_pause`/`next`/`previous`/`vol_up`/`vol_down`/`mute` | touche multimedia |
 
 ## Limitations connues
@@ -63,7 +86,8 @@ main, editez-le directement plutot que via cette interface.
   systeme est gere nativement (`osascript`). Pour play/pause/next sur macOS,
   il faudra integrer un outil tiers (ex. `nowplaying-cli`) dans
   `streamdeck_companion/actions.py::_media_macos`.
-- Le "statut PC" pousse vers l'ecran (`Companion.push_status`) n'est branche
-  ici que sur connexion/deconnexion ("PC connecte"/"PC hors ligne") a titre
-  d'exemple. Pour afficher le titre de la fenetre active, la piste en cours,
-  etc., appelez `push_status(...)` depuis votre propre logique.
+- `tray.py` n'a pu etre teste que hors environnement graphique Windows reel
+  (logique de routes/menu verifiee ; le rendu de l'icone lui-meme necessite
+  un vrai bureau Windows pour etre confirme).
+- Le serveur ecoute sur toutes les interfaces (0.0.0.0) pour etre joignable
+  par Home Assistant : gardez le `token` secret, c'est la seule protection.
