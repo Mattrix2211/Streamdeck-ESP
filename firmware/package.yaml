@@ -66,15 +66,16 @@ i2c:
     scl: GPIO8
     frequency: 400kHz
 
+# Pas de transform ici : la dalle est utilisee dans son orientation native
+# (rotation: 0, valeur par defaut de display.mipi_dsi). swap_xy/mirror_y
+# etaient necessaires dans la config communautaire de reference parce que sa
+# dalle etait montee a 90 - ce n'est pas notre cas, ca decalait le tactile.
 touchscreen:
   - platform: gt911
     id: my_touchscreen
     i2c_id: bus_a
     reset_pin: GPIO22
     interrupt_pin: GPIO21
-    transform:
-      swap_xy: true
-      mirror_y: true
 
 # ---------------------------------------------------------------------------
 # Retroeclairage
