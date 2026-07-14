@@ -125,6 +125,15 @@ binary_sensor:
       inverted: true
     on_press:
       - event.trigger: { id: encoder1_event, event_type: "press" }
+      - lvgl.obj.update:
+          id: encoder1_card
+          border_color: 0x00B4D8
+          bg_color: 0x1E4060
+    on_release:
+      - lvgl.obj.update:
+          id: encoder1_card
+          border_color: 0x1A3A52
+          bg_color: 0x0F2942
   - platform: gpio
     id: encoder2_button
     name: "Encodeur 2 - bouton"
@@ -134,6 +143,15 @@ binary_sensor:
       inverted: true
     on_press:
       - event.trigger: { id: encoder2_event, event_type: "press" }
+      - lvgl.obj.update:
+          id: encoder2_card
+          border_color: 0x00B4D8
+          bg_color: 0x1E4060
+    on_release:
+      - lvgl.obj.update:
+          id: encoder2_card
+          border_color: 0x1A3A52
+          bg_color: 0x0F2942
   - platform: gpio
     id: encoder3_button
     name: "Encodeur 3 - bouton"
@@ -143,6 +161,15 @@ binary_sensor:
       inverted: true
     on_press:
       - event.trigger: { id: encoder3_event, event_type: "press" }
+      - lvgl.obj.update:
+          id: encoder3_card
+          border_color: 0x00B4D8
+          bg_color: 0x1E4060
+    on_release:
+      - lvgl.obj.update:
+          id: encoder3_card
+          border_color: 0x1A3A52
+          bg_color: 0x0F2942
 
 # ---------------------------------------------------------------------------
 # Encodeurs rotatifs - 3 par defaut, ajustables selon ce que vous avez achete.
@@ -405,6 +432,7 @@ lvgl:
               flex_align_main: space_evenly
             widgets:
               - obj:
+                  id: encoder1_card
                   width: 300
                   height: 90
                   bg_color: 0x0F2942
@@ -425,6 +453,7 @@ lvgl:
                         text_color: 0x00B4D8
                         align: bottom_left
               - obj:
+                  id: encoder2_card
                   width: 300
                   height: 90
                   bg_color: 0x0F2942
@@ -445,6 +474,7 @@ lvgl:
                         text_color: 0x00B4D8
                         align: bottom_left
               - obj:
+                  id: encoder3_card
                   width: 300
                   height: 90
                   bg_color: 0x0F2942
