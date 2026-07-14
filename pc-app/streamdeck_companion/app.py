@@ -30,7 +30,7 @@ def load_config(path: Path) -> dict:
 
 
 class Companion:
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, config_path: Path | None = None):
         conn = config["connection"]
         self.actions_by_entity: dict = config.get("actions", {})
         self.client = APIClient(
@@ -41,6 +41,27 @@ class Companion:
         )
         self.key_to_entity_name: dict[int, str] = {}
         self.status_text_key: int | None = None
+        self.config_path = config_path
+        self.config_mtime = config_path.stat().st_mtime if config_path and config_path.exists() else None
+
+    def reload_actions_if_changed(self) -> None:
+        """Recharge uniquement le mapping actions: depuis config.yaml si le
+        fichier a change - permet a l'interface web (webui.py) de modifier
+        les actions sans redemarrer cette appli. La connexion (host/cle) ne
+        change pas a chaud : ca necessite un vrai redemarrage."""
+        if self.config_path is None or not self.config_path.exists():
+            return
+        mtime = self.config_path.stat().st_mtime
+        if mtime == self.config_mtime:
+            return
+        self.config_mtime = mtime
+        try:
+            new_config = load_config(self.config_path)
+        except Exception:
+            LOG.exception("Echec du rechargement de %s, config precedente conservee", self.config_path)
+            return
+        self.actions_by_entity = new_config.get("actions", {})
+        LOG.info("Configuration des actions rechargee depuis %s", self.config_path)
 
     async def connect(self) -> None:
         await self.client.connect(login=False)
@@ -82,7 +103,8 @@ class Companion:
         self.push_status("PC connecte")
         try:
             while True:
-                await asyncio.sleep(3600)
+                await asyncio.sleep(2)
+                self.reload_actions_if_changed()
         finally:
             self.push_status("PC hors ligne")
             await self.client.disconnect()
@@ -99,15 +121,15 @@ def main() -> None:
         sys.exit(1)
     config = load_config(config_path)
     try:
-        asyncio.run(_run(config))
+        asyncio.run(_run(config, config_path))
     except KeyboardInterrupt:
         pass
 
 
-async def _run(config: dict) -> None:
+async def _run(config: dict, config_path: Path) -> None:
     # Construit l'APIClient a l'interieur de la boucle asyncio active :
     # son constructeur echoue sinon avec "no running event loop".
-    companion = Companion(config)
+    companion = Companion(config, config_path)
     await companion.run_forever()
 
 

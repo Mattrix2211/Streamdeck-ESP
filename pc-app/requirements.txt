@@ -1,3 +1,4 @@
 aioesphomeapi>=29.0.0
 PyYAML>=6.0
 keyboard>=0.13.5 ; sys_platform != "darwin"
+Flask>=3.0.0

@@ -27,6 +27,24 @@ Editez `config.yaml` :
 python -m streamdeck_companion.app
 ```
 
+## Interface web de configuration
+
+Plutot que d'editer `config.yaml` a la main, une petite page web locale
+permet de choisir visuellement l'action de chaque bouton/encodeur :
+
+```bash
+python -m streamdeck_companion.webui
+```
+
+Puis ouvrez http://127.0.0.1:5000 dans un navigateur. Les changements sont
+appliques par l'appli compagnon (`app.py`) **sans redemarrage** (elle relit
+`config.yaml` toutes les 2 secondes). Seuls les identifiants de connexion
+(host/cle API) necessitent un vrai redemarrage de `app.py` pour prendre effet.
+
+Note : sauvegarder depuis cette page reecrit entierement `config.yaml` (les
+commentaires eventuels sont perdus). Si vous preferez un fichier annote a la
+main, editez-le directement plutot que via cette interface.
+
 ## Types d'actions disponibles dans `config.yaml`
 
 | type     | target                          | effet                                    |
