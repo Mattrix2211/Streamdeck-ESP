@@ -153,8 +153,12 @@ sensor:
   - platform: rotary_encoder
     id: encoder1_value
     name: "Encodeur 1"
-    pin_a: GPIO1
-    pin_b: GPIO2
+    pin_a:
+      number: GPIO1
+      mode: INPUT_PULLUP
+    pin_b:
+      number: GPIO2
+      mode: INPUT_PULLUP
     on_clockwise:
       - event.trigger: { id: encoder1_event, event_type: "clockwise" }
     on_anticlockwise:
@@ -166,8 +170,12 @@ sensor:
   - platform: rotary_encoder
     id: encoder2_value
     name: "Encodeur 2"
-    pin_a: GPIO4
-    pin_b: GPIO20
+    pin_a:
+      number: GPIO4
+      mode: INPUT_PULLUP
+    pin_b:
+      number: GPIO20
+      mode: INPUT_PULLUP
     on_clockwise:
       - event.trigger: { id: encoder2_event, event_type: "clockwise" }
     on_anticlockwise:
@@ -179,8 +187,12 @@ sensor:
   - platform: rotary_encoder
     id: encoder3_value
     name: "Encodeur 3"
-    pin_a: GPIO33
-    pin_b: GPIO45
+    pin_a:
+      number: GPIO33
+      mode: INPUT_PULLUP
+    pin_b:
+      number: GPIO45
+      mode: INPUT_PULLUP
     on_clockwise:
       - event.trigger: { id: encoder3_event, event_type: "clockwise" }
     on_anticlockwise:
