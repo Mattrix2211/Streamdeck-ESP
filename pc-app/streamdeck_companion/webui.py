@@ -17,6 +17,7 @@ import yaml
 from flask import Flask, redirect, render_template_string, request, url_for
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.yaml"
+WEBUI_PORT = 5000
 
 MEDIA_TARGETS = ["play_pause", "next", "previous", "vol_up", "vol_down", "mute"]
 
@@ -148,8 +149,10 @@ PAGE_TEMPLATE = """
           <input type="text" name="conn_host" value="{{ connection.host or '' }}">
         </div>
         <div>
-          <label>Port</label>
+          <label>Port du Stream Deck</label>
           <input type="text" name="conn_port" value="{{ connection.port or 6053 }}">
+          <p class="hint">Port de l'API ESPHome sur le Stream Deck (6053 par defaut) -
+            PAS le port de cette page web ({{ webui_port }}).</p>
         </div>
       </div>
       <label>Cle API (meme valeur que firmware/secrets.yaml)</label>
@@ -205,6 +208,7 @@ def index():
         slots=slots,
         media_targets=", ".join(MEDIA_TARGETS),
         saved=saved,
+        webui_port=WEBUI_PORT,
     )
 
 
@@ -237,8 +241,8 @@ def main() -> None:
     global DEFAULT_CONFIG_PATH  # noqa: PLW0603
     config_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_CONFIG_PATH
     DEFAULT_CONFIG_PATH = config_path
-    print(f"Interface de configuration sur http://127.0.0.1:5000  (fichier: {config_path})")
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    print(f"Interface de configuration sur http://127.0.0.1:{WEBUI_PORT}  (fichier: {config_path})")
+    app.run(host="127.0.0.1", port=WEBUI_PORT, debug=False)
 
 
 if __name__ == "__main__":
