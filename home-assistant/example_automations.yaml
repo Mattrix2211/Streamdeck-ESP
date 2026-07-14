@@ -1,87 +1,15 @@
 # Exemples d'automations Home Assistant pour le Stream Deck.
 #
-# Le Stream Deck utilise l'integration ESPHome native : des qu'il est appaire
-# (Parametres > Appareils et services > l'appareil est decouvert
-# automatiquement en Wi-Fi), toutes ses entites apparaissent normalement sous
-# le prefixe "streamdeck_" (a verifier/ajuster dans l'UI HA - les entity_id
-# exacts ci-dessous sont des exemples a adapter).
+# Le mapping "quel bouton/encodeur fait quoi" se configure desormais dans
+# l'appli PC (voir pc-app/README.md, page http://127.0.0.1:8080) - PAS ici.
+# Ces automations HA sont complementaires : elles utilisent les entites de
+# l'ecran (auto-decouvertes via l'integration ESPHome native) pour des
+# choses que l'appli PC ne fait pas elle-meme (afficher une info HA sur
+# l'ecran, reagir a un evenement HA sans rapport avec le Stream Deck...).
 #
-# Pour les actions qui doivent s'executer SUR LE PC (lancer une appli,
-# raccourci clavier, media...), voir d'abord rest_command.yaml.snippet
-# (a coller une seule fois dans configuration.yaml) - les automations
-# ci-dessous l'utilisent via rest_command.streamdeck_pc_action.
-#
-# A coller/adapter dans configuration.yaml (ou via l'UI Automatisations,
-# qui reste la facon la plus simple de creer/modifier ces automations :
-# menu Parametres > Automatisations > Creer, puis "Modifier en YAML"
-# pour coller un des blocs ci-dessous si besoin).
-#
-# Les entites "event:" d'ESPHome apparaissent dans HA comme des entites du
-# domaine "event" (event.xxx). Leur etat est un horodatage qui change a
-# CHAQUE occurrence (meme type d'evenement repete inclus) : un trigger
-# "state" classique sur l'entite se declenche donc bien a chaque fois, le
-# type precis se lit dans trigger.to_state.attributes.event_type.
+# A coller/adapter dans configuration.yaml (ou via l'UI Automatisations).
 
 automation:
-  # Bouton d'action 1 de l'ecran -> lance Discord sur le PC
-  - alias: "Stream Deck - Action 1 : Discord"
-    trigger:
-      - platform: state
-        entity_id: event.streamdeck_bouton_d_action_ecran  # a verifier dans HA
-    condition:
-      - "{{ trigger.to_state.attributes.event_type == 'action_1' }}"
-    action:
-      - service: rest_command.streamdeck_pc_action
-        data:
-          type: "launch"
-          target: "%LOCALAPPDATA%\\Discord\\Update.exe --processStart Discord.exe"
-
-  # Bouton d'action 2 -> lance un jeu Steam (App ID a adapter)
-  - alias: "Stream Deck - Action 2 : jeu Steam"
-    trigger:
-      - platform: state
-        entity_id: event.streamdeck_bouton_d_action_ecran
-    condition:
-      - "{{ trigger.to_state.attributes.event_type == 'action_2' }}"
-    action:
-      - service: rest_command.streamdeck_pc_action
-        data:
-          type: "url"
-          target: "steam://rungameid/570"  # exemple : Dota 2
-
-  # Bouton d'action 3 -> capture d'ecran (raccourci clavier)
-  - alias: "Stream Deck - Action 3 : capture d'ecran"
-    trigger:
-      - platform: state
-        entity_id: event.streamdeck_bouton_d_action_ecran
-    condition:
-      - "{{ trigger.to_state.attributes.event_type == 'action_3' }}"
-    action:
-      - service: rest_command.streamdeck_pc_action
-        data:
-          type: "keys"
-          target: ["ctrl", "shift", "s"]
-
-  # Encodeur 1 (rotation) -> volume du PC (et non d'un media_player HA)
-  - alias: "Stream Deck - Encodeur 1 : volume PC"
-    trigger:
-      - platform: state
-        entity_id: event.streamdeck_encodeur_1_evenement
-    action:
-      - choose:
-          - conditions: "{{ trigger.to_state.attributes.event_type == 'clockwise' }}"
-            sequence:
-              - service: rest_command.streamdeck_pc_action
-                data: { type: "media", target: "vol_up" }
-          - conditions: "{{ trigger.to_state.attributes.event_type == 'anticlockwise' }}"
-            sequence:
-              - service: rest_command.streamdeck_pc_action
-                data: { type: "media", target: "vol_down" }
-          - conditions: "{{ trigger.to_state.attributes.event_type == 'press' }}"
-            sequence:
-              - service: rest_command.streamdeck_pc_action
-                data: { type: "media", target: "mute" }
-
   # Pousser l'etat d'une entite HA vers l'ecran (widget "Statut PC" reutilise
   # ici comme bandeau d'info generique)
   - alias: "Stream Deck - afficher la temperature exterieure"
@@ -109,3 +37,19 @@ automation:
           entity_id: light.streamdeck_retroeclairage_ecran
         data:
           brightness_pct: 100
+
+  # Exemple d'usage du rest_command optionnel (voir rest_command.yaml.snippet) :
+  # declencher une action PC depuis un evenement HA SANS RAPPORT avec le
+  # Stream Deck lui-meme (ici : detection de mouvement -> lance une appli
+  # de surveillance sur le PC). N'a rien a voir avec les 12 boutons/3
+  # encodeurs, qui sont geres directement par l'appli PC.
+  - alias: "Bonus - mouvement detecte -> ouvre l'appli de surveillance"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.detecteur_mouvement_entree
+        to: "on"
+    action:
+      - service: rest_command.streamdeck_pc_action
+        data:
+          type: "launch"
+          target: "C:\\Program Files\\MaCamApp\\cam.exe"

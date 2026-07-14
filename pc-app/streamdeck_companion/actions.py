@@ -52,8 +52,8 @@ def _launch(target: str) -> None:
     # cibles avec arguments (ex: Discord se lance via
     # "%LOCALAPPDATA%\Discord\Update.exe --processStart Discord.exe" sur
     # Windows, un jeu peut avoir des flags de lancement...). La cible vient
-    # de la config de l'utilisateur (Home Assistant/receiver_config.yaml),
-    # pas d'une entree distante non authentifiee.
+    # de la config de l'utilisateur (dashboard_config.yaml), pas d'une
+    # entree distante non authentifiee.
     if SYSTEM == "Darwin" and not target.strip().startswith("open "):
         subprocess.Popen(["open", target])  # noqa: S603
     else:

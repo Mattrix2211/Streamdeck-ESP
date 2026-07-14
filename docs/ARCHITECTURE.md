@@ -5,70 +5,76 @@
                          |  Stream Deck (ESP32-P4)  |
                          |  ESPHome + LVGL          |
                          |  - ecran tactile 1024x600|
-                         |  - 3 encodeurs rotatifs   |
+                         |  - 12 boutons + 3 encodeurs|
                          |  - Wi-Fi via ESP32-C6     |
                          +------------+-------------+
                                       |
                          API native ESPHome (chiffree,
                          Noise Protocol, port 6053)
                                       |
-                         +------------v-------------+
-                         |     Home Assistant        |
-                         |  (integration ESPHome      |
-                         |   native + automatisations  |
-                         |   visuelles)                |
-                         +------------+---------------+
-                                      |
-                         appel REST (rest_command),
-                         token partage
-                                      |
-                         +------------v-------------+
-                         |  Recepteur PC (Python)    |
-                         |  streamdeck_companion/     |
-                         |  receiver.py + tray.py     |
-                         +------------+---------------+
-                                      |
-                            actions locales : raccourcis
-                            clavier, lancement d'appli/jeu,
-                            media, url
+                +---------------------+---------------------+
+                |                                           |
+     +----------v-----------+                    +----------v-----------+
+     |   Home Assistant       |                    |   Appli PC (Python)    |
+     |   (integration ESPHome  |                    |   streamdeck_companion/|
+     |    native - facultatif   |                    |   device_client.py     |
+     |    pour ses propres      |                    |   (connexion directe   |
+     |    automations)          |                    |    et permanente)       |
+     +--------------------------+                    +------------+------------+
+                                                                    |
+                                                       dashboard.py (page de
+                                                       config visuelle,
+                                                       port 8080) + tray.py
+                                                       (icone barre des taches)
+                                                                    |
+                                                       actions locales :
+                                                       raccourcis clavier,
+                                                       lancement d'appli/jeu,
+                                                       media, url
 ```
 
-## Home Assistant comme cerveau unique
+## L'appli PC comme point de configuration unique
 
-Toute la configuration (quel bouton/encodeur declenche quelle action) se
-fait dans Home Assistant : c'est lui qui garde la connexion a l'ecran
-(integration ESPHome native, deja en place) et qui decide, via ses
-automatisations - creables entierement dans son interface web, sans YAML a
-ecrire pour chaque bouton - d'appeler le PC. Consequences :
+Tout se regle dans l'appli PC (page de configuration visuelle,
+`http://127.0.0.1:8080`) : disposition des 12 boutons et 3 encodeurs, leurs
+actions, leur apparence (libelles, forme carre/rond). Un seul clic
+("Enregistrer et envoyer a l'ecran") sauvegarde et pousse les changements.
 
-- Le PC n'a plus besoin de se connecter au Stream Deck (fini les soucis
-  d'IP/mDNS/port/cle API cote PC) : il attend juste que HA l'appelle.
-- Un seul service `rest_command` a definir une fois dans `configuration.yaml`
-  (`home-assistant/rest_command.yaml.snippet`) ; chaque automation
-  (bouton/encodeur) l'appelle juste avec des donnees differentes.
-- Le recepteur PC (`streamdeck_companion/receiver.py`) est minuscule :
-  un seul endpoint HTTP protege par un token, qui execute l'action recue.
+- `device_client.py` maintient une connexion permanente et directe a
+  l'ecran (IP configuree une fois, pas de mDNS) : elle ecoute les
+  boutons/encodeurs ET sert a pousser les libelles/la forme (meme
+  connexion, pas de reconnexion a chaque changement).
+- `dashboard.py` est la page web de configuration (thread Flask separe),
+  qui communique avec `device_client.py` via `asyncio.run_coroutine_threadsafe`
+  pour rester thread-safe.
+- `tray.py` orchestre les deux dans une icone de barre des taches, sans
+  fenetre de terminal.
+- Home Assistant continue de voir l'appareil nativement (integration
+  ESPHome auto-decouverte) et peut faire ses propres automations en
+  parallele, mais ce n'est **pas necessaire** pour que le Stream Deck
+  fonctionne avec le PC.
 
 ## Flux "bouton -> PC"
 
 1. L'utilisateur touche un bouton sur l'ecran (LVGL) ou tourne un encodeur.
 2. Le firmware declenche une entite `event:` (`event.trigger`).
-3. Home Assistant recoit l'etat (entite `event.xxx`), une automation
-   verifie le `event_type` et appelle `rest_command.streamdeck_pc_action`
-   avec `{type, target}`.
-4. Le recepteur PC recoit l'appel HTTP (`POST /run`, token verifie) et
-   execute l'action localement (`streamdeck_companion/actions.py`).
+3. `device_client.py` recoit l'etat via sa connexion permanente
+   (`subscribe_states`), retrouve l'action configuree (bouton ou
+   sens/appui d'encodeur) dans `dashboard_config.yaml` et l'execute
+   localement (`streamdeck_companion/actions.py`).
+4. En bonus, Home Assistant peut aussi ecouter la meme entite `event:`
+   pour ses propres automations, independamment (voir
+   `home-assistant/example_automations.yaml`).
 
-## Flux "PC/HA -> ecran"
+## Flux "PC -> ecran"
 
-- **Statut / info generique** : Home Assistant appelle directement le
-  service `text.set_value` sur l'entite `text.streamdeck_statut_pc` (voir
-  `home-assistant/example_automations.yaml`) - aucun code PC necessaire.
-- **Libelles des boutons** : la page "Personnaliser l'ecran" du recepteur PC
-  (`streamdeck_companion/screen_labels.py`) se connecte ponctuellement a
-  l'ecran (pas une connexion permanente) pour pousser les nouveaux textes
-  vers les entites `text.action_N_libelle`, qui mettent a jour les boutons
-  LVGL correspondants (`on_value` -> `lvgl.button.update`).
+- **Libelles des boutons + forme** : `dashboard.py` (page "Enregistrer et
+  envoyer a l'ecran") appelle `device_client.schedule_push()`, qui pousse
+  les nouveaux textes/la forme vers les entites `text.action_N_libelle` /
+  `select.forme_des_boutons` en reutilisant la connexion deja ouverte.
+- **Statut / info generique depuis Home Assistant** : HA peut aussi
+  appeler directement le service `text.set_value` sur
+  `text.streamdeck_statut_pc` (voir `home-assistant/example_automations.yaml`).
 
 ## Design
 

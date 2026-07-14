@@ -1,9 +1,0 @@
-# Copiez ce fichier en "receiver_config.yaml" (ignore par git) et remplissez.
-
-# Genere avec : python3 -c "import secrets; print(secrets.token_urlsafe(24))"
-# Protege ce PC : sans ce token, n'importe qui sur le reseau local pourrait
-# demander l'execution d'une action (lancer une appli, envoyer des touches...).
-token: "REMPLACER_PAR_UN_TOKEN_ALEATOIRE"
-
-# Port d'ecoute de ce serveur (Home Assistant doit appeler cette adresse).
-port: 8765

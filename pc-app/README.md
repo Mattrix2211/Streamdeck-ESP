@@ -1,15 +1,13 @@
 # Appli compagnon PC
 
-Petit programme qui tourne en fond sur votre PC (icone dans la barre des
-taches, pas de fenetre de terminal), et execute des actions locales
-(raccourci clavier, lancement d'appli/jeu, media, url) quand Home Assistant
-le lui demande.
+Tout se configure ici, visuellement, sans toucher a un fichier a la main :
+la disposition (quel bouton/encodeur fait quoi), les libelles affiches sur
+l'ecran, et leur forme (carre/rond). Un clic envoie tout vers l'ecran.
 
-**Toute la configuration se fait dans Home Assistant** (automatisations
-visuelles, menus deroulants) : quel bouton/encodeur declenche quelle action.
-Ce programme ne fait qu'executer ce que Home Assistant lui envoie - il ne se
-connecte pas lui-meme au Stream Deck (c'est Home Assistant qui garde cette
-connexion, deja en place).
+Tourne en icone dans la barre des taches (pas de fenetre de terminal), se
+connecte directement au Stream Deck (pas besoin de Home Assistant pour que
+ca fonctionne - meme si HA continue de voir l'appareil nativement en
+parallele).
 
 ## Installation
 
@@ -18,14 +16,14 @@ cd pc-app
 python3 -m venv .venv
 source .venv/bin/activate   # .venv\Scripts\activate sur Windows
 pip install -r requirements.txt
-cp receiver_config.yaml.example receiver_config.yaml
+cp dashboard_config.yaml.example dashboard_config.yaml
 ```
 
-Editez `receiver_config.yaml` :
-- `token` : generez-en un avec `python3 -c "import secrets; print(secrets.token_urlsafe(24))"`
-  (protege ce PC : sans lui, n'importe qui sur le reseau local pourrait
-  demander l'execution d'une action)
-- `port` : 8765 par defaut, changez si deja utilise
+Editez au moins `connection.host` et `connection.api_key` dans
+`dashboard_config.yaml` (l'IP se trouve dans Home Assistant : l'appareil
+"Stream Deck" > Adresse IP ; la cle API est la meme que dans
+`firmware/secrets.yaml`). Le reste (boutons, encodeurs, forme) se regle
+ensuite depuis la page de configuration.
 
 ## Lancer au quotidien (recommande)
 
@@ -41,41 +39,50 @@ Pour qu'elle demarre automatiquement a l'ouverture de session Windows :
 powershell -ExecutionPolicy Bypass -File install_startup.ps1
 ```
 
-Clic droit sur l'icone dans la barre des taches pour : personnaliser
-l'ecran, ouvrir Home Assistant, ou quitter.
+Clic sur l'icone (ou "Configurer le Stream Deck" dans son menu) pour
+ouvrir la page de configuration - `http://127.0.0.1:8080`.
 
 ## Lancer manuellement (sans icone, avec logs dans le terminal)
 
 ```bash
-python -m streamdeck_companion.receiver
+python -c "from streamdeck_companion.tray import main; main()"
 ```
 
-## Cote Home Assistant
+## La page de configuration
 
-1. Collez `home-assistant/rest_command.yaml.snippet` dans `configuration.yaml`
-   (une seule fois), en remplacant l'IP par celle de ce PC et le token par
-   celui de `receiver_config.yaml`. Redemarrez Home Assistant.
-2. Creez vos automatisations (menu **Parametres > Automatisations**, ou en
-   YAML) : trigger = l'entite `event.streamdeck_...` du bouton/encodeur,
-   action = service `rest_command.streamdeck_pc_action` avec `type`/`target`.
-   Exemples complets dans `home-assistant/example_automations.yaml`.
+- **Connexion** : IP/port/cle API de l'ecran.
+- **Forme des boutons** : carre ou rond.
+- **12 boutons** : pour chacun, un libelle et une action (type + cible).
+- **3 encodeurs** : pour chacun, une action par sens de rotation et une pour
+  l'appui.
+- **"Enregistrer et envoyer a l'ecran"** : sauvegarde tout dans
+  `dashboard_config.yaml` et pousse immediatement les libelles/la forme
+  vers l'ecran (les actions des boutons/encodeurs, elles, sont deja actives
+  des l'enregistrement - pas besoin de rien pousser de plus, l'appli les
+  applique directement quand vous appuyez).
 
-## Personnaliser l'ecran (libelles des boutons)
+## Types d'actions (`type` / cible)
 
-Accessible depuis le menu de l'icone de la barre des taches ("Personnaliser
-l'ecran"), ou directement `http://127.0.0.1:8765/screen` dans un navigateur.
-Change le texte affiche sur les 12 boutons de l'ecran et leur forme
-(carre/rond), sans reflasher le firmware. Necessite l'adresse et la cle API
-du Stream Deck (memes valeurs que `firmware/secrets.yaml`).
-
-## Types d'actions (`type`/`target` envoyes par Home Assistant)
-
-| type     | target                          | effet                                    |
-|----------|----------------------------------|-------------------------------------------|
-| `keys`   | liste de touches (ex `["ctrl","c"]`) | envoie une combinaison clavier         |
-| `launch` | chemin ou commande (arguments acceptes) | lance une application/un jeu (ex: `"steam://rungameid/570"` en type `url`, ou une commande complete en `launch`) |
+| type     | cible                             | effet                                    |
+|----------|------------------------------------|-------------------------------------------|
+| `none`   | -                                  | rien configure                             |
+| `keys`   | ex `ctrl+shift+s`                 | envoie une combinaison clavier             |
+| `launch` | chemin ou commande (arguments acceptes) | lance une application/un jeu (ex: la commande de lancement de Discord) |
 | `url`    | URL ou URI (`steam://...`, `discord://...`) | ouverte via le gestionnaire par defaut du systeme |
 | `media`  | `play_pause`/`next`/`previous`/`vol_up`/`vol_down`/`mute` | touche multimedia |
+
+## Integration Home Assistant (optionnelle, en plus)
+
+Comme l'ecran expose ses entites nativement (integration ESPHome), Home
+Assistant les voit et peut declencher ses propres automatisations en
+parallele de cette appli (aucune configuration necessaire cote HA pour ca).
+
+Si vous voulez en plus que Home Assistant puisse demander une action a ce
+PC (ex: depuis une automation HA sans rapport avec le Stream Deck), activez
+`receiver.token` dans `dashboard_config.yaml` et utilisez
+`home-assistant/rest_command.yaml.snippet` + les exemples dans
+`home-assistant/example_automations.yaml`. Ce n'est **pas necessaire** pour
+que les boutons/encodeurs du Stream Deck fonctionnent - c'est un bonus.
 
 ## Limitations connues
 
@@ -87,7 +94,8 @@ du Stream Deck (memes valeurs que `firmware/secrets.yaml`).
   il faudra integrer un outil tiers (ex. `nowplaying-cli`) dans
   `streamdeck_companion/actions.py::_media_macos`.
 - `tray.py` n'a pu etre teste que hors environnement graphique Windows reel
-  (logique de routes/menu verifiee ; le rendu de l'icone lui-meme necessite
-  un vrai bureau Windows pour etre confirme).
-- Le serveur ecoute sur toutes les interfaces (0.0.0.0) pour etre joignable
-  par Home Assistant : gardez le `token` secret, c'est la seule protection.
+  (logique de connexion/config verifiee en detail ; le rendu de l'icone
+  lui-meme necessite un vrai bureau Windows pour etre confirme).
+- Un changement d'IP/port/cle API necessite de redemarrer l'icone de la
+  barre des taches (la reconnexion automatique gere les coupures reseau,
+  pas un changement de configuration de connexion).

@@ -1,0 +1,48 @@
+# Copiez ce fichier en "dashboard_config.yaml" (ignore par git).
+#
+# Vous pouvez remplir ce fichier a la main pour demarrer, mais l'idee est de
+# tout regler ensuite depuis la page de configuration visuelle
+# (icone barre des taches > "Configurer le Stream Deck").
+
+connection:
+  host: "192.168.1.XX"        # IP du Stream Deck (voir Home Assistant > l'appareil > Adresse IP)
+  port: 6053
+  api_key: "REMPLACER_PAR_LA_MEME_CLE_QUE_LE_FIRMWARE"
+
+# "carre" ou "rond"
+shape: "carre"
+
+# 12 entrees, une par bouton de l'ecran (dans l'ordre : Action 1 a Action 12).
+# type: none / keys / launch / url / media (voir pc-app/README.md)
+buttons:
+  - { label: "Discord", type: "launch", target: "%LOCALAPPDATA%\\Discord\\Update.exe --processStart Discord.exe" }
+  - { label: "Navigateur", type: "launch", target: "chrome.exe" }
+  - { label: "Capture", type: "keys", target: ["ctrl", "shift", "s"] }
+  - { label: "Action 4", type: "none", target: "" }
+  - { label: "Action 5", type: "none", target: "" }
+  - { label: "Action 6", type: "none", target: "" }
+  - { label: "Action 7", type: "none", target: "" }
+  - { label: "Action 8", type: "none", target: "" }
+  - { label: "Action 9", type: "none", target: "" }
+  - { label: "Action 10", type: "none", target: "" }
+  - { label: "Action 11", type: "none", target: "" }
+  - { label: "Action 12", type: "none", target: "" }
+
+# 3 entrees, une par encodeur. Chacune a 3 actions possibles.
+encoders:
+  - clockwise: { type: "media", target: "vol_up" }
+    anticlockwise: { type: "media", target: "vol_down" }
+    press: { type: "media", target: "mute" }
+  - clockwise: { type: "none", target: "" }
+    anticlockwise: { type: "none", target: "" }
+    press: { type: "none", target: "" }
+  - clockwise: { type: "none", target: "" }
+    anticlockwise: { type: "none", target: "" }
+    press: { type: "none", target: "" }
+
+# Optionnel : endpoint HTTP bonus pour declencher une action depuis Home
+# Assistant en plus du fonctionnement direct (voir pc-app/README.md). Laissez
+# vide pour desactiver.
+receiver:
+  token: ""
+  port: 8765
