@@ -19,10 +19,11 @@ esphome:
   friendly_name: ${friendly_name}
 
 esp32:
-  variant: esp32p4
-  # Necessaire si votre carte est un exemplaire d'ingenierie pre-serie
-  # (revision de silicium < v3.0) - c'etait votre cas sur l'ancien repo :
-  engineering_sample: true
+  # Board explicite (plutot que variant + engineering_sample, qui peut
+  # se resoudre au mauvais board rev3 selon l'ordre de fusion avec
+  # esp32: de package.yaml) - necessaire pour un exemplaire d'ingenierie
+  # pre-serie (revision de silicium < v3.0), c'etait votre cas :
+  board: esp32-p4-evboard
 
 logger:
 

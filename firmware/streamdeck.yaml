@@ -14,13 +14,15 @@ esphome:
   friendly_name: ${friendly_name}
 
 esp32:
-  variant: esp32p4
-  # Necessaire : cette carte est un exemplaire d'ingenierie pre-serie
-  # (revision de silicium v1.3, confirmee via "Chip type: ESP32-P4
-  # (revision v1.3)" dans le log esptool). Sans cette option, ESPHome
-  # compile pour le board de production rev3 et le firmware plante au
-  # tout premier instant du demarrage (illegal instruction au niveau ROM).
-  engineering_sample: true
+  # Board explicite (plutot que variant + engineering_sample) car cette
+  # carte est un exemplaire d'ingenierie pre-serie (revision de silicium
+  # v1.3, confirmee via "Chip type: ESP32-P4 (revision v1.3)" dans le log
+  # esptool). "variant: esp32p4" + "engineering_sample: true" ne suffisait
+  # pas ici (le board resolu restait esp32-p4_r3-evboard, la board de
+  # production rev3, probablement a cause de l'ordre de fusion avec
+  # esp32: de package.yaml) et provoquait un illegal instruction des le
+  # tout premier instant du demarrage (ROM). Board explicite = fiable.
+  board: esp32-p4-evboard
 
 logger:
 
