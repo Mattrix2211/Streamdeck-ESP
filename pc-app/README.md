@@ -63,7 +63,10 @@ python -c "from streamdeck_companion.tray import main; main()"
   desactives - activez-les dans leur popup ("Visible sur l'ecran") des
   que vous en avez besoin, sans reflasher.
 - **3 encodeurs** : pour chacun, une action par sens de rotation et une pour
-  l'appui.
+  l'appui. Chaque encodeur affiche desormais une barre 0-100% (type "barre
+  de son") au lieu d'un simple compteur qui s'incremente sans limite -
+  pratique pour un encodeur de volume par exemple. La valeur repart de 0
+  a chaque redemarrage de l'ecran (pas de memorisation du dernier niveau).
 - **"Enregistrer et envoyer a l'ecran"** : sauvegarde tout dans
   `dashboard_config.yaml` et pousse immediatement la config (libelles,
   icones, types, visibilite, forme) vers l'ecran (les actions des
