@@ -4,3 +4,4 @@ keyboard>=0.13.5 ; sys_platform != "darwin"
 Flask>=3.0.0
 pystray>=0.19.5
 Pillow>=10.0.0
+requests>=2.31.0
