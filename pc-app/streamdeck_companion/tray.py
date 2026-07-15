@@ -32,7 +32,7 @@ from PIL import Image, ImageDraw
 
 from . import dashboard
 from . import ha_poller
-from .device_client import DEFAULT_CONFIG_PATH, DeviceClient, load_config
+from .device_client import DEFAULT_CONFIG_PATH, DeviceClient, load_config, save_config
 
 LOG = logging.getLogger("streamdeck_tray")
 
@@ -89,15 +89,30 @@ def run_device_client(client: DeviceClient) -> None:
         time.sleep(10)
 
 
+def ensure_config_exists(config_path: Path) -> None:
+    """Cree un fichier de config vide (connexion non renseignee) au tout
+    premier lancement, plutot que de demander a l'utilisateur de copier un
+    fichier .example a la main - la page 'Reglages' (voir dashboard.py) se
+    charge de demander les infos manquantes des l'ouverture de l'appli."""
+    if config_path.exists():
+        return
+    from . import dashboard as _dashboard  # import tardif : evite un cycle au chargement du module
+
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    save_config(config_path, {
+        "connection": {"host": "", "port": 6053, "api_key": ""},
+        "shape": "carre",
+        "home_assistant": {"url": "", "token": ""},
+        "slots": _dashboard.default_slots(),
+        "encoders": _dashboard.default_encoders(),
+    })
+    LOG.info("Fichier de config cree: %s", config_path)
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     config_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_CONFIG_PATH
-    if not config_path.exists():
-        LOG.error(
-            "Fichier de config introuvable: %s (copiez dashboard_config.yaml.example)",
-            config_path,
-        )
-        sys.exit(1)
+    ensure_config_exists(config_path)
 
     device_client = DeviceClient(config_path)
     client_thread = threading.Thread(target=run_device_client, args=(device_client,), daemon=True)

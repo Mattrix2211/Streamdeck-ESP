@@ -1,10 +1,14 @@
 # Appli compagnon PC
 
-Tout se configure ici, visuellement, sans toucher a un fichier a la main :
-apercu de la grille des 16 emplacements (boutons ou widgets), glisser-
-deposer pour les reordonner, popup pour regler libelle/icone/type/action de
-chacun, encodeurs, forme des boutons, integration Home Assistant. Un clic
-envoie tout vers l'ecran.
+Trois pages, comme gerer les pages d'applications sur un telephone :
+
+- **Accueil** : uniquement la grille des 16 emplacements - glisser-deposer
+  pour reordonner, cliquer une tuile pour la configurer (popup). C'est la
+  seule page dont vous avez besoin au quotidien.
+- **Encodeurs** : l'action des 3 encodeurs (rarement modifiee).
+- **Reglages** (icone &#9881;) : connexion a l'ecran, cle API, Home
+  Assistant, forme des boutons - demandee automatiquement au tout premier
+  lancement, puis on n'y revient quasiment plus.
 
 Tourne en icone dans la barre des taches (pas de fenetre de terminal), se
 connecte directement au Stream Deck (pas besoin de Home Assistant pour que
@@ -19,14 +23,14 @@ cd pc-app
 python3 -m venv .venv
 source .venv/bin/activate   # .venv\Scripts\activate sur Windows
 pip install -r requirements.txt
-cp dashboard_config.yaml.example dashboard_config.yaml
 ```
 
-Editez au moins `connection.host` et `connection.api_key` dans
-`dashboard_config.yaml` (l'IP se trouve dans Home Assistant : l'appareil
-"Stream Deck" > Adresse IP ; la cle API est la meme que dans
-`firmware/secrets.yaml`). Le reste (boutons, encodeurs, forme) se regle
-ensuite depuis la page de configuration.
+Pas de fichier a copier a la main : au tout premier lancement, l'appli
+cree `dashboard_config.yaml` automatiquement (vide) et vous redirige vers
+la page **Reglages** pour renseigner l'IP de l'ecran et la cle API (meme
+valeur que `firmware/secrets.yaml` ; l'IP se trouve dans Home Assistant :
+l'appareil "Stream Deck" > Adresse IP). Une fois valide, vous arrivez sur
+l'accueil et n'avez plus besoin d'y retoucher.
 
 ## Lancer au quotidien (recommande)
 
@@ -51,28 +55,32 @@ ouvrir la page de configuration - `http://127.0.0.1:8080`.
 python -c "from streamdeck_companion.tray import main; main()"
 ```
 
-## La page de configuration
+## Les 3 pages
 
-- **Connexion** : IP/port/cle API de l'ecran.
-- **Home Assistant** (facultatif) : URL + jeton d'acces longue duree.
-- **Forme des boutons** : carre ou rond (s'applique aux 16 emplacements).
-- **Grille des 16 emplacements** : cliquez une tuile pour ouvrir sa popup
-  de reglages (visibilite, libelle, icone, type, action) ; glissez-deposez
-  une tuile sur une autre pour les echanger. 12 emplacements sont visibles
-  par defaut (comme l'ancien systeme a 12 boutons), les 4 derniers sont
-  desactives - activez-les dans leur popup ("Visible sur l'ecran") des
-  que vous en avez besoin, sans reflasher.
-- **3 encodeurs** : pour chacun, une action par sens de rotation et une pour
-  l'appui. Chaque encodeur affiche desormais une barre 0-100% (type "barre
-  de son") au lieu d'un simple compteur qui s'incremente sans limite -
-  pratique pour un encodeur de volume par exemple. La valeur repart de 0
-  a chaque redemarrage de l'ecran (pas de memorisation du dernier niveau).
-- **"Enregistrer et envoyer a l'ecran"** : sauvegarde tout dans
-  `dashboard_config.yaml` et pousse immediatement la config (libelles,
-  icones, types, visibilite, forme) vers l'ecran (les actions des
-  boutons/encodeurs, elles, sont deja actives des l'enregistrement - pas
-  besoin de rien pousser de plus, l'appli les applique directement quand
-  vous appuyez).
+### Accueil (`/`)
+
+La grille des 16 emplacements : cliquez une tuile pour ouvrir sa popup de
+reglages (visibilite, libelle, icone, type, action) ; glissez-deposez une
+tuile sur une autre pour les echanger. 12 emplacements sont visibles par
+defaut (comme l'ancien systeme a 12 boutons), les 4 derniers sont
+desactives - activez-les dans leur popup ("Visible sur l'ecran") des que
+vous en avez besoin, sans reflasher. "Enregistrer et envoyer a l'ecran"
+sauvegarde et pousse immediatement la grille vers l'ecran.
+
+### Encodeurs (`/encodeurs`)
+
+Pour chacun des 3 encodeurs, une action par sens de rotation et une pour
+l'appui. Chaque encodeur affiche sur l'ecran une barre 0-100% (type "barre
+de son") au lieu d'un simple compteur qui s'incremente sans limite -
+pratique pour un encodeur de volume par exemple. La valeur repart de 0
+a chaque redemarrage de l'ecran (pas de memorisation du dernier niveau).
+
+### Reglages (`/reglages`)
+
+Connexion (IP/port/cle API), forme des boutons (carre/rond, s'applique aux
+16 emplacements), Home Assistant (URL + jeton). Des reglages qu'on ne
+touche presque jamais une fois l'ecran configure - a l'ecart de la page
+qu'on utilise au quotidien.
 
 ### Type d'emplacement (`bouton` / `barre` / `texte`)
 

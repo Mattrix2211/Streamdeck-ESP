@@ -3,7 +3,22 @@
   --signal: #00B4D8; --mist: #8FAFC7; --fog: #6B8BA4; --green-tech: #16B84E; --red: #E63946;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--navy); color: #fff; font-family: 'Inter', sans-serif; padding: 32px 16px 100px; }
+body { margin: 0; background: var(--navy); color: #fff; font-family: 'Inter', sans-serif; padding: 0 16px 100px; }
+
+/* --- Navigation entre les 3 pages (Accueil / Encodeurs / Reglages) --- */
+.topnav {
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: 980px; margin: 0 auto; padding: 20px 0 16px;
+}
+.topnav .brand { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; }
+.topnav .nav-links { display: flex; gap: 20px; }
+.topnav .nav-links a {
+  font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--mist);
+  text-decoration: none; padding: 6px 10px; border-radius: 8px;
+}
+.topnav .nav-links a:hover { color: #fff; }
+.topnav .nav-links a.active { color: var(--signal); background: var(--ocean); }
+
 h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 28px; margin: 0 0 4px; }
 h2 { font-family: 'Space Grotesk', sans-serif; font-size: 16px; margin: 0 0 12px; }
 .sub { color: var(--mist); margin: 0 0 24px; font-size: 14px; }

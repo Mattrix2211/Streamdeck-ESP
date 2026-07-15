@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+  <p class="sub">Cliquez un emplacement pour le configurer. Glissez-deposez pour reordonner - comme sur l'ecran d'accueil d'un telephone.</p>
+
+  <form method="post" action="{{ url_for('save') }}" id="config-form">
+    <div id="slot-grid" class="slot-grid"></div>
+    <input type="hidden" name="slots_json" id="slots_json">
+    <button type="submit" id="save-button">Enregistrer et envoyer a l'ecran</button>
+  </form>
+
+  <div id="slot-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <h2 id="modal-title">Emplacement</h2>
+      <label>Visible sur l'ecran</label>
+      <input type="checkbox" id="modal-visible">
+
+      <label>Libelle</label>
+      <input type="text" id="modal-label" maxlength="24">
+
+      <label>Type</label>
+      <select id="modal-type">
+        {% for t in slot_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+      </select>
+
+      <label>Icone</label>
+      <div id="icon-picker" class="icon-picker"></div>
+
+      <div id="modal-action-fields">
+        <label>Action (au clic)</label>
+        <select id="modal-action-type">
+          {% for t in action_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+        </select>
+        <input type="text" id="modal-action-target"
+               placeholder="ctrl+shift+s / notepad.exe / https://... / vol_up / light.toggle:light.bureau">
+      </div>
+
+      <div id="modal-source-fields">
+        <label>Source Home Assistant (entity_id)</label>
+        <input type="text" id="modal-ha-entity" placeholder="sensor.volume_pc / sensor.temperature_salon">
+        <p class="hint">Rafraichie toutes les ~15s. "barre" attend une valeur numerique 0-100.</p>
+      </div>
+
+      <div class="modal-buttons">
+        <button type="button" id="modal-cancel" class="secondary">Annuler</button>
+        <button type="button" id="modal-apply">Appliquer</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const INITIAL_SLOTS = {{ slots | tojson }};
+  const ICON_CHOICES = {{ icon_choices | tojson }};
+</script>
+<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+{% endblock %}

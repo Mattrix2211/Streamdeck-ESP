@@ -39,20 +39,30 @@
 
 ## L'appli PC comme point de configuration unique
 
-Tout se regle dans l'appli PC (page de configuration visuelle,
-`http://127.0.0.1:8080`) : apercu glisser-deposer des 16 emplacements
-(bouton/barre/texte, icone, action), 3 encodeurs, forme carre/rond,
-connexion Home Assistant. Un seul clic ("Enregistrer et envoyer a
-l'ecran") sauvegarde et pousse les changements.
+Tout se regle dans l'appli PC (`http://127.0.0.1:8080`), en 3 pages pour
+eviter la surcharge (esprit "gerer ses pages d'applications sur un
+telephone") :
+- **Accueil** (`/`) : apercu glisser-deposer des 16 emplacements
+  (bouton/barre/texte, icone, action) - la seule page du quotidien.
+- **Encodeurs** (`/encodeurs`) : action des 3 encodeurs.
+- **Reglages** (`/reglages`) : connexion, forme carre/rond, Home
+  Assistant - demandee automatiquement au tout premier lancement
+  (`dashboard_config.yaml` est cree vide par `tray.py`, plus besoin de
+  copier un fichier `.example` a la main), puis rarement revisitee.
+
+Un seul clic ("Enregistrer et envoyer a l'ecran") sauvegarde et pousse les
+changements de la page courante (chaque page ne touche que sa portion de
+`dashboard_config.yaml`, jamais les autres).
 
 - `device_client.py` maintient une connexion permanente et directe a
   l'ecran (IP configuree une fois, pas de mDNS) : elle ecoute les
   emplacements/encodeurs ET sert a pousser leur config (libelle, icone,
   type, visibilite, valeur des widgets) - meme connexion, pas de
   reconnexion a chaque changement.
-- `dashboard.py` (+ `templates/dashboard.html`, `static/dashboard.js`)
-  est la page web de configuration (thread Flask separe), qui communique
-  avec `device_client.py` via `asyncio.run_coroutine_threadsafe` pour
+- `dashboard.py` (+ `templates/base.html`+`home.html`+`settings.html`+
+  `encoders.html`, `static/dashboard.js`) sont les 3 pages web (thread
+  Flask separe), qui communiquent avec `device_client.py` via
+  `asyncio.run_coroutine_threadsafe` pour
   rester thread-safe.
 - `ha_client.py`/`ha_poller.py` sondent l'API REST de Home Assistant
   (facultatif) toutes les ~15s pour rafraichir les emplacements type
