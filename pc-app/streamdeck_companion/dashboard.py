@@ -132,6 +132,7 @@ def index():
         "home.html",
         active_page="home",
         slots=slots,
+        shape=config.get("shape", "carre"),
         action_types=ACTION_TYPES,
         slot_types=SLOT_TYPES,
         icon_choices=icons.icon_choices(),

@@ -1,9 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
-  <p class="sub">Cliquez un emplacement pour le configurer. Glissez-deposez pour reordonner - comme sur l'ecran d'accueil d'un telephone.</p>
+  <p class="sub">Aperçu fidele de l'ecran (memes proportions et disposition). Cliquez un emplacement pour le configurer, glissez-deposez pour reordonner.</p>
 
   <form method="post" action="{{ url_for('save') }}" id="config-form">
-    <div id="slot-grid" class="slot-grid"></div>
+    <div class="screen-mock">
+      <div class="screen-header">
+        <span class="screen-title">STREAM DECK</span>
+        <span class="screen-dot"></span>
+      </div>
+      <div class="screen-grid-wrap">
+        <div id="slot-grid" class="screen-grid"></div>
+      </div>
+      <div id="encoder-mock" class="screen-encoders"></div>
+      <div class="screen-status">PC hors ligne</div>
+    </div>
+
+    <div class="hidden-tray-section">
+      <h2>Emplacements masques</h2>
+      <p class="hint">N'apparaissent pas sur l'ecran. Cliquez pour configurer/activer, ou glissez-les sur un emplacement de l'ecran ci-dessus pour les echanger.</p>
+      <div id="hidden-tray" class="hidden-tray"></div>
+    </div>
+
     <input type="hidden" name="slots_json" id="slots_json">
     <button type="submit" id="save-button">Enregistrer et envoyer a l'ecran</button>
   </form>
@@ -51,6 +68,7 @@
 <script>
   const INITIAL_SLOTS = {{ slots | tojson }};
   const ICON_CHOICES = {{ icon_choices | tojson }};
+  const SHAPE = {{ shape | tojson }};
 </script>
 <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
 {% endblock %}

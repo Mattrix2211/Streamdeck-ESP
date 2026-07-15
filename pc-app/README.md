@@ -59,13 +59,29 @@ python -c "from streamdeck_companion.tray import main; main()"
 
 ### Accueil (`/`)
 
-La grille des 16 emplacements : cliquez une tuile pour ouvrir sa popup de
-reglages (visibilite, libelle, icone, type, action) ; glissez-deposez une
-tuile sur une autre pour les echanger. 12 emplacements sont visibles par
-defaut (comme l'ancien systeme a 12 boutons), les 4 derniers sont
-desactives - activez-les dans leur popup ("Visible sur l'ecran") des que
-vous en avez besoin, sans reflasher. "Enregistrer et envoyer a l'ecran"
-sauvegarde et pousse immediatement la grille vers l'ecran.
+Une maquette fidele de l'ecran (memes proportions 1024x600, meme
+disposition header/grille/encodeurs/statut, tuiles carrees ou rondes selon
+vos reglages) : ce que vous voyez dans le navigateur correspond vraiment a
+ce qui s'affichera sur l'ecran physique, avant meme d'envoyer.
+
+- Les emplacements **visibles** apparaissent dans la maquette d'ecran, a la
+  meme place qu'ils occuperont reellement.
+- Les emplacements **masques** apparaissent a part, sous la maquette, dans
+  une section "Emplacements masques" (comme la bibliotheque d'apps d'un
+  iPhone) - ils n'apparaissent jamais sur l'ecran reel tant qu'ils restent
+  la.
+- Cliquez une tuile (dans la maquette ou dans les masques) pour ouvrir sa
+  popup de reglages (visibilite, libelle, icone, type, action).
+- Glissez-deposez une tuile sur une autre - dans la maquette, dans les
+  masques, ou de l'un vers l'autre - pour les echanger (utile pour faire
+  passer un emplacement masque a l'ecran, ou reordonner ceux deja
+  visibles).
+
+12 emplacements sont visibles par defaut (comme l'ancien systeme a 12
+boutons), les 4 derniers sont masques - faites-les glisser sur l'ecran (ou
+cochez "Visible sur l'ecran" dans leur popup) des que vous en avez besoin,
+sans reflasher. "Enregistrer et envoyer a l'ecran" sauvegarde et pousse
+immediatement la grille vers l'ecran.
 
 ### Encodeurs (`/encodeurs`)
 
@@ -166,7 +182,9 @@ necessaire pour que les emplacements/encodeurs du Stream Deck fonctionnent
 - Les widgets Home Assistant (`barre`/`texte`) sont sondes par polling
   REST toutes les ~15s (`ha_poller.py`), pas en temps reel instantane.
 - La page de configuration a ete testee de bout en bout avec un navigateur
-  headless (rendu de la grille, popup, glisser-deposer, sauvegarde) mais
-  pas visuellement sur l'ecran physique - verifiez apres un push que les
-  icones/couleurs/tailles vous conviennent et signalez tout ce qui parait
-  cassé (ex une icone qui s'affiche comme une case vide).
+  headless (rendu de la maquette d'ecran et des masques, popup,
+  glisser-deposer dans les deux sens et entre les deux, sauvegarde,
+  persistance apres rechargement) mais pas visuellement sur l'ecran
+  physique - verifiez apres un push que les icones/couleurs/tailles vous
+  conviennent et signalez tout ce qui parait cassé (ex une icone qui
+  s'affiche comme une case vide).

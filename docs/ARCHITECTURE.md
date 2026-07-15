@@ -42,8 +42,11 @@
 Tout se regle dans l'appli PC (`http://127.0.0.1:8080`), en 3 pages pour
 eviter la surcharge (esprit "gerer ses pages d'applications sur un
 telephone") :
-- **Accueil** (`/`) : apercu glisser-deposer des 16 emplacements
-  (bouton/barre/texte, icone, action) - la seule page du quotidien.
+- **Accueil** (`/`) : maquette fidele de l'ecran (memes proportions et
+  disposition que le firmware) avec les 16 emplacements
+  (bouton/barre/texte, icone, action) - les emplacements masques sont a
+  part sous la maquette, glisser-deposer pour reordonner/echanger dans les
+  deux sections - la seule page du quotidien.
 - **Encodeurs** (`/encodeurs`) : action des 3 encodeurs.
 - **Reglages** (`/reglages`) : connexion, forme carre/rond, Home
   Assistant - demandee automatiquement au tout premier lancement
