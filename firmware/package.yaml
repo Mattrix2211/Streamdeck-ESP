@@ -1,29 +1,13 @@
-# Package partage du Stream Deck : tout le hardware + l'UI, RIEN de secret
-# et RIEN de specifique a un appareil (pas de nom, wifi, cle API...).
+# Package partage du Stream Deck : hardware + UI, rien de secret/specifique
+# a un appareil. Importe via `packages:` (voir ha-device.yaml.example) ou
+# inclus localement (voir streamdeck.yaml). Carte : Guition JC1060P470C_I_W
+# (ESP32-P4 + ESP32-C6, ecran IPS 7" 1024x600, tactile GT911, Wi-Fi/BT via
+# le C6 en co-processeur SDIO). HA et l'appli PC (pc-app/) se connectent
+# tous deux a la MEME API native ESPHome chiffree (aioesphomeapi cote PC).
 #
-# Ce fichier est concu pour etre importe via `packages:` (voir
-# firmware/ha-device.yaml.example) depuis Home Assistant / ESPHome Builder,
-# ou inclus localement (voir firmware/streamdeck.yaml) si vous flashez
-# directement depuis un PC avec la CLI ESPHome.
-#
-# Carte  : Guition JC1060P470C_I_W (ESP32-P4 + ESP32-C6, ecran IPS 7" 1024x600,
-#          tactile capacitif GT911, Wi-Fi/BT via le C6 en co-processeur SDIO)
-# Design : palette + typographies du design system perso (Space Grotesk /
-#          Inter / JetBrains Mono, dark-first, accent Signal #00B4D8)
-#
-# Deux canaux de controle utilisent la MEME API native ESPHome (chiffree) :
-#   - Home Assistant s'y connecte nativement (entites auto-decouvertes)
-#   - L'appli compagnon PC (pc-app/) s'y connecte aussi, via aioesphomeapi,
-#     exactement comme le ferait Home Assistant.
-#
-# Reperes materiels (issus des photos produit + d'une config communautaire
-# verifiee pour cette carte) : reset LCD, bus SDIO du C6, bus I2C tactile et
-# retroeclairage utilisent des GPIO internes non sortis sur le header. Les
-# encodeurs ci-dessous n'utilisent QUE des GPIO confirmes disponibles sur le
-# header d'extension (colonne gauche GPIO1-5/20/32/33, colonne droite
-# GPIO45-47). GPIO5 du header est volontairement evite : il correspond au
-# reset interne de la dalle. Verifiez ce mapping contre le schema exact de
-# votre revision de carte avant de souder quoi que ce soit.
+# GPIO encodeurs : uniquement ceux confirmes disponibles sur le header
+# d'extension (colonne gauche GPIO1-5/20/32/33, droite GPIO45-47). GPIO5 est
+# le reset interne de la dalle, evitez-le. Verifiez contre votre revision.
 
 esp32:
   flash_size: 16MB
@@ -253,6 +237,7 @@ event:
         "action_1", "action_2", "action_3", "action_4",
         "action_5", "action_6", "action_7", "action_8",
         "action_9", "action_10", "action_11", "action_12",
+        "action_13", "action_14", "action_15", "action_16",
       ]
 
 # Texte pousse par l'appli PC (titre en cours, volume, notification...) et
@@ -270,123 +255,25 @@ text:
           id: lbl_pc_status
           text: !lambda "return x;"
 
-  # Libelles des boutons d'action - modifiables a chaud (sans reflasher)
-  # depuis Home Assistant (service text.set_value) ou depuis la page
-  # "Personnaliser l'ecran" de l'appli PC (pc-app/streamdeck_companion).
-  - platform: template
-    id: action_1_label
-    name: "Action 1 - libelle"
-    mode: text
-    optimistic: true
-    initial_value: "Action 1"
-    max_length: 24
-    on_value:
-      - lvgl.button.update: { id: btn_action1, text: !lambda "return x;" }
-  - platform: template
-    id: action_2_label
-    name: "Action 2 - libelle"
-    mode: text
-    optimistic: true
-    initial_value: "Action 2"
-    max_length: 24
-    on_value:
-      - lvgl.button.update: { id: btn_action2, text: !lambda "return x;" }
-  - platform: template
-    id: action_3_label
-    name: "Action 3 - libelle"
-    mode: text
-    optimistic: true
-    initial_value: "Action 3"
-    max_length: 24
-    on_value:
-      - lvgl.button.update: { id: btn_action3, text: !lambda "return x;" }
-  - platform: template
-    id: action_4_label
-    name: "Action 4 - libelle"
-    mode: text
-    optimistic: true
-    initial_value: "Action 4"
-    max_length: 24
-    on_value:
-      - lvgl.button.update: { id: btn_action4, text: !lambda "return x;" }
-  - platform: template
-    id: action_5_label
-    name: "Action 5 - libelle"
-    mode: text
-    optimistic: true
-    initial_value: "Action 5"
-    max_length: 24
-    on_value:
-      - lvgl.button.update: { id: btn_action5, text: !lambda "return x;" }
-  - platform: template
-    id: action_6_label
-    name: "Action 6 - libelle"
-    mode: text
-    optimistic: true
-    initial_value: "Action 6"
-    max_length: 24
-    on_value:
-      - lvgl.button.update: { id: btn_action6, text: !lambda "return x;" }
-  - platform: template
-    id: action_7_label
-    name: "Action 7 - libelle"
-    mode: text
-    optimistic: true
-    initial_value: "Action 7"
-    max_length: 24
-    on_value:
-      - lvgl.button.update: { id: btn_action7, text: !lambda "return x;" }
-  - platform: template
-    id: action_8_label
-    name: "Action 8 - libelle"
-    mode: text
-    optimistic: true
-    initial_value: "Action 8"
-    max_length: 24
-    on_value:
-      - lvgl.button.update: { id: btn_action8, text: !lambda "return x;" }
-  - platform: template
-    id: action_9_label
-    name: "Action 9 - libelle"
-    mode: text
-    optimistic: true
-    initial_value: "Action 9"
-    max_length: 24
-    on_value:
-      - lvgl.button.update: { id: btn_action9, text: !lambda "return x;" }
-  - platform: template
-    id: action_10_label
-    name: "Action 10 - libelle"
-    mode: text
-    optimistic: true
-    initial_value: "Action 10"
-    max_length: 24
-    on_value:
-      - lvgl.button.update: { id: btn_action10, text: !lambda "return x;" }
-  - platform: template
-    id: action_11_label
-    name: "Action 11 - libelle"
-    mode: text
-    optimistic: true
-    initial_value: "Action 11"
-    max_length: 24
-    on_value:
-      - lvgl.button.update: { id: btn_action11, text: !lambda "return x;" }
-  - platform: template
-    id: action_12_label
-    name: "Action 12 - libelle"
-    mode: text
-    optimistic: true
-    initial_value: "Action 12"
-    max_length: 24
-    on_value:
-      - lvgl.button.update: { id: btn_action12, text: !lambda "return x;" }
+
+# ---------------------------------------------------------------------------
+# 16 emplacements configurables (boutons/widgets) - entites generees dans
+# slots_1_5.yaml / slots_6_11.yaml / slots_12_16.yaml (decoupees pour rester
+# sous 500 lignes chacune). Chaque emplacement expose : libelle, valeur,
+# icone, type (bouton/barre/texte) et visibilite - tout pilotable a chaud
+# depuis l'appli PC (pc-app/streamdeck_companion) sans reflasher.
+# ---------------------------------------------------------------------------
+packages:
+  slots_1_5: !include slots_1_5.yaml
+  slots_6_11: !include slots_6_11.yaml
+  slots_12_16: !include slots_12_16.yaml
 
 # ---------------------------------------------------------------------------
 # Forme des boutons - modifiable a chaud (carre ou rond) depuis Home
-# Assistant (service select.select_option) ou l'appli PC. Les 12 boutons
-# sont des carres exacts (110x110) : radius 12 = coins arrondis (carre),
-# radius 999 = LVGL plafonne au maximum possible -> cercle parfait.
+# Assistant (service select.select_option) ou l'appli PC. radius 12 = coins
+# arrondis (carre), radius 999 = LVGL plafonne au maximum possible -> cercle.
+# S'applique aux 16 emplacements (inoffensif sur les emplacements de type
+# widget, qui n'utilisent que le style de coin du conteneur).
 # ---------------------------------------------------------------------------
 select:
   - platform: template
@@ -398,18 +285,28 @@ select:
     on_value:
       - lambda: |-
           int r = (x == "rond") ? 999 : 12;
-          lv_obj_set_style_radius(id(btn_action1), r, 0);
-          lv_obj_set_style_radius(id(btn_action2), r, 0);
-          lv_obj_set_style_radius(id(btn_action3), r, 0);
-          lv_obj_set_style_radius(id(btn_action4), r, 0);
-          lv_obj_set_style_radius(id(btn_action5), r, 0);
-          lv_obj_set_style_radius(id(btn_action6), r, 0);
-          lv_obj_set_style_radius(id(btn_action7), r, 0);
-          lv_obj_set_style_radius(id(btn_action8), r, 0);
-          lv_obj_set_style_radius(id(btn_action9), r, 0);
-          lv_obj_set_style_radius(id(btn_action10), r, 0);
-          lv_obj_set_style_radius(id(btn_action11), r, 0);
-          lv_obj_set_style_radius(id(btn_action12), r, 0);
+          for (int i = 1; i <= 16; i++) {
+            lv_obj_t *btn = nullptr;
+            switch (i) {
+              case 1: btn = id(slot1_btn); break;
+              case 2: btn = id(slot2_btn); break;
+              case 3: btn = id(slot3_btn); break;
+              case 4: btn = id(slot4_btn); break;
+              case 5: btn = id(slot5_btn); break;
+              case 6: btn = id(slot6_btn); break;
+              case 7: btn = id(slot7_btn); break;
+              case 8: btn = id(slot8_btn); break;
+              case 9: btn = id(slot9_btn); break;
+              case 10: btn = id(slot10_btn); break;
+              case 11: btn = id(slot11_btn); break;
+              case 12: btn = id(slot12_btn); break;
+              case 13: btn = id(slot13_btn); break;
+              case 14: btn = id(slot14_btn); break;
+              case 15: btn = id(slot15_btn); break;
+              case 16: btn = id(slot16_btn); break;
+            }
+            lv_obj_set_style_radius(btn, r, 0);
+          }
 
 # ---------------------------------------------------------------------------
 # Polices Google Fonts du design system (telechargees et converties au build)
@@ -479,13 +376,14 @@ lvgl:
                   bg_color: 0xE63946
                   border_width: 0
 
-        # Grille d'actions : 12 boutons carres (4 colonnes x 3 lignes).
-        # Forme (carre/rond) pilotee par l'entite select "button_shape".
+        # Grille de 16 emplacements configurables (boutons/widgets). Forme
+        # (carre/rond) pilotee par "button_shape", contenu/visibilite par
+        # les entites generees dans slots_*.yaml (voir docs/ARCHITECTURE.md).
         - obj:
             id: action_grid
-            height: 380
-            width: 520
-            y: 68
+            height: 420
+            width: 700
+            y: 64
             align: top_mid
             bg_opa: transp
             border_width: 0
@@ -495,159 +393,16 @@ lvgl:
               flex_flow: row_wrap
               flex_align_cross: start
               flex_align_main: start
-              pad_row: 14
-              pad_column: 14
-            widgets:
-              - button:
-                  id: btn_action1
-                  width: 110
-                  height: 110
-                  bg_color: 0x0F2942
-                  border_color: 0x1A3A52
-                  border_width: 1
-                  radius: 12
-                  text: "Action 1"
-                  text_font: font_body
-                  on_click:
-                    - event.trigger: { id: action_button_event, event_type: "action_1" }
-              - button:
-                  id: btn_action2
-                  width: 110
-                  height: 110
-                  bg_color: 0x0F2942
-                  border_color: 0x1A3A52
-                  border_width: 1
-                  radius: 12
-                  text: "Action 2"
-                  text_font: font_body
-                  on_click:
-                    - event.trigger: { id: action_button_event, event_type: "action_2" }
-              - button:
-                  id: btn_action3
-                  width: 110
-                  height: 110
-                  bg_color: 0x0F2942
-                  border_color: 0x1A3A52
-                  border_width: 1
-                  radius: 12
-                  text: "Action 3"
-                  text_font: font_body
-                  on_click:
-                    - event.trigger: { id: action_button_event, event_type: "action_3" }
-              - button:
-                  id: btn_action4
-                  width: 110
-                  height: 110
-                  bg_color: 0x0F2942
-                  border_color: 0x1A3A52
-                  border_width: 1
-                  radius: 12
-                  text: "Action 4"
-                  text_font: font_body
-                  on_click:
-                    - event.trigger: { id: action_button_event, event_type: "action_4" }
-              - button:
-                  id: btn_action5
-                  width: 110
-                  height: 110
-                  bg_color: 0x0F2942
-                  border_color: 0x1A3A52
-                  border_width: 1
-                  radius: 12
-                  text: "Action 5"
-                  text_font: font_body
-                  on_click:
-                    - event.trigger: { id: action_button_event, event_type: "action_5" }
-              - button:
-                  id: btn_action6
-                  width: 110
-                  height: 110
-                  bg_color: 0x0F2942
-                  border_color: 0x1A3A52
-                  border_width: 1
-                  radius: 12
-                  text: "Action 6"
-                  text_font: font_body
-                  on_click:
-                    - event.trigger: { id: action_button_event, event_type: "action_6" }
-              - button:
-                  id: btn_action7
-                  width: 110
-                  height: 110
-                  bg_color: 0x0F2942
-                  border_color: 0x1A3A52
-                  border_width: 1
-                  radius: 12
-                  text: "Action 7"
-                  text_font: font_body
-                  on_click:
-                    - event.trigger: { id: action_button_event, event_type: "action_7" }
-              - button:
-                  id: btn_action8
-                  width: 110
-                  height: 110
-                  bg_color: 0x0F2942
-                  border_color: 0x1A3A52
-                  border_width: 1
-                  radius: 12
-                  text: "Action 8"
-                  text_font: font_body
-                  on_click:
-                    - event.trigger: { id: action_button_event, event_type: "action_8" }
-              - button:
-                  id: btn_action9
-                  width: 110
-                  height: 110
-                  bg_color: 0x0F2942
-                  border_color: 0x1A3A52
-                  border_width: 1
-                  radius: 12
-                  text: "Action 9"
-                  text_font: font_body
-                  on_click:
-                    - event.trigger: { id: action_button_event, event_type: "action_9" }
-              - button:
-                  id: btn_action10
-                  width: 110
-                  height: 110
-                  bg_color: 0x0F2942
-                  border_color: 0x1A3A52
-                  border_width: 1
-                  radius: 12
-                  text: "Action 10"
-                  text_font: font_body
-                  on_click:
-                    - event.trigger: { id: action_button_event, event_type: "action_10" }
-              - button:
-                  id: btn_action11
-                  width: 110
-                  height: 110
-                  bg_color: 0x0F2942
-                  border_color: 0x1A3A52
-                  border_width: 1
-                  radius: 12
-                  text: "Action 11"
-                  text_font: font_body
-                  on_click:
-                    - event.trigger: { id: action_button_event, event_type: "action_11" }
-              - button:
-                  id: btn_action12
-                  width: 110
-                  height: 110
-                  bg_color: 0x0F2942
-                  border_color: 0x1A3A52
-                  border_width: 1
-                  radius: 12
-                  text: "Action 12"
-                  text_font: font_body
-                  on_click:
-                    - event.trigger: { id: action_button_event, event_type: "action_12" }
+              pad_row: 12
+              pad_column: 12
+            widgets: !include slot_widgets.yaml
+
 
         # Bas d'ecran : 3 cartes encodeurs + statut PC
         - obj:
-            height: 90
+            height: 80
             width: 100%
-            y: 462
+            y: 488
             bg_opa: transp
             border_width: 0
             pad_all: 4
@@ -660,7 +415,7 @@ lvgl:
               - obj:
                   id: encoder1_card
                   width: 300
-                  height: 75
+                  height: 66
                   bg_color: 0x0F2942
                   border_color: 0x1A3A52
                   border_width: 1
@@ -681,7 +436,7 @@ lvgl:
               - obj:
                   id: encoder2_card
                   width: 300
-                  height: 75
+                  height: 66
                   bg_color: 0x0F2942
                   border_color: 0x1A3A52
                   border_width: 1
@@ -702,7 +457,7 @@ lvgl:
               - obj:
                   id: encoder3_card
                   width: 300
-                  height: 75
+                  height: 66
                   bg_color: 0x0F2942
                   border_color: 0x1A3A52
                   border_width: 1

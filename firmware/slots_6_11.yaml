@@ -1,0 +1,397 @@
+# Entites des emplacements 6 a 11 (voir docs/ARCHITECTURE.md pour le
+# systeme de 16 emplacements configurables). Genere, ne pas editer a la main.
+text:
+  - platform: template
+    id: slot6_label
+    name: "Slot 6 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Slot 6"
+    max_length: 24
+    on_value:
+      - lvgl.label.update: { id: slot6_title, text: !lambda "return x;" }
+  - platform: template
+    id: slot6_value
+    name: "Slot 6 - valeur"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 24
+    on_value:
+      - lvgl.label.update: { id: slot6_value_lbl, text: !lambda "return x;" }
+      - lambda: |-
+          char *endptr;
+          long v = strtol(x.c_str(), &endptr, 10);
+          if (endptr != x.c_str()) {
+            if (v < 0) v = 0;
+            if (v > 100) v = 100;
+            lv_bar_set_value(id(slot6_bar), (int) v, LV_ANIM_OFF);
+          }
+  - platform: template
+    id: slot6_icon
+    name: "Slot 6 - icone"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 8
+    on_value:
+      - lvgl.label.update: { id: slot6_icon_lbl, text: !lambda "return x;" }
+  - platform: template
+    id: slot7_label
+    name: "Slot 7 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Slot 7"
+    max_length: 24
+    on_value:
+      - lvgl.label.update: { id: slot7_title, text: !lambda "return x;" }
+  - platform: template
+    id: slot7_value
+    name: "Slot 7 - valeur"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 24
+    on_value:
+      - lvgl.label.update: { id: slot7_value_lbl, text: !lambda "return x;" }
+      - lambda: |-
+          char *endptr;
+          long v = strtol(x.c_str(), &endptr, 10);
+          if (endptr != x.c_str()) {
+            if (v < 0) v = 0;
+            if (v > 100) v = 100;
+            lv_bar_set_value(id(slot7_bar), (int) v, LV_ANIM_OFF);
+          }
+  - platform: template
+    id: slot7_icon
+    name: "Slot 7 - icone"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 8
+    on_value:
+      - lvgl.label.update: { id: slot7_icon_lbl, text: !lambda "return x;" }
+  - platform: template
+    id: slot8_label
+    name: "Slot 8 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Slot 8"
+    max_length: 24
+    on_value:
+      - lvgl.label.update: { id: slot8_title, text: !lambda "return x;" }
+  - platform: template
+    id: slot8_value
+    name: "Slot 8 - valeur"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 24
+    on_value:
+      - lvgl.label.update: { id: slot8_value_lbl, text: !lambda "return x;" }
+      - lambda: |-
+          char *endptr;
+          long v = strtol(x.c_str(), &endptr, 10);
+          if (endptr != x.c_str()) {
+            if (v < 0) v = 0;
+            if (v > 100) v = 100;
+            lv_bar_set_value(id(slot8_bar), (int) v, LV_ANIM_OFF);
+          }
+  - platform: template
+    id: slot8_icon
+    name: "Slot 8 - icone"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 8
+    on_value:
+      - lvgl.label.update: { id: slot8_icon_lbl, text: !lambda "return x;" }
+  - platform: template
+    id: slot9_label
+    name: "Slot 9 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Slot 9"
+    max_length: 24
+    on_value:
+      - lvgl.label.update: { id: slot9_title, text: !lambda "return x;" }
+  - platform: template
+    id: slot9_value
+    name: "Slot 9 - valeur"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 24
+    on_value:
+      - lvgl.label.update: { id: slot9_value_lbl, text: !lambda "return x;" }
+      - lambda: |-
+          char *endptr;
+          long v = strtol(x.c_str(), &endptr, 10);
+          if (endptr != x.c_str()) {
+            if (v < 0) v = 0;
+            if (v > 100) v = 100;
+            lv_bar_set_value(id(slot9_bar), (int) v, LV_ANIM_OFF);
+          }
+  - platform: template
+    id: slot9_icon
+    name: "Slot 9 - icone"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 8
+    on_value:
+      - lvgl.label.update: { id: slot9_icon_lbl, text: !lambda "return x;" }
+  - platform: template
+    id: slot10_label
+    name: "Slot 10 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Slot 10"
+    max_length: 24
+    on_value:
+      - lvgl.label.update: { id: slot10_title, text: !lambda "return x;" }
+  - platform: template
+    id: slot10_value
+    name: "Slot 10 - valeur"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 24
+    on_value:
+      - lvgl.label.update: { id: slot10_value_lbl, text: !lambda "return x;" }
+      - lambda: |-
+          char *endptr;
+          long v = strtol(x.c_str(), &endptr, 10);
+          if (endptr != x.c_str()) {
+            if (v < 0) v = 0;
+            if (v > 100) v = 100;
+            lv_bar_set_value(id(slot10_bar), (int) v, LV_ANIM_OFF);
+          }
+  - platform: template
+    id: slot10_icon
+    name: "Slot 10 - icone"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 8
+    on_value:
+      - lvgl.label.update: { id: slot10_icon_lbl, text: !lambda "return x;" }
+  - platform: template
+    id: slot11_label
+    name: "Slot 11 - libelle"
+    mode: text
+    optimistic: true
+    initial_value: "Slot 11"
+    max_length: 24
+    on_value:
+      - lvgl.label.update: { id: slot11_title, text: !lambda "return x;" }
+  - platform: template
+    id: slot11_value
+    name: "Slot 11 - valeur"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 24
+    on_value:
+      - lvgl.label.update: { id: slot11_value_lbl, text: !lambda "return x;" }
+      - lambda: |-
+          char *endptr;
+          long v = strtol(x.c_str(), &endptr, 10);
+          if (endptr != x.c_str()) {
+            if (v < 0) v = 0;
+            if (v > 100) v = 100;
+            lv_bar_set_value(id(slot11_bar), (int) v, LV_ANIM_OFF);
+          }
+  - platform: template
+    id: slot11_icon
+    name: "Slot 11 - icone"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 8
+    on_value:
+      - lvgl.label.update: { id: slot11_icon_lbl, text: !lambda "return x;" }
+
+select:
+  - platform: template
+    id: slot6_type
+    name: "Slot 6 - type"
+    optimistic: true
+    options: ["bouton", "barre", "texte"]
+    initial_option: "bouton"
+    on_value:
+      - lambda: |-
+          if (x == "barre") {
+            lv_obj_clear_flag(id(slot6_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot6_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          } else if (x == "texte") {
+            lv_obj_add_flag(id(slot6_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot6_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(slot6_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot6_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          }
+  - platform: template
+    id: slot7_type
+    name: "Slot 7 - type"
+    optimistic: true
+    options: ["bouton", "barre", "texte"]
+    initial_option: "bouton"
+    on_value:
+      - lambda: |-
+          if (x == "barre") {
+            lv_obj_clear_flag(id(slot7_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot7_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          } else if (x == "texte") {
+            lv_obj_add_flag(id(slot7_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot7_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(slot7_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot7_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          }
+  - platform: template
+    id: slot8_type
+    name: "Slot 8 - type"
+    optimistic: true
+    options: ["bouton", "barre", "texte"]
+    initial_option: "bouton"
+    on_value:
+      - lambda: |-
+          if (x == "barre") {
+            lv_obj_clear_flag(id(slot8_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot8_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          } else if (x == "texte") {
+            lv_obj_add_flag(id(slot8_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot8_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(slot8_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot8_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          }
+  - platform: template
+    id: slot9_type
+    name: "Slot 9 - type"
+    optimistic: true
+    options: ["bouton", "barre", "texte"]
+    initial_option: "bouton"
+    on_value:
+      - lambda: |-
+          if (x == "barre") {
+            lv_obj_clear_flag(id(slot9_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot9_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          } else if (x == "texte") {
+            lv_obj_add_flag(id(slot9_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot9_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(slot9_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot9_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          }
+  - platform: template
+    id: slot10_type
+    name: "Slot 10 - type"
+    optimistic: true
+    options: ["bouton", "barre", "texte"]
+    initial_option: "bouton"
+    on_value:
+      - lambda: |-
+          if (x == "barre") {
+            lv_obj_clear_flag(id(slot10_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot10_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          } else if (x == "texte") {
+            lv_obj_add_flag(id(slot10_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot10_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(slot10_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot10_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          }
+  - platform: template
+    id: slot11_type
+    name: "Slot 11 - type"
+    optimistic: true
+    options: ["bouton", "barre", "texte"]
+    initial_option: "bouton"
+    on_value:
+      - lambda: |-
+          if (x == "barre") {
+            lv_obj_clear_flag(id(slot11_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot11_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          } else if (x == "texte") {
+            lv_obj_add_flag(id(slot11_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot11_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(slot11_bar), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot11_value_lbl), LV_OBJ_FLAG_HIDDEN);
+          }
+
+switch:
+  - platform: template
+    id: slot6_visible
+    name: "Slot 6 - visible"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_state:
+      - lambda: |-
+          if (x) {
+            lv_obj_clear_flag(id(slot6_btn), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(slot6_btn), LV_OBJ_FLAG_HIDDEN);
+          }
+  - platform: template
+    id: slot7_visible
+    name: "Slot 7 - visible"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_state:
+      - lambda: |-
+          if (x) {
+            lv_obj_clear_flag(id(slot7_btn), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(slot7_btn), LV_OBJ_FLAG_HIDDEN);
+          }
+  - platform: template
+    id: slot8_visible
+    name: "Slot 8 - visible"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_state:
+      - lambda: |-
+          if (x) {
+            lv_obj_clear_flag(id(slot8_btn), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(slot8_btn), LV_OBJ_FLAG_HIDDEN);
+          }
+  - platform: template
+    id: slot9_visible
+    name: "Slot 9 - visible"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_state:
+      - lambda: |-
+          if (x) {
+            lv_obj_clear_flag(id(slot9_btn), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(slot9_btn), LV_OBJ_FLAG_HIDDEN);
+          }
+  - platform: template
+    id: slot10_visible
+    name: "Slot 10 - visible"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_state:
+      - lambda: |-
+          if (x) {
+            lv_obj_clear_flag(id(slot10_btn), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(slot10_btn), LV_OBJ_FLAG_HIDDEN);
+          }
+  - platform: template
+    id: slot11_visible
+    name: "Slot 11 - visible"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_state:
+      - lambda: |-
+          if (x) {
+            lv_obj_clear_flag(id(slot11_btn), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(slot11_btn), LV_OBJ_FLAG_HIDDEN);
+          }
