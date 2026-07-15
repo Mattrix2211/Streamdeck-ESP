@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Stream Deck - Configuration</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body>
+<div class="page">
+  <h1>STREAM DECK</h1>
+  <p class="sub">Connexion, apercu visuel des 16 emplacements (glisser-deposer pour echanger), encodeurs, Home Assistant. Un seul clic pour envoyer a l'ecran.</p>
+  {% if error %}<div class="banner-err">Echec : {{ error }}</div>{% endif %}
+  {% if saved %}<div class="banner-ok">Enregistre et envoye a l'ecran.</div>{% endif %}
+
+  <form method="post" action="{{ url_for('save') }}" id="config-form">
+    <div class="card">
+      <h2>Connexion a l'ecran</h2>
+      <div class="grid2">
+        <div>
+          <label>Adresse (IP du Stream Deck)</label>
+          <input type="text" name="conn_host" value="{{ connection.host or '' }}">
+        </div>
+        <div>
+          <label>Port</label>
+          <input type="text" name="conn_port" value="{{ connection.port or 6053 }}">
+        </div>
+      </div>
+      <label>Cle API (meme valeur que firmware/secrets.yaml)</label>
+      <input type="text" name="conn_key" value="{{ connection.api_key or '' }}">
+      <p class="hint">Un changement ici necessite de redemarrer l'icone de la barre des taches.</p>
+    </div>
+
+    <div class="card">
+      <h2>Home Assistant (facultatif)</h2>
+      <div class="grid2">
+        <div>
+          <label>URL (ex http://homeassistant.local:8123)</label>
+          <input type="text" name="ha_url" value="{{ home_assistant.url or '' }}">
+        </div>
+        <div>
+          <label>Jeton d'acces longue duree</label>
+          <input type="text" name="ha_token" value="{{ home_assistant.token or '' }}">
+        </div>
+      </div>
+      <p class="hint">
+        Genere dans HA : profil utilisateur &rarr; bas de page &rarr; "Jetons d'acces longue duree".
+        Necessaire pour les emplacements type "barre"/"texte" avec une source HA, et pour les actions type "home_assistant".
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Forme des boutons</h2>
+      <select name="shape">
+        <option value="carre" {% if shape != "rond" %}selected{% endif %}>Carre</option>
+        <option value="rond" {% if shape == "rond" %}selected{% endif %}>Rond</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <h2>Les 16 emplacements</h2>
+      <p class="hint">
+        Cliquez un emplacement pour le configurer (libelle, icone, type, action).
+        Glissez-deposez un emplacement sur un autre pour les echanger.
+        Les emplacements grises sont masques sur l'ecran (activables dans la popup).
+      </p>
+      <div id="slot-grid" class="slot-grid"></div>
+      <input type="hidden" name="slots_json" id="slots_json">
+    </div>
+
+    <div class="card">
+      <h2>Les 3 encodeurs</h2>
+      {% for e in encoders %}
+      {% set enc_idx = loop.index0 %}
+      <div class="encoder-block">
+        <strong>Encodeur {{ loop.index }}</strong>
+        {% for direction, dlabel in [("clockwise", "Sens horaire"), ("anticlockwise", "Sens antihoraire"), ("press", "Appui")] %}
+        {% set d = e.get(direction, {}) %}
+        <div class="encoder-row">
+          <label style="margin-top:0">{{ dlabel }}</label>
+          <select name="enc_{{ enc_idx }}_{{ direction }}_type">
+            {% for t in action_types %}
+            <option value="{{ t }}" {% if t == d.get("type", "none") %}selected{% endif %}>{{ t }}</option>
+            {% endfor %}
+          </select>
+          <input type="text" name="enc_{{ enc_idx }}_{{ direction }}_target" value="{{ d.get('target', '') }}"
+                 placeholder="vol_up / ctrl+z / notepad.exe / light.toggle:light.bureau">
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+      <p class="hint">
+        Types : <b>keys</b> (ex "ctrl+shift+s") &middot; <b>launch</b> (chemin/commande) &middot;
+        <b>url</b> (site web/URI) &middot; <b>media</b> (play_pause/next/previous/vol_up/vol_down/mute) &middot;
+        <b>home_assistant</b> (format "domaine.service:entite", ex "light.toggle:light.bureau") &middot; <b>none</b>.
+      </p>
+    </div>
+
+    <button type="submit" id="save-button">Enregistrer et envoyer a l'ecran</button>
+  </form>
+</div>
+
+<div id="slot-modal" class="modal-backdrop hidden">
+  <div class="modal">
+    <h2 id="modal-title">Emplacement</h2>
+    <label>Visible sur l'ecran</label>
+    <input type="checkbox" id="modal-visible">
+
+    <label>Libelle</label>
+    <input type="text" id="modal-label" maxlength="24">
+
+    <label>Type</label>
+    <select id="modal-type">
+      {% for t in slot_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+    </select>
+
+    <label>Icone</label>
+    <div id="icon-picker" class="icon-picker"></div>
+
+    <div id="modal-action-fields">
+      <label>Action (au clic)</label>
+      <select id="modal-action-type">
+        {% for t in action_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+      </select>
+      <input type="text" id="modal-action-target"
+             placeholder="ctrl+shift+s / notepad.exe / https://... / vol_up / light.toggle:light.bureau">
+    </div>
+
+    <div id="modal-source-fields">
+      <label>Source Home Assistant (entity_id)</label>
+      <input type="text" id="modal-ha-entity" placeholder="sensor.volume_pc / sensor.temperature_salon">
+      <p class="hint">Rafraichie toutes les ~15s. "barre" attend une valeur numerique 0-100.</p>
+    </div>
+
+    <div class="modal-buttons">
+      <button type="button" id="modal-cancel" class="secondary">Annuler</button>
+      <button type="button" id="modal-apply">Appliquer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const INITIAL_SLOTS = {{ slots | tojson }};
+  const ICON_CHOICES = {{ icon_choices | tojson }};
+  const SLOT_TYPES = {{ slot_types | tojson }};
+</script>
+<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body>
+</html>

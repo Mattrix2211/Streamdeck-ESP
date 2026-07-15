@@ -31,6 +31,7 @@ import pystray
 from PIL import Image, ImageDraw
 
 from . import dashboard
+from . import ha_poller
 from .device_client import DEFAULT_CONFIG_PATH, DeviceClient, load_config
 
 LOG = logging.getLogger("streamdeck_tray")
@@ -52,7 +53,8 @@ def make_icon_image() -> Image.Image:
 
 
 def build_menu(config: dict) -> pystray.Menu:
-    ha_url = config.get("home_assistant_url") or "http://homeassistant.local:8123"
+    ha_conf = config.get("home_assistant") or {}
+    ha_url = ha_conf.get("url") or "http://homeassistant.local:8123"
 
     def open_dashboard(_icon, _item):
         webbrowser.open(f"http://127.0.0.1:{dashboard.DASHBOARD_PORT}")
@@ -105,6 +107,12 @@ def main() -> None:
         target=dashboard.run_server, args=(config_path, device_client), daemon=True
     )
     dashboard_thread.start()
+
+    ha_stop_event = threading.Event()
+    ha_thread = threading.Thread(
+        target=ha_poller.run_forever, args=(device_client, ha_stop_event), daemon=True
+    )
+    ha_thread.start()
 
     config = load_config(config_path)
     icon = pystray.Icon("streamdeck", make_icon_image(), "Stream Deck", menu=build_menu(config))

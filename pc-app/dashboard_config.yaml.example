@@ -12,23 +12,56 @@ connection:
 # "carre" ou "rond"
 shape: "carre"
 
-# 12 entrees, une par bouton de l'ecran (dans l'ordre : Action 1 a Action 12).
-# type: none / keys / launch / url / media (voir pc-app/README.md)
-buttons:
-  - { label: "Discord", type: "launch", target: "%LOCALAPPDATA%\\Discord\\Update.exe --processStart Discord.exe" }
-  - { label: "Navigateur", type: "launch", target: "chrome.exe" }
-  - { label: "Capture", type: "keys", target: ["ctrl", "shift", "s"] }
-  - { label: "Action 4", type: "none", target: "" }
-  - { label: "Action 5", type: "none", target: "" }
-  - { label: "Action 6", type: "none", target: "" }
-  - { label: "Action 7", type: "none", target: "" }
-  - { label: "Action 8", type: "none", target: "" }
-  - { label: "Action 9", type: "none", target: "" }
-  - { label: "Action 10", type: "none", target: "" }
-  - { label: "Action 11", type: "none", target: "" }
-  - { label: "Action 12", type: "none", target: "" }
+# Optionnel : connexion a Home Assistant, pour les emplacements type
+# "barre"/"texte" (etat en direct d'une entite) et les actions type
+# "home_assistant" (appelle un service HA). Jeton genere dans HA : profil
+# utilisateur > bas de page > "Jetons d'acces longue duree".
+home_assistant:
+  url: ""
+  token: ""
 
-# 3 entrees, une par encodeur. Chacune a 3 actions possibles.
+# 16 entrees, une par emplacement de l'ecran (dans l'ordre : Slot 1 a
+# Slot 16). 12 visibles par defaut (comme l'ancien systeme a 12 boutons),
+# les 4 derniers desactives - activables a la demande depuis la page de
+# configuration, sans reflasher.
+#
+# type: bouton (action au clic) / barre (jauge 0-100, source HA) /
+#       texte (valeur + unite, source HA)
+# icon: cle du catalogue pc-app/streamdeck_companion/icons.py (ex
+#       "play_arrow", "volume_up", "home", "wb_sunny"...), ou "" pour aucune.
+# action.type: none / keys / launch / url / media / home_assistant
+#   home_assistant: {domain, service, entity_id, data} - ex bascule une
+#   lumiere: {type: home_assistant, domain: light, service: toggle, entity_id: light.bureau}
+# ha_entity: entity_id HA a lire pour les types barre/texte (rafraichi ~15s)
+slots:
+  - { label: "Discord", icon: "mic", type: "bouton", visible: true,
+      action: { type: "launch", target: "%LOCALAPPDATA%\\Discord\\Update.exe --processStart Discord.exe" } }
+  - { label: "Navigateur", icon: "", type: "bouton", visible: true,
+      action: { type: "launch", target: "chrome.exe" } }
+  - { label: "Capture", icon: "", type: "bouton", visible: true,
+      action: { type: "keys", target: ["ctrl", "shift", "s"] } }
+  - { label: "Lecture", icon: "play_arrow", type: "bouton", visible: true,
+      action: { type: "media", target: "play_pause" } }
+  - { label: "Volume", icon: "volume_up", type: "barre", visible: true,
+      ha_entity: "sensor.pc_volume" }
+  - { label: "Salon", icon: "wb_sunny", type: "texte", visible: true,
+      ha_entity: "sensor.temperature_salon" }
+  - { label: "Lumiere", icon: "lightbulb_outline", type: "bouton", visible: true,
+      action: { type: "home_assistant", domain: "light", service: "toggle", entity_id: "light.bureau" } }
+  - { label: "Slot 8", icon: "", type: "bouton", visible: true, action: { type: "none", target: "" } }
+  - { label: "Slot 9", icon: "", type: "bouton", visible: true, action: { type: "none", target: "" } }
+  - { label: "Slot 10", icon: "", type: "bouton", visible: true, action: { type: "none", target: "" } }
+  - { label: "Slot 11", icon: "", type: "bouton", visible: true, action: { type: "none", target: "" } }
+  - { label: "Slot 12", icon: "", type: "bouton", visible: true, action: { type: "none", target: "" } }
+  - { label: "Slot 13", icon: "", type: "bouton", visible: false, action: { type: "none", target: "" } }
+  - { label: "Slot 14", icon: "", type: "bouton", visible: false, action: { type: "none", target: "" } }
+  - { label: "Slot 15", icon: "", type: "bouton", visible: false, action: { type: "none", target: "" } }
+  - { label: "Slot 16", icon: "", type: "bouton", visible: false, action: { type: "none", target: "" } }
+
+# 3 entrees, une par encodeur. Chacune a 3 actions possibles (memes types
+# que ci-dessus, y compris "home_assistant" au format compact
+# "domaine.service:entite" quand utilise directement dans l'appli PC via
+# la page web - ici en YAML on utilise le meme format dict que les slots).
 encoders:
   - clockwise: { type: "media", target: "vol_up" }
     anticlockwise: { type: "media", target: "vol_down" }

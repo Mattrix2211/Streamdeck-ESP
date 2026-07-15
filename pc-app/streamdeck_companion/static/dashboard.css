@@ -1,0 +1,62 @@
+:root {
+  --navy: #0B1929; --ocean: #0F2942; --slate: #1A3A52; --horizon: #1E4060;
+  --signal: #00B4D8; --mist: #8FAFC7; --fog: #6B8BA4; --green-tech: #16B84E; --red: #E63946;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--navy); color: #fff; font-family: 'Inter', sans-serif; padding: 32px 16px 100px; }
+h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 28px; margin: 0 0 4px; }
+h2 { font-family: 'Space Grotesk', sans-serif; font-size: 16px; margin: 0 0 12px; }
+.sub { color: var(--mist); margin: 0 0 24px; font-size: 14px; }
+.page { max-width: 980px; margin: 0 auto; }
+.card { background: var(--ocean); border: 1px solid var(--slate); border-radius: 12px; padding: 20px; margin-bottom: 16px; position: relative; overflow: hidden; }
+.card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--signal), transparent); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+label { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--mist); display: block; margin-top: 8px; }
+input[type=text], select { background: var(--navy); border: 1px solid var(--slate); border-radius: 8px; color: #fff; padding: 8px 10px; font-family: 'Inter'; font-size: 14px; width: 100%; margin-top: 4px; }
+input:focus, select:focus { outline: none; border-color: var(--signal); }
+button { background: var(--signal); color: var(--navy); border: none; border-radius: 8px; padding: 12px 24px; font-family: 'Space Grotesk'; font-weight: 700; font-size: 15px; cursor: pointer; margin-top: 8px; }
+button:hover { background: #48CAE4; }
+button.secondary { background: transparent; color: var(--mist); border: 1px solid var(--slate); }
+button.secondary:hover { background: var(--slate); color: #fff; }
+.banner-ok { background: rgba(22,184,78,.08); border: 1px solid rgba(22,184,78,.3); color: var(--green-tech); padding: 10px 16px; border-radius: 8px; margin-bottom: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+.banner-err { background: rgba(230,57,70,.08); border: 1px solid rgba(230,57,70,.3); color: var(--red); padding: 10px 16px; border-radius: 8px; margin-bottom: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+.hint { color: var(--fog); font-size: 12px; margin-top: 4px; }
+.encoder-block { border-top: 1px solid var(--slate); padding-top: 12px; margin-top: 12px; }
+.encoder-block:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+.encoder-row { display: grid; grid-template-columns: 140px 1fr 1fr; gap: 10px; align-items: end; margin-top: 6px; }
+
+/* --- Grille des 16 emplacements --- */
+.slot-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 8px; }
+.slot-tile {
+  background: var(--navy); border: 1px solid var(--slate); border-radius: 10px;
+  padding: 10px; min-height: 88px; cursor: pointer; user-select: none;
+  display: flex; flex-direction: column; justify-content: space-between;
+  transition: border-color .15s, opacity .15s;
+}
+.slot-tile:hover { border-color: var(--signal); }
+.slot-tile.hidden-slot { opacity: 0.4; }
+.slot-tile.drag-over { border-color: var(--signal); background: var(--horizon); }
+.slot-tile .icon { font-family: 'Material Icons'; font-size: 22px; color: var(--signal); line-height: 1; }
+.slot-tile .label { font-size: 13px; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slot-tile .type-tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--fog); text-transform: uppercase; }
+
+/* --- Popup de configuration d'un emplacement --- */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,.6);
+  display: flex; align-items: center; justify-content: center; z-index: 10;
+}
+.modal-backdrop.hidden { display: none; }
+.modal {
+  background: var(--ocean); border: 1px solid var(--slate); border-radius: 12px;
+  padding: 24px; width: 90%; max-width: 420px; max-height: 85vh; overflow-y: auto;
+}
+.icon-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 6px; }
+.icon-choice {
+  font-family: 'Material Icons'; font-size: 22px; text-align: center; padding: 8px 0;
+  border: 1px solid var(--slate); border-radius: 8px; cursor: pointer; color: var(--mist);
+}
+.icon-choice:hover { border-color: var(--signal); color: #fff; }
+.icon-choice.selected { border-color: var(--signal); background: var(--horizon); color: var(--signal); }
+.icon-choice.none-choice { font-family: 'Inter'; font-size: 11px; }
+.modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+#modal-visible { width: auto; margin-top: 4px; }
