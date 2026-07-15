@@ -22,6 +22,7 @@ BUTTON_LABEL_NAMES = [f"Action {i} - libelle" for i in range(1, 13)]
 SHAPE_ENTITY_NAME = "Forme des boutons"
 ACTION_EVENT_ENTITY = "Bouton d'action ecran"
 ENCODER_EVENT_ENTITIES = [f"Encodeur {i} - evenement" for i in range(1, 4)]
+STATUS_ENTITY_NAME = "Statut PC"
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent.parent / "dashboard_config.yaml"
 
@@ -80,10 +81,13 @@ class DeviceClient:
         for ent in entities:
             if isinstance(ent, EventInfo) and ent.name in (ACTION_EVENT_ENTITY, *ENCODER_EVENT_ENTITIES):
                 self.key_to_entity_name[ent.key] = ent.name
-            if isinstance(ent, (TextInfo, SelectInfo)) and ent.name in (*BUTTON_LABEL_NAMES, SHAPE_ENTITY_NAME):
+            if isinstance(ent, (TextInfo, SelectInfo)) and ent.name in (*BUTTON_LABEL_NAMES, SHAPE_ENTITY_NAME, STATUS_ENTITY_NAME):
                 self.entity_keys[ent.name] = ent.key
         self.connected = True
         LOG.info("Connecte a %s (%d bouton/encodeur mappes)", conn.get("host"), len(self.key_to_entity_name))
+        status_key = self.entity_keys.get(STATUS_ENTITY_NAME)
+        if status_key is not None:
+            self.client.text_command(status_key, "PC en ligne")
 
     def _resolve_action(self, entity_name: str, event_type: str) -> dict | None:
         if entity_name == ACTION_EVENT_ENTITY:
@@ -153,4 +157,10 @@ class DeviceClient:
                 self.reload_config_if_changed()
         finally:
             self.connected = False
+            status_key = self.entity_keys.get(STATUS_ENTITY_NAME)
+            if status_key is not None:
+                try:
+                    self.client.text_command(status_key, "PC hors ligne")
+                except Exception:
+                    pass
             await self.client.disconnect()
