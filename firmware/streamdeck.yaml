@@ -15,9 +15,12 @@ esphome:
 
 esp32:
   variant: esp32p4
-  # Decommentez si votre carte est un exemplaire d'ingenierie pre-serie
-  # (revision de silicium < v3.0) :
-  # engineering_sample: true
+  # Necessaire : cette carte est un exemplaire d'ingenierie pre-serie
+  # (revision de silicium v1.3, confirmee via "Chip type: ESP32-P4
+  # (revision v1.3)" dans le log esptool). Sans cette option, ESPHome
+  # compile pour le board de production rev3 et le firmware plante au
+  # tout premier instant du demarrage (illegal instruction au niveau ROM).
+  engineering_sample: true
 
 logger:
 
