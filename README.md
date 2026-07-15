@@ -33,14 +33,17 @@ identite d'appareil). Deux facons de l'utiliser :
    mettre a jour le firmware plus tard, il suffit de recompiler depuis HA,
    sans rien recopier.
 3. **Appli PC** : voir `pc-app/README.md`. **C'est le seul endroit ou vous
-   configurez** quoi (disposition des 12 boutons + 3 encodeurs, actions,
-   libelles, forme carre/rond) - page visuelle, un clic pour envoyer a
-   l'ecran.
+   configurez** quoi (16 emplacements bouton/widget + 3 encodeurs, actions,
+   icones, libelles, forme carre/rond) - apercu visuel glisser-deposer,
+   un clic pour envoyer a l'ecran.
 4. **Home Assistant** (facultatif) : l'appareil est decouvert automatiquement
    (integration ESPHome native, meme cle API que dans le fichier utilise
    ci-dessus) et peut faire ses propres automations en parallele - voir
-   `home-assistant/example_automations.yaml`. Pas necessaire pour que
-   l'appli PC fonctionne.
+   `home-assistant/example_automations.yaml`. En renseignant une URL/jeton
+   HA dans l'appli PC, vous debloquez aussi des widgets a etat live
+   (temperature, volume...) et des boutons qui pilotent directement vos
+   appareils HA (lumieres, prises, scenes). Rien de tout ceci n'est
+   necessaire pour que l'appli PC fonctionne.
 
 Details d'architecture : `docs/ARCHITECTURE.md`. Cablage des encodeurs et
 mapping des GPIO : `docs/WIRING.md`.
@@ -48,8 +51,9 @@ mapping des GPIO : `docs/WIRING.md`.
 ## Materiel
 
 - Ecran Guition JC1060P470C_I_W (ESP32-P4 + ESP32-C6, tactile GT911)
-- 12 boutons carres/ronds + 3 encodeurs rotatifs, ajustable dans
-  `firmware/package.yaml` et `docs/WIRING.md`
+- 16 emplacements carres/ronds (bouton, jauge ou texte) + 3 encodeurs
+  rotatifs, ajustable dans `firmware/package.yaml`/`slots_*.yaml` et
+  `docs/WIRING.md`
 
 ## Design
 
