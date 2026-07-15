@@ -255,7 +255,6 @@ text:
           id: lbl_pc_status
           text: !lambda "return x;"
 
-
 # ---------------------------------------------------------------------------
 # 16 emplacements configurables (boutons/widgets) - entites generees dans
 # slots_1_5.yaml / slots_6_11.yaml / slots_12_16.yaml (decoupees pour rester
@@ -321,6 +320,21 @@ font:
   - file: "gfonts://JetBrains Mono@500"
     id: font_mono
     size: 15
+  # Icones des emplacements - police d'icones dediee (glyphes Material Icons,
+  # codepoints verifies aupres du fichier officiel MaterialIcons-Regular.
+  # codepoints). L'appli PC envoie directement le glyphe (voir pc-app/
+  # streamdeck_companion/icons.py), le firmware ne fait qu'afficher le texte
+  # recu - glyphs: limite la police embarquee a ce jeu d'icones uniquement.
+  - file: "gfonts://Material Icons"
+    id: font_icons
+    size: 28
+    glyphs:
+      [
+        "", "", "", "", "", "", "",
+        "", "", "", "", "", "", "",
+        "", "", "", "", "", "", "",
+        "", "",
+      ]
   - file: "gfonts://JetBrains Mono@700"
     id: font_mono_bold
     size: 22
@@ -396,7 +410,6 @@ lvgl:
               pad_row: 12
               pad_column: 12
             widgets: !include slot_widgets.yaml
-
 
         # Bas d'ecran : 3 cartes encodeurs + statut PC
         - obj:
