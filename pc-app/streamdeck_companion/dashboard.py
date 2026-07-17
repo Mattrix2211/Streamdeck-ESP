@@ -26,6 +26,8 @@ from flask import Flask, jsonify, redirect, render_template, request, url_for
 
 from . import actions as action_runner
 from . import icons
+from .app_library import list_installed_apps
+from .browse import browse_for_executable
 from .device_client import DEFAULT_CONFIG_PATH, SLOT_COUNT, DeviceClient, load_config, save_config
 
 LOG = logging.getLogger("streamdeck_dashboard")
@@ -247,6 +249,33 @@ def save_encoders():
     return redirect(url_for("encoders_page", saved="1"))
 
 
+@app.route("/browse-app", methods=["POST"])
+def browse_app():
+    """Ouvre le selecteur de fichier natif (voir browse.py) pour choisir une
+    application a lancer sans avoir a taper de chemin - utilise par le
+    bouton "Parcourir..." de la popup d'emplacement, uniquement pour le
+    type d'action 'launch'."""
+    try:
+        path = browse_for_executable()
+    except Exception as exc:
+        LOG.exception("Echec de l'ouverture du selecteur de fichier")
+        return jsonify({"error": str(exc)}), 500
+    return jsonify({"path": path})
+
+
+@app.route("/installed-apps", methods=["GET"])
+def installed_apps():
+    """Liste des applications installees (raccourcis du menu Demarrer),
+    pour le menu deroulant "Applications installees" de la popup - evite
+    d'avoir a chercher/taper un chemin pour les cas les plus courants."""
+    try:
+        apps = list_installed_apps()
+    except Exception as exc:
+        LOG.exception("Echec de la lecture de la bibliotheque d'applications")
+        return jsonify({"error": str(exc)}), 500
+    return jsonify({"apps": apps})
+
+
 @app.route("/run", methods=["POST"])
 def run_action():
     """Endpoint optionnel : permet a Home Assistant (ou tout autre outil) de
@@ -278,4 +307,7 @@ def run_server(config_path: Path, device_client: DeviceClient | None = None, por
     _config_path = config_path
     _device_client = device_client
     LOG.info("Page de configuration sur http://127.0.0.1:%d", port)
-    app.run(host="127.0.0.1", port=port, debug=False)
+    # threaded=True : le selecteur de fichier natif (/browse-app) bloque son
+    # thread le temps du choix - sans threaded=True, ca gelerait toute la
+    # page de config pendant ce temps.
+    app.run(host="127.0.0.1", port=port, debug=False, threaded=True)

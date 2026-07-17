@@ -120,3 +120,6 @@ button.secondary:hover { background: var(--slate); color: #fff; }
 .icon-choice.none-choice { font-family: 'Inter'; font-size: 11px; }
 .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
 #modal-visible { width: auto; margin-top: 4px; }
+.target-row { display: flex; gap: 8px; align-items: center; }
+.target-row input { margin-top: 4px; }
+.target-row button { margin-top: 4px; padding: 8px 14px; white-space: nowrap; }

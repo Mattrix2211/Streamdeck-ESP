@@ -125,10 +125,29 @@ la recoit, via `ha_poller.py`).
 |-------------------|------------------------------------|-------------------------------------------|
 | `none`            | -                                  | rien configure                             |
 | `keys`            | ex `ctrl+shift+s`                 | envoie une combinaison clavier             |
-| `launch`          | chemin ou commande (arguments acceptes) | lance une application/un jeu (ex: la commande de lancement de Discord) |
+| `launch`          | chemin ou commande (arguments acceptes) | lance une application/un jeu - voir "Choisir une application" ci-dessous, pas besoin de taper le chemin a la main |
 | `url`             | URL ou URI (`steam://...`, `discord://...`) | ouverte via le gestionnaire par defaut du systeme |
 | `media`           | `play_pause`/`next`/`previous`/`vol_up`/`vol_down`/`mute` | touche multimedia |
 | `home_assistant`  | dans la popup : domaine/service/entite (encodeurs : format compact `domaine.service:entite`, ex `light.toggle:light.bureau`) | appelle un service Home Assistant (bascule une lumiere/prise/scene...) |
+
+## Choisir une application (type d'action `launch`)
+
+Pour eviter d'avoir a connaitre/taper un chemin (pas accessible au grand
+public), la popup d'un emplacement propose deux facons de choisir
+l'application sans rien taper, des que le type d'action est `launch` :
+
+- **Liste des applications installees** : un menu deroulant liste les
+  raccourcis du menu Demarrer (utilisateur + tous les utilisateurs) -
+  choisissez juste le nom, le chemin de lancement et le libelle de
+  l'emplacement se remplissent tout seuls (`streamdeck_companion/app_library.py`).
+- **Parcourir...** : ouvre l'explorateur de fichiers Windows pour choisir
+  directement le `.exe` ou le raccourci `.lnk`, pour les cas non listes
+  (jeux portables, applications sans raccourci Demarrer).
+
+Windows uniquement (necessite `pywin32`/`winshell`, deja dans
+`requirements.txt` pour cette plateforme). Sur les autres systemes, ces
+deux options sont masquees automatiquement et il reste possible de taper
+une commande a la main dans le champ.
 
 ## Icones
 
@@ -169,9 +188,10 @@ necessaire pour que les emplacements/encodeurs du Stream Deck fonctionnent
 - `tray.py` n'a pu etre teste que hors environnement graphique Windows reel
   (logique de connexion/config verifiee en detail ; le rendu de l'icone
   lui-meme necessite un vrai bureau Windows pour etre confirme).
-- Un changement d'IP/port/cle API necessite de redemarrer l'icone de la
-  barre des taches (la reconnexion automatique gere les coupures reseau,
-  pas un changement de configuration de connexion).
+- Un changement d'IP/port/cle API est repris automatiquement au prochain
+  essai de reconnexion (jusqu'a ~10s, `device_client.py::connect()` relit
+  la config a chaque tentative) - pas besoin de redemarrer l'icone de la
+  barre des taches.
 - Le bouton "media" (`play_pause` etc.) envoie une touche multimedia - il
   n'affiche pas l'etat de lecture reel (recuperer l'etat "en cours de
   lecture" de facon fiable et multi-plateforme demanderait une integration
@@ -188,6 +208,13 @@ necessaire pour que les emplacements/encodeurs du Stream Deck fonctionnent
   s'affiche comme une case vide sur l'ecran.
 - Les widgets Home Assistant (`barre`/`texte`) sont sondes par polling
   REST toutes les ~15s (`ha_poller.py`), pas en temps reel instantane.
+- La liste "Applications installees" (`app_library.py`) ne liste que les
+  raccourcis du menu Demarrer (utilisateur + tous les utilisateurs) - les
+  applications sans raccourci Demarrer (portables, certaines apps du
+  Microsoft Store) n'y apparaissent pas ; utilisez "Parcourir..." pour
+  celles-ci. Fonctionnalite Windows uniquement, non verifiee sur une
+  vraie machine Windows (logique testee avec des donnees simulees dans
+  le sandbox de developpement, qui n'a pas acces a `pywin32`/`winshell`).
 - La page de configuration a ete testee de bout en bout avec un navigateur
   headless (rendu de la maquette d'ecran et des masques, popup,
   glisser-deposer dans les deux sens et entre les deux, sauvegarde,

@@ -47,8 +47,18 @@
         <select id="modal-action-type">
           {% for t in action_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
         </select>
-        <input type="text" id="modal-action-target"
-               placeholder="ctrl+shift+s / notepad.exe / https://... / vol_up / light.toggle:light.bureau">
+        <div id="modal-app-picker-row" class="target-row">
+          <select id="modal-app-picker">
+            <option value="">— Choisir dans les applications installees —</option>
+          </select>
+        </div>
+        <p id="modal-app-picker-status" class="hint"></p>
+        <div class="target-row">
+          <input type="text" id="modal-action-target"
+                 placeholder="ctrl+shift+s / https://... / vol_up / light.toggle:light.bureau">
+          <button type="button" id="modal-browse-app" class="secondary">Parcourir...</button>
+        </div>
+        <p id="modal-browse-hint" class="hint">Ou choisissez directement le programme (.exe) ou son raccourci (.lnk) - pas besoin de connaitre le chemin.</p>
       </div>
 
       <div id="modal-source-fields">

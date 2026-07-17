@@ -153,6 +153,101 @@ function updateModalFieldsVisibility() {
   const type = document.getElementById("modal-type").value;
   document.getElementById("modal-action-fields").style.display = type === "bouton" ? "block" : "none";
   document.getElementById("modal-source-fields").style.display = type === "bouton" ? "none" : "block";
+  updateBrowseButtonVisibility();
+}
+
+function updateBrowseButtonVisibility() {
+  const isLaunch = document.getElementById("modal-action-type").value === "launch";
+  document.getElementById("modal-browse-app").style.display = isLaunch ? "inline-block" : "none";
+  document.getElementById("modal-browse-hint").style.display = isLaunch ? "block" : "none";
+  document.getElementById("modal-action-target").placeholder = isLaunch
+    ? "Choisissez une application ci-dessus, ou tapez une commande"
+    : "ctrl+shift+s / https://... / vol_up / light.toggle:light.bureau";
+  document.getElementById("modal-app-picker-row").style.display = isLaunch ? "flex" : "none";
+  if (isLaunch) loadInstalledAppsIfNeeded();
+}
+
+/* null = pas encore charge, false = echec (systeme non supporte), [] ou
+ * tableau = charge avec succes. Charge une seule fois par session (la
+ * liste ne change pas pendant qu'on configure des emplacements). */
+let installedApps = null;
+
+function loadInstalledAppsIfNeeded() {
+  if (installedApps !== null) return;
+  const picker = document.getElementById("modal-app-picker");
+  const status = document.getElementById("modal-app-picker-status");
+  status.textContent = "Chargement de la liste des applications...";
+  fetch("/installed-apps")
+    .then((r) => r.json())
+    .then((data) => {
+      if (data.error || !data.apps) {
+        installedApps = false;
+        document.getElementById("modal-app-picker-row").style.display = "none";
+        status.textContent = "";
+        return;
+      }
+      installedApps = data.apps;
+      installedApps.forEach((app, index) => {
+        const opt = document.createElement("option");
+        opt.value = String(index);
+        opt.textContent = app.name;
+        picker.appendChild(opt);
+      });
+      status.textContent = installedApps.length
+        ? `${installedApps.length} applications trouvees.`
+        : "Aucune application trouvee - utilisez \"Parcourir...\" ci-dessous.";
+    })
+    .catch(() => {
+      installedApps = false;
+      document.getElementById("modal-app-picker-row").style.display = "none";
+      status.textContent = "";
+    });
+}
+
+function applyAppPickerSelection() {
+  const picker = document.getElementById("modal-app-picker");
+  if (!picker.value || !installedApps) return;
+  const app = installedApps[Number(picker.value)];
+  if (!app) return;
+  document.getElementById("modal-action-target").value = app.target;
+  const labelField = document.getElementById("modal-label");
+  if (!labelField.value.trim() || /^Slot \d+$/.test(labelField.value.trim())) {
+    labelField.value = app.name;
+  }
+}
+
+function browseForApp() {
+  const btn = document.getElementById("modal-browse-app");
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Choix en cours...";
+  fetch("/browse-app", { method: "POST" })
+    .then((r) => r.json())
+    .then((data) => {
+      if (data.error) {
+        alert("Impossible d'ouvrir le selecteur de fichier : " + data.error);
+        return;
+      }
+      if (data.path) {
+        const target = document.getElementById("modal-action-target");
+        target.value = data.path;
+        const labelField = document.getElementById("modal-label");
+        if (!labelField.value.trim() || /^Slot \d+$/.test(labelField.value.trim())) {
+          labelField.value = guessAppName(data.path);
+        }
+      }
+    })
+    .catch(() => alert("Impossible de contacter l'appli pour ouvrir le selecteur de fichier."))
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = original;
+    });
+}
+
+function guessAppName(path) {
+  const clean = path.replace(/^"|"$/g, "");
+  const fileName = clean.split(/[\\/]/).pop() || clean;
+  return fileName.replace(/\.(exe|lnk|bat|app)$/i, "");
 }
 
 function openModal(index) {
@@ -176,6 +271,9 @@ function closeModal() {
 }
 
 document.getElementById("modal-type").addEventListener("change", updateModalFieldsVisibility);
+document.getElementById("modal-action-type").addEventListener("change", updateBrowseButtonVisibility);
+document.getElementById("modal-browse-app").addEventListener("click", browseForApp);
+document.getElementById("modal-app-picker").addEventListener("change", applyAppPickerSelection);
 document.getElementById("modal-cancel").addEventListener("click", closeModal);
 
 document.getElementById("modal-apply").addEventListener("click", () => {
