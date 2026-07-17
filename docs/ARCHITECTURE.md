@@ -39,15 +39,17 @@
 
 ## L'appli PC comme point de configuration unique
 
-Tout se regle dans l'appli PC (`http://127.0.0.1:8080`), en 3 pages pour
+Tout se regle dans l'appli PC (`http://127.0.0.1:8080`), en 2 pages pour
 eviter la surcharge (esprit "gerer ses pages d'applications sur un
 telephone") :
 - **Accueil** (`/`) : maquette fidele de l'ecran (memes proportions et
   disposition que le firmware) avec les 16 emplacements
-  (bouton/barre/texte, icone, action) - les emplacements masques sont a
-  part sous la maquette, glisser-deposer pour reordonner/echanger dans les
-  deux sections - la seule page du quotidien.
-- **Encodeurs** (`/encodeurs`) : action des 3 encodeurs.
+  (bouton/barre/texte, icone, action) et les 3 encodeurs, chacun
+  configurable via sa propre popup - les emplacements masques sont a part
+  sous la maquette, glisser-deposer pour reordonner/echanger dans les deux
+  sections - la seule page du quotidien. Le type d'action `launch` propose
+  une bibliotheque d'applications (grille avec recherche, applications
+  detectees + personnalisees) plutot que de taper un chemin.
 - **Reglages** (`/reglages`) : connexion, forme carre/rond, Home
   Assistant - demandee automatiquement au tout premier lancement
   (`dashboard_config.yaml` est cree vide par `tray.py`, plus besoin de
@@ -62,17 +64,20 @@ changements de la page courante (chaque page ne touche que sa portion de
   emplacements/encodeurs ET sert a pousser leur config (libelle, icone,
   type, visibilite, valeur des widgets) - meme connexion, pas de
   reconnexion a chaque changement.
-- `dashboard.py` (+ `templates/base.html`+`home.html`+`settings.html`+
-  `encoders.html`, `static/dashboard.js`) sont les 3 pages web (thread
-  Flask separe), qui communiquent avec `device_client.py` via
-  `asyncio.run_coroutine_threadsafe` pour
-  rester thread-safe.
+- `dashboard.py` (+ `templates/base.html`+`home.html`+`settings.html`,
+  `static/dashboard.js`) sont les 2 pages web (thread Flask separe), qui
+  communiquent avec `device_client.py` via `asyncio.run_coroutine_threadsafe`
+  pour rester thread-safe.
 - `ha_client.py`/`ha_poller.py` sondent l'API REST de Home Assistant
   (facultatif) toutes les ~15s pour rafraichir les emplacements type
   widget, et executent le type d'action `home_assistant` (appel de
   service).
 - `icons.py` : catalogue d'icones (glyphes Material Icons, memes
   points de code que la police `font_icons` du firmware).
+- `app_library.py`/`custom_apps.py`/`browse.py` : bibliotheque
+  d'applications du picker "launch" - detection des raccourcis du menu
+  Demarrer, applications personnalisees persistees dans
+  `dashboard_config.yaml`, selecteur de fichier natif pour les ajouter.
 - `tray.py` orchestre le tout (connexion, dashboard, sondeur HA) dans une
   icone de barre des taches, sans fenetre de terminal.
 - Home Assistant continue de voir l'appareil nativement (integration

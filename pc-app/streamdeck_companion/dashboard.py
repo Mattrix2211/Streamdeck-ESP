@@ -1,14 +1,13 @@
-"""Page de configuration visuelle du Stream Deck, en plusieurs pages pour
-eviter la surcharge (esprit "gerer ses pages d'applications sur son
-iPhone") :
+"""Page de configuration visuelle du Stream Deck, en 2 pages pour eviter la
+surcharge (esprit "gerer ses pages d'applications sur son iPhone") :
 
-- **Accueil** (`/`) : uniquement la grille des 16 emplacements (glisser-
-  deposer + popup par emplacement). C'est la page qu'on utilise au
-  quotidien.
+- **Accueil** (`/`) : la grille des 16 emplacements ET les 3 encodeurs,
+  chacun configurable via sa propre popup (glisser-deposer pour les
+  emplacements). C'est la seule page qu'on utilise au quotidien - plus
+  besoin d'une page separee pour les encodeurs.
 - **Reglages** (`/reglages`) : connexion a l'ecran, cle API, Home
   Assistant, forme des boutons - des reglages qu'on ne touche qu'une fois.
   Demandee automatiquement au tout premier lancement (connexion vide).
-- **Encodeurs** (`/encodeurs`) : action des 3 encodeurs par sens/appui.
 
 Chaque page sauvegarde uniquement SA partie de la config (pas de risque
 d'ecraser les emplacements en modifiant les reglages, etc.) et pousse vers
@@ -28,6 +27,7 @@ from . import actions as action_runner
 from . import icons
 from .app_library import list_installed_apps
 from .browse import browse_for_executable
+from .custom_apps import add_custom_app, list_custom_apps, remove_custom_app
 from .device_client import DEFAULT_CONFIG_PATH, SLOT_COUNT, DeviceClient, load_config, save_config
 
 LOG = logging.getLogger("streamdeck_dashboard")
@@ -122,6 +122,37 @@ def push_to_screen() -> str | None:
         return str(exc)
 
 
+def encoders_to_fields(encoders: list[dict]) -> list[dict]:
+    """Convertit les cibles (liste/dict selon le type) en simples chaines
+    affichables/editables dans les champs du popup encodeur."""
+    return [
+        {
+            direction: {
+                **enc.get(direction, {}),
+                "target": target_to_field(
+                    enc.get(direction, {}).get("type", "none"), enc.get(direction, {}).get("target")
+                ),
+            }
+            for direction in DIRECTIONS
+        }
+        for enc in (encoders or default_encoders())
+    ]
+
+
+def fields_to_encoders(raw_encoders: list[dict]) -> list[dict]:
+    encoders = []
+    for i in range(3):
+        enc = raw_encoders[i] if i < len(raw_encoders) else {}
+        encoders.append({
+            direction: {
+                "type": (t := (enc.get(direction) or {}).get("type", "none")),
+                "target": field_to_target(t, (enc.get(direction) or {}).get("target", "")),
+            }
+            for direction in DIRECTIONS
+        })
+    return encoders
+
+
 @app.route("/", methods=["GET"])
 def index():
     config = load_config(_config_path)
@@ -134,9 +165,11 @@ def index():
         "home.html",
         active_page="home",
         slots=slots,
+        encoders=encoders_to_fields(config.get("encoders")),
         shape=config.get("shape", "carre"),
         action_types=ACTION_TYPES,
         slot_types=SLOT_TYPES,
+        directions=DIRECTIONS,
         icon_choices=icons.icon_choices(),
         saved=request.args.get("saved") == "1",
         error=request.args.get("error"),
@@ -158,6 +191,13 @@ def save():
         slot["icon_char"] = icons.icon_char(slot.get("icon", ""))
         slot["label"] = (slot.get("label") or "").strip()[:24] or slot["label"]
     config["slots"] = slots
+
+    try:
+        raw_encoders = json.loads(request.form.get("encoders_json", "[]"))
+    except (TypeError, ValueError):
+        raw_encoders = []
+    config["encoders"] = fields_to_encoders(raw_encoders)
+
     save_config(_config_path, config)
 
     error = push_to_screen()
@@ -204,75 +244,43 @@ def save_settings():
     return redirect(url_for("index" if request.form.get("premiere_fois") == "1" else "settings", saved="1"))
 
 
-@app.route("/encodeurs", methods=["GET"])
-def encoders_page():
-    config = load_config(_config_path)
-    encoders = config.get("encoders") or default_encoders()
-    encoders = [
-        {
-            direction: {**enc.get(direction, {}), "target": target_to_field(
-                enc.get(direction, {}).get("type", "none"), enc.get(direction, {}).get("target")
-            )}
-            for direction in DIRECTIONS
-        }
-        for enc in encoders
-    ]
-    return render_template(
-        "encoders.html",
-        active_page="encoders",
-        encoders=encoders,
-        action_types=ACTION_TYPES,
-        directions=DIRECTIONS,
-        saved=request.args.get("saved") == "1",
-        error=request.args.get("error"),
-    )
+@app.route("/installed-apps", methods=["GET"])
+def installed_apps():
+    """Bibliotheque d'applications du picker (popup d'emplacement, type
+    d'action 'launch') : applications detectees (raccourcis du menu
+    Demarrer) + applications personnalisees ajoutees via la tuile
+    "+ Ajouter" (voir custom_apps.py). Ne renvoie jamais d'erreur bloquante
+    - si la detection systeme echoue (non-Windows...), on retombe juste sur
+    la liste personnalisee (peut-etre vide)."""
+    try:
+        apps = list_installed_apps()
+        detect_error = None
+    except Exception as exc:
+        LOG.exception("Echec de la lecture de la bibliotheque d'applications")
+        apps, detect_error = [], str(exc)
+    return jsonify({"apps": apps, "custom": list_custom_apps(_config_path), "detect_error": detect_error})
 
 
-@app.route("/encodeurs/save", methods=["POST"])
-def save_encoders():
-    config = load_config(_config_path)
-    config["encoders"] = [
-        {
-            direction: {
-                "type": (t := request.form.get(f"enc_{enc_i}_{direction}_type", "none")),
-                "target": field_to_target(t, request.form.get(f"enc_{enc_i}_{direction}_target", "").strip()),
-            }
-            for direction in DIRECTIONS
-        }
-        for enc_i in range(3)
-    ]
-    save_config(_config_path, config)
-
-    error = push_to_screen()
-    if error:
-        return redirect(url_for("encoders_page", error=error))
-    return redirect(url_for("encoders_page", saved="1"))
-
-
-@app.route("/browse-app", methods=["POST"])
-def browse_app():
-    """Ouvre le selecteur de fichier natif (voir browse.py) pour choisir une
-    application a lancer sans avoir a taper de chemin - utilise par le
-    bouton "Parcourir..." de la popup d'emplacement, uniquement pour le
-    type d'action 'launch'."""
+@app.route("/custom-apps", methods=["POST"])
+def add_custom_app_route():
+    """Tuile "+ Ajouter" du picker : ouvre le selecteur de fichier natif
+    (browse.py) puis persiste le choix dans dashboard_config.yaml pour
+    qu'il rejoigne la bibliotheque durablement (custom_apps.py)."""
     try:
         path = browse_for_executable()
     except Exception as exc:
         LOG.exception("Echec de l'ouverture du selecteur de fichier")
         return jsonify({"error": str(exc)}), 500
-    return jsonify({"path": path})
+    if not path:
+        return jsonify({"target": None})
+    name = Path(path.strip('"')).stem
+    apps = add_custom_app(_config_path, name, path)
+    return jsonify({"name": name, "target": path, "apps": apps})
 
 
-@app.route("/installed-apps", methods=["GET"])
-def installed_apps():
-    """Liste des applications installees (raccourcis du menu Demarrer),
-    pour le menu deroulant "Applications installees" de la popup - evite
-    d'avoir a chercher/taper un chemin pour les cas les plus courants."""
-    try:
-        apps = list_installed_apps()
-    except Exception as exc:
-        LOG.exception("Echec de la lecture de la bibliotheque d'applications")
-        return jsonify({"error": str(exc)}), 500
+@app.route("/custom-apps/remove", methods=["POST"])
+def remove_custom_app_route():
+    apps = remove_custom_app(_config_path, request.form.get("target", ""))
     return jsonify({"apps": apps})
 
 

@@ -6,13 +6,16 @@
  * et la tray. Pas de framework - vanilla JS. */
 
 let slots = INITIAL_SLOTS.map((s) => ({ ...s }));
+let encoders = INITIAL_ENCODERS.map((e) => ({ ...e }));
 let dragSrcIndex = null;
 let currentIndex = null;
+let currentEncoderIndex = null;
 
 const screenGrid = document.getElementById("slot-grid");
 const hiddenTray = document.getElementById("hidden-tray");
 const encoderMock = document.getElementById("encoder-mock");
 const modal = document.getElementById("slot-modal");
+const encoderModal = document.getElementById("encoder-modal");
 const iconPicker = document.getElementById("icon-picker");
 
 function renderIconPicker(selectedIcon) {
@@ -125,9 +128,10 @@ function renderGrid() {
 
 function renderEncoderMock() {
   encoderMock.innerHTML = "";
-  for (let i = 1; i <= 3; i++) {
+  for (let i = 0; i < 3; i++) {
     const card = document.createElement("div");
     card.className = "encoder-mock-card";
+    card.addEventListener("click", () => openEncoderModal(i));
 
     const icon = document.createElement("div");
     icon.className = "icon";
@@ -136,7 +140,7 @@ function renderEncoderMock() {
 
     const title = document.createElement("div");
     title.className = "title";
-    title.textContent = `ENCODEUR ${i}`;
+    title.textContent = `ENCODEUR ${i + 1}`;
     card.appendChild(title);
 
     const bar = document.createElement("div");
@@ -153,101 +157,132 @@ function updateModalFieldsVisibility() {
   const type = document.getElementById("modal-type").value;
   document.getElementById("modal-action-fields").style.display = type === "bouton" ? "block" : "none";
   document.getElementById("modal-source-fields").style.display = type === "bouton" ? "none" : "block";
-  updateBrowseButtonVisibility();
+  updateLaunchPickerVisibility();
 }
 
-function updateBrowseButtonVisibility() {
+function updateLaunchPickerVisibility() {
   const isLaunch = document.getElementById("modal-action-type").value === "launch";
-  document.getElementById("modal-browse-app").style.display = isLaunch ? "inline-block" : "none";
-  document.getElementById("modal-browse-hint").style.display = isLaunch ? "block" : "none";
+  document.getElementById("modal-app-library").style.display = isLaunch ? "block" : "none";
   document.getElementById("modal-action-target").placeholder = isLaunch
     ? "Choisissez une application ci-dessus, ou tapez une commande"
     : "ctrl+shift+s / https://... / vol_up / light.toggle:light.bureau";
-  document.getElementById("modal-app-picker-row").style.display = isLaunch ? "flex" : "none";
-  if (isLaunch) loadInstalledAppsIfNeeded();
+  if (isLaunch) loadAppLibraryIfNeeded();
 }
 
-/* null = pas encore charge, false = echec (systeme non supporte), [] ou
- * tableau = charge avec succes. Charge une seule fois par session (la
- * liste ne change pas pendant qu'on configure des emplacements). */
-let installedApps = null;
+/* Bibliotheque d'applications du picker "launch" : detectees (menu
+ * Demarrer, via app_library.py) + personnalisees (ajoutees via la tuile
+ * "+ Ajouter", persistees cote serveur - custom_apps.py). Chargee une
+ * seule fois par session, la tuile "+ Ajouter" met a jour le cache local
+ * ensuite sans recharger. */
+let appLibrary = null;
+let selectedAppTarget = null;
 
-function loadInstalledAppsIfNeeded() {
-  if (installedApps !== null) return;
-  const picker = document.getElementById("modal-app-picker");
-  const status = document.getElementById("modal-app-picker-status");
-  status.textContent = "Chargement de la liste des applications...";
+function loadAppLibraryIfNeeded() {
+  if (appLibrary !== null) { renderAppGrid(); return; }
+  const status = document.getElementById("modal-app-status");
+  status.textContent = "Chargement de la bibliotheque d'applications...";
   fetch("/installed-apps")
     .then((r) => r.json())
     .then((data) => {
-      if (data.error || !data.apps) {
-        installedApps = false;
-        document.getElementById("modal-app-picker-row").style.display = "none";
-        status.textContent = "";
-        return;
-      }
-      installedApps = data.apps;
-      installedApps.forEach((app, index) => {
-        const opt = document.createElement("option");
-        opt.value = String(index);
-        opt.textContent = app.name;
-        picker.appendChild(opt);
-      });
-      status.textContent = installedApps.length
-        ? `${installedApps.length} applications trouvees.`
-        : "Aucune application trouvee - utilisez \"Parcourir...\" ci-dessous.";
+      appLibrary = { detected: data.apps || [], custom: data.custom || [] };
+      status.textContent = data.detect_error
+        ? "Detection automatique indisponible sur ce systeme - ajoutez vos applications avec \"+ Ajouter\"."
+        : "";
+      renderAppGrid();
     })
     .catch(() => {
-      installedApps = false;
-      document.getElementById("modal-app-picker-row").style.display = "none";
-      status.textContent = "";
+      appLibrary = { detected: [], custom: [] };
+      status.textContent = "Impossible de charger la bibliotheque d'applications.";
+      renderAppGrid();
     });
 }
 
-function applyAppPickerSelection() {
-  const picker = document.getElementById("modal-app-picker");
-  if (!picker.value || !installedApps) return;
-  const app = installedApps[Number(picker.value)];
-  if (!app) return;
+function renderAppGrid() {
+  const grid = document.getElementById("modal-app-grid");
+  grid.innerHTML = "";
+  if (!appLibrary) return;
+
+  const query = document.getElementById("modal-app-search").value.trim().toLowerCase();
+  const all = [
+    ...appLibrary.custom.map((a) => ({ ...a, custom: true })),
+    ...appLibrary.detected,
+  ].filter((a) => a.name.toLowerCase().includes(query));
+
+  all.forEach((app) => grid.appendChild(makeAppTile(app)));
+
+  const addTile = document.createElement("div");
+  addTile.className = "app-tile add-tile";
+  addTile.title = "Ajouter une application a la bibliotheque";
+  addTile.innerHTML = '<div class="app-icon">+</div><div class="app-name">Ajouter...</div>';
+  addTile.addEventListener("click", addCustomApp);
+  grid.appendChild(addTile);
+}
+
+function makeAppTile(app) {
+  const tile = document.createElement("div");
+  tile.className = "app-tile" + (app.target === selectedAppTarget ? " selected" : "");
+  tile.title = app.name;
+
+  const icon = document.createElement("div");
+  icon.className = "app-icon";
+  icon.textContent = "\uE5C3"; /* "apps" (Material Icons) - glyphe generique */
+  tile.appendChild(icon);
+
+  const name = document.createElement("div");
+  name.className = "app-name";
+  name.textContent = app.name;
+  tile.appendChild(name);
+
+  tile.addEventListener("click", () => selectApp(app));
+
+  if (app.custom) {
+    const remove = document.createElement("div");
+    remove.className = "app-remove";
+    remove.textContent = "Retirer";
+    remove.addEventListener("click", (e) => { e.stopPropagation(); removeCustomApp(app.target); });
+    tile.appendChild(remove);
+  }
+
+  return tile;
+}
+
+function selectApp(app) {
+  selectedAppTarget = app.target;
   document.getElementById("modal-action-target").value = app.target;
   const labelField = document.getElementById("modal-label");
   if (!labelField.value.trim() || /^Slot \d+$/.test(labelField.value.trim())) {
     labelField.value = app.name;
   }
+  renderAppGrid();
 }
 
-function browseForApp() {
-  const btn = document.getElementById("modal-browse-app");
-  const original = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = "Choix en cours...";
-  fetch("/browse-app", { method: "POST" })
+function addCustomApp() {
+  fetch("/custom-apps", { method: "POST" })
     .then((r) => r.json())
     .then((data) => {
       if (data.error) {
         alert("Impossible d'ouvrir le selecteur de fichier : " + data.error);
         return;
       }
-      if (data.path) {
-        const target = document.getElementById("modal-action-target");
-        target.value = data.path;
-        const labelField = document.getElementById("modal-label");
-        if (!labelField.value.trim() || /^Slot \d+$/.test(labelField.value.trim())) {
-          labelField.value = guessAppName(data.path);
-        }
-      }
+      if (!data.target) return;
+      appLibrary.custom = data.apps || appLibrary.custom;
+      selectApp({ name: data.name, target: data.target });
     })
-    .catch(() => alert("Impossible de contacter l'appli pour ouvrir le selecteur de fichier."))
-    .finally(() => {
-      btn.disabled = false;
-      btn.textContent = original;
-    });
+    .catch(() => alert("Impossible de contacter l'appli pour ouvrir le selecteur de fichier."));
 }
 
-function guessAppName(path) {
-  const clean = path.replace(/^"|"$/g, "");
-  const fileName = clean.split(/[\\/]/).pop() || clean;
-  return fileName.replace(/\.(exe|lnk|bat|app)$/i, "");
+function removeCustomApp(target) {
+  fetch("/custom-apps/remove", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "target=" + encodeURIComponent(target),
+  })
+    .then((r) => r.json())
+    .then((data) => {
+      appLibrary.custom = data.apps || [];
+      renderAppGrid();
+    })
+    .catch(() => {});
 }
 
 function openModal(index) {
@@ -260,6 +295,7 @@ function openModal(index) {
   document.getElementById("modal-action-type").value = (slot.action && slot.action.type) || "none";
   document.getElementById("modal-action-target").value = slot.action_field || "";
   document.getElementById("modal-ha-entity").value = slot.ha_entity || "";
+  selectedAppTarget = slot.action_field || null;
   renderIconPicker(slot.icon || "");
   updateModalFieldsVisibility();
   modal.classList.remove("hidden");
@@ -271,9 +307,8 @@ function closeModal() {
 }
 
 document.getElementById("modal-type").addEventListener("change", updateModalFieldsVisibility);
-document.getElementById("modal-action-type").addEventListener("change", updateBrowseButtonVisibility);
-document.getElementById("modal-browse-app").addEventListener("click", browseForApp);
-document.getElementById("modal-app-picker").addEventListener("change", applyAppPickerSelection);
+document.getElementById("modal-action-type").addEventListener("change", updateLaunchPickerVisibility);
+document.getElementById("modal-app-search").addEventListener("input", renderAppGrid);
 document.getElementById("modal-cancel").addEventListener("click", closeModal);
 
 document.getElementById("modal-apply").addEventListener("click", () => {
@@ -290,8 +325,40 @@ document.getElementById("modal-apply").addEventListener("click", () => {
   closeModal();
 });
 
+function openEncoderModal(index) {
+  currentEncoderIndex = index;
+  document.getElementById("encoder-modal-title").textContent = `Encodeur ${index + 1}`;
+  const enc = encoders[index];
+  DIRECTIONS.forEach((direction) => {
+    const d = enc[direction] || { type: "none", target: "" };
+    document.getElementById(`encoder-modal-${direction}-type`).value = d.type || "none";
+    document.getElementById(`encoder-modal-${direction}-target`).value = d.target || "";
+  });
+  encoderModal.classList.remove("hidden");
+}
+
+function closeEncoderModal() {
+  encoderModal.classList.add("hidden");
+  currentEncoderIndex = null;
+}
+
+document.getElementById("encoder-modal-cancel").addEventListener("click", closeEncoderModal);
+document.getElementById("encoder-modal-apply").addEventListener("click", () => {
+  if (currentEncoderIndex === null) return;
+  const enc = {};
+  DIRECTIONS.forEach((direction) => {
+    enc[direction] = {
+      type: document.getElementById(`encoder-modal-${direction}-type`).value,
+      target: document.getElementById(`encoder-modal-${direction}-target`).value,
+    };
+  });
+  encoders[currentEncoderIndex] = enc;
+  closeEncoderModal();
+});
+
 document.getElementById("config-form").addEventListener("submit", () => {
   document.getElementById("slots_json").value = JSON.stringify(slots);
+  document.getElementById("encoders_json").value = JSON.stringify(encoders);
 });
 
 renderGrid();

@@ -5,7 +5,7 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--navy); color: #fff; font-family: 'Inter', sans-serif; padding: 0 16px 100px; }
 
-/* --- Navigation entre les 3 pages (Accueil / Encodeurs / Reglages) --- */
+/* --- Navigation entre les 2 pages (Accueil / Reglages) --- */
 .topnav {
   display: flex; align-items: center; justify-content: space-between;
   max-width: 980px; margin: 0 auto; padding: 20px 0 16px;
@@ -38,7 +38,7 @@ button.secondary:hover { background: var(--slate); color: #fff; }
 .hint { color: var(--fog); font-size: 12px; margin-top: 4px; }
 .encoder-block { border-top: 1px solid var(--slate); padding-top: 12px; margin-top: 12px; }
 .encoder-block:first-child { border-top: none; padding-top: 0; margin-top: 0; }
-.encoder-row { display: grid; grid-template-columns: 140px 1fr 1fr; gap: 10px; align-items: end; margin-top: 6px; }
+.encoder-row { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; align-items: start; margin-top: 4px; }
 
 /* --- Maquette de l'ecran (memes proportions que le firmware, 1024x600) ---
  * Sections empilees en colonne, flex-basis calques sur les coordonnees
@@ -108,7 +108,7 @@ button.secondary:hover { background: var(--slate); color: #fff; }
 .modal-backdrop.hidden { display: none; }
 .modal {
   background: var(--ocean); border: 1px solid var(--slate); border-radius: 12px;
-  padding: 24px; width: 90%; max-width: 420px; max-height: 85vh; overflow-y: auto;
+  padding: 24px; width: 90%; max-width: 460px; max-height: 85vh; overflow-y: auto;
 }
 .icon-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 6px; }
 .icon-choice {
@@ -120,6 +120,27 @@ button.secondary:hover { background: var(--slate); color: #fff; }
 .icon-choice.none-choice { font-family: 'Inter'; font-size: 11px; }
 .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
 #modal-visible { width: auto; margin-top: 4px; }
-.target-row { display: flex; gap: 8px; align-items: center; }
-.target-row input { margin-top: 4px; }
-.target-row button { margin-top: 4px; padding: 8px 14px; white-space: nowrap; }
+
+/* --- Bibliotheque d'applications (picker du type d'action "launch") --- */
+#modal-app-library { margin-top: 6px; }
+.app-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  max-height: 200px; overflow-y: auto; padding: 8px;
+  border: 1px solid var(--slate); border-radius: 8px; background: var(--navy); margin-top: 4px;
+}
+.app-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 8px 4px; border-radius: 8px; cursor: pointer; text-align: center;
+  border: 1px solid transparent; position: relative;
+}
+.app-tile:hover { background: var(--slate); }
+.app-tile.selected { border-color: var(--signal); background: var(--horizon); }
+.app-tile .app-icon { font-family: 'Material Icons'; font-size: 22px; color: var(--signal); line-height: 1; }
+.app-tile.add-tile .app-icon { font-family: 'Inter'; font-weight: 700; }
+.app-tile .app-name {
+  font-size: 10px; color: var(--mist); max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.app-tile .app-remove {
+  font-size: 9px; color: var(--red); text-decoration: underline; margin-top: -2px;
+}

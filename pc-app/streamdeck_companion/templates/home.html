@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-  <p class="sub">Aperçu fidele de l'ecran (memes proportions et disposition). Cliquez un emplacement pour le configurer, glissez-deposez pour reordonner.</p>
+  <p class="sub">Aperçu fidele de l'ecran (memes proportions et disposition). Cliquez un emplacement ou un encodeur pour le configurer, glissez-deposez les emplacements pour reordonner.</p>
 
   <form method="post" action="{{ url_for('save') }}" id="config-form">
     <div class="screen-mock">
@@ -22,6 +22,7 @@
     </div>
 
     <input type="hidden" name="slots_json" id="slots_json">
+    <input type="hidden" name="encoders_json" id="encoders_json">
     <button type="submit" id="save-button">Enregistrer et envoyer a l'ecran</button>
   </form>
 
@@ -47,18 +48,13 @@
         <select id="modal-action-type">
           {% for t in action_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
         </select>
-        <div id="modal-app-picker-row" class="target-row">
-          <select id="modal-app-picker">
-            <option value="">— Choisir dans les applications installees —</option>
-          </select>
+        <div id="modal-app-library">
+          <input type="text" id="modal-app-search" placeholder="Rechercher une application...">
+          <div id="modal-app-grid" class="app-grid"></div>
+          <p id="modal-app-status" class="hint"></p>
         </div>
-        <p id="modal-app-picker-status" class="hint"></p>
-        <div class="target-row">
-          <input type="text" id="modal-action-target"
-                 placeholder="ctrl+shift+s / https://... / vol_up / light.toggle:light.bureau">
-          <button type="button" id="modal-browse-app" class="secondary">Parcourir...</button>
-        </div>
-        <p id="modal-browse-hint" class="hint">Ou choisissez directement le programme (.exe) ou son raccourci (.lnk) - pas besoin de connaitre le chemin.</p>
+        <input type="text" id="modal-action-target"
+               placeholder="ctrl+shift+s / https://... / vol_up / light.toggle:light.bureau">
       </div>
 
       <div id="modal-source-fields">
@@ -73,10 +69,39 @@
       </div>
     </div>
   </div>
+
+  <div id="encoder-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <h2 id="encoder-modal-title">Encodeur</h2>
+      {% for direction, dlabel in [("clockwise", "Sens horaire"), ("anticlockwise", "Sens antihoraire"), ("press", "Appui")] %}
+      <div class="encoder-block">
+        <label style="margin-top:0">{{ dlabel }}</label>
+        <div class="encoder-row">
+          <select id="encoder-modal-{{ direction }}-type">
+            {% for t in action_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+          </select>
+          <input type="text" id="encoder-modal-{{ direction }}-target"
+                 placeholder="vol_up / ctrl+z / light.toggle:light.bureau">
+        </div>
+      </div>
+      {% endfor %}
+      <p class="hint">
+        <b>keys</b> (ex "ctrl+shift+s") &middot; <b>launch</b> (chemin/commande) &middot;
+        <b>url</b> (site web/URI) &middot; <b>media</b> (play_pause/next/previous/vol_up/vol_down/mute) &middot;
+        <b>home_assistant</b> (format "domaine.service:entite") &middot; <b>none</b>.
+      </p>
+      <div class="modal-buttons">
+        <button type="button" id="encoder-modal-cancel" class="secondary">Annuler</button>
+        <button type="button" id="encoder-modal-apply">Appliquer</button>
+      </div>
+    </div>
+  </div>
 {% endblock %}
 {% block scripts %}
 <script>
   const INITIAL_SLOTS = {{ slots | tojson }};
+  const INITIAL_ENCODERS = {{ encoders | tojson }};
+  const DIRECTIONS = {{ directions | tojson }};
   const ICON_CHOICES = {{ icon_choices | tojson }};
   const SHAPE = {{ shape | tojson }};
 </script>

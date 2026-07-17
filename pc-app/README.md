@@ -1,11 +1,11 @@
 # Appli compagnon PC
 
-Trois pages, comme gerer les pages d'applications sur un telephone :
+Deux pages, comme gerer les pages d'applications sur un telephone :
 
-- **Accueil** : uniquement la grille des 16 emplacements - glisser-deposer
-  pour reordonner, cliquer une tuile pour la configurer (popup). C'est la
-  seule page dont vous avez besoin au quotidien.
-- **Encodeurs** : l'action des 3 encodeurs (rarement modifiee).
+- **Accueil** : la grille des 16 emplacements ET les 3 encodeurs - chaque
+  emplacement/encodeur se configure via sa propre popup (glisser-deposer
+  pour reordonner les emplacements). C'est la seule page dont vous avez
+  besoin au quotidien.
 - **Reglages** (icone &#9881;) : connexion a l'ecran, cle API, Home
   Assistant, forme des boutons - demandee automatiquement au tout premier
   lancement, puis on n'y revient quasiment plus.
@@ -55,7 +55,7 @@ ouvrir la page de configuration - `http://127.0.0.1:8080`.
 python -c "from streamdeck_companion.tray import main; main()"
 ```
 
-## Les 3 pages
+## Les 2 pages
 
 ### Accueil (`/`)
 
@@ -81,12 +81,11 @@ ce qui s'affichera sur l'ecran physique, avant meme d'envoyer.
 boutons), les 4 derniers sont masques - faites-les glisser sur l'ecran (ou
 cochez "Visible sur l'ecran" dans leur popup) des que vous en avez besoin,
 sans reflasher. "Enregistrer et envoyer a l'ecran" sauvegarde et pousse
-immediatement la grille vers l'ecran.
+immediatement la grille (emplacements + encodeurs) vers l'ecran.
 
-### Encodeurs (`/encodeurs`)
-
-Pour chacun des 3 encodeurs, une action par sens de rotation et une pour
-l'appui. Chaque encodeur affiche sur l'ecran une barre 0-100% (type "barre
+Les 3 encodeurs de la maquette sont cliquables comme les emplacements :
+leur popup regle l'action de chacun des 3 sens (horaire, antihoraire,
+appui). Chaque encodeur affiche sur l'ecran une barre 0-100% (type "barre
 de son") au lieu d'un simple compteur qui s'incremente sans limite -
 pratique pour un encodeur de volume par exemple. La valeur repart de 0
 a chaque redemarrage de l'ecran (pas de memorisation du dernier niveau).
@@ -130,24 +129,35 @@ la recoit, via `ha_poller.py`).
 | `media`           | `play_pause`/`next`/`previous`/`vol_up`/`vol_down`/`mute` | touche multimedia |
 | `home_assistant`  | dans la popup : domaine/service/entite (encodeurs : format compact `domaine.service:entite`, ex `light.toggle:light.bureau`) | appelle un service Home Assistant (bascule une lumiere/prise/scene...) |
 
-## Choisir une application (type d'action `launch`)
+## Bibliotheque d'applications (type d'action `launch`)
 
 Pour eviter d'avoir a connaitre/taper un chemin (pas accessible au grand
-public), la popup d'un emplacement propose deux facons de choisir
-l'application sans rien taper, des que le type d'action est `launch` :
+public), la popup d'un emplacement affiche une vraie bibliotheque
+d'applications - grille avec icones et recherche, comme un logiciel de
+Stream Deck du commerce - des que le type d'action est `launch` :
 
-- **Liste des applications installees** : un menu deroulant liste les
-  raccourcis du menu Demarrer (utilisateur + tous les utilisateurs) -
-  choisissez juste le nom, le chemin de lancement et le libelle de
-  l'emplacement se remplissent tout seuls (`streamdeck_companion/app_library.py`).
-- **Parcourir...** : ouvre l'explorateur de fichiers Windows pour choisir
-  directement le `.exe` ou le raccourci `.lnk`, pour les cas non listes
-  (jeux portables, applications sans raccourci Demarrer).
+- **Applications detectees** : les raccourcis du menu Demarrer (utilisateur
+  + tous les utilisateurs), listes automatiquement
+  (`streamdeck_companion/app_library.py`).
+- **Barre de recherche** : filtre la grille en tapant les premieres lettres
+  du nom.
+- **Tuile "+ Ajouter..."** : ouvre l'explorateur de fichiers Windows pour
+  choisir un `.exe`/`.lnk` non liste (jeu portable, appli sans raccourci
+  Demarrer) - l'application choisie **rejoint durablement la bibliotheque**
+  (persistee dans `dashboard_config.yaml`, cle `custom_apps`), plus besoin
+  de rechercher son chemin une seconde fois. Un lien "Retirer" sur ces
+  tuiles personnalisees permet de les enlever de la bibliotheque.
 
-Windows uniquement (necessite `pywin32`/`winshell`, deja dans
-`requirements.txt` pour cette plateforme). Sur les autres systemes, ces
-deux options sont masquees automatiquement et il reste possible de taper
-une commande a la main dans le champ.
+Cliquer une tuile remplit automatiquement le chemin de lancement et le
+libelle de l'emplacement. Le champ texte en dessous reste modifiable
+directement pour les utilisateurs avances (ex: ajouter des arguments de
+ligne de commande apres avoir choisi une application dans la grille).
+
+Windows uniquement pour la detection automatique (necessite
+`pywin32`/`winshell`, deja dans `requirements.txt` pour cette plateforme).
+Sur les autres systemes, seule la detection automatique est indisponible -
+la tuile "+ Ajouter..." (via un selecteur de fichier natif, `tkinter`) et
+le champ texte libre restent utilisables partout.
 
 ## Icones
 
@@ -208,17 +218,24 @@ necessaire pour que les emplacements/encodeurs du Stream Deck fonctionnent
   s'affiche comme une case vide sur l'ecran.
 - Les widgets Home Assistant (`barre`/`texte`) sont sondes par polling
   REST toutes les ~15s (`ha_poller.py`), pas en temps reel instantane.
-- La liste "Applications installees" (`app_library.py`) ne liste que les
-  raccourcis du menu Demarrer (utilisateur + tous les utilisateurs) - les
-  applications sans raccourci Demarrer (portables, certaines apps du
-  Microsoft Store) n'y apparaissent pas ; utilisez "Parcourir..." pour
-  celles-ci. Fonctionnalite Windows uniquement, non verifiee sur une
-  vraie machine Windows (logique testee avec des donnees simulees dans
-  le sandbox de developpement, qui n'a pas acces a `pywin32`/`winshell`).
+- La detection automatique (`app_library.py`) ne liste que les raccourcis
+  du menu Demarrer (utilisateur + tous les utilisateurs) - les applications
+  sans raccourci Demarrer (portables, certaines apps du Microsoft Store)
+  n'y apparaissent pas ; ajoutez-les via la tuile "+ Ajouter...". Detection
+  Windows uniquement (le reste de la bibliotheque - ajout manuel, recherche,
+  applications personnalisees - fonctionne partout). Logique testee avec
+  des donnees simulees dans le sandbox de developpement (qui n'a pas acces
+  a `pywin32`/`winshell`), pas encore confirmee de bout en bout sur une
+  vraie machine Windows.
+- Les icones de la bibliotheque d'applications sont un glyphe generique
+  (pas l'icone reelle extraite du `.exe`) - extraire une vraie miniature
+  par application demanderait une integration plus lourde
+  (`win32gui.ExtractIconEx`), envisageable dans un futur chantier.
 - La page de configuration a ete testee de bout en bout avec un navigateur
-  headless (rendu de la maquette d'ecran et des masques, popup,
-  glisser-deposer dans les deux sens et entre les deux, sauvegarde,
-  persistance apres rechargement) mais pas visuellement sur l'ecran
-  physique - verifiez apres un push que les icones/couleurs/tailles vous
-  conviennent et signalez tout ce qui parait cassé (ex une icone qui
-  s'affiche comme une case vide).
+  headless (rendu de la maquette d'ecran et des masques, popup emplacement
+  et popup encodeur, glisser-deposer dans les deux sens et entre les deux,
+  bibliotheque d'applications - recherche, selection, ajout/retrait
+  personnalise -, sauvegarde, persistance apres rechargement) mais pas
+  visuellement sur l'ecran physique - verifiez apres un push que les
+  icones/couleurs/tailles vous conviennent et signalez tout ce qui parait
+  cassé (ex une icone qui s'affiche comme une case vide).
