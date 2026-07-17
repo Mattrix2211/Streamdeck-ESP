@@ -74,6 +74,14 @@ button.secondary:hover { background: var(--slate); color: #fff; }
   font-size: clamp(7px, 1.6vw, 12px); text-align: center; max-width: 100%;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.slot-tile.has-widget .label { margin-bottom: 2px; }
+.slot-tile .widget-bar {
+  width: 78%; height: 3px; border-radius: 2px; background: var(--slate); overflow: hidden;
+}
+.slot-tile .widget-bar > span { display: block; height: 100%; width: 0%; background: var(--signal); }
+.slot-tile .widget-value {
+  font-family: 'JetBrains Mono', monospace; font-size: clamp(6px, 1.3vw, 10px); color: var(--mist);
+}
 
 /* --- Cartes encodeurs (maquette, lecture seule - reglage sur /encodeurs) --- */
 .encoder-mock-card {

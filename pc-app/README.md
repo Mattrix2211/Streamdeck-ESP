@@ -112,6 +112,13 @@ Les widgets (`barre`/`texte`) sont rafraichis toutes les ~15 secondes par
 Assistant en arriere-plan (pas de websocket, suffisant pour quelques
 entites).
 
+Dans la maquette de l'accueil, une tuile `barre` affiche une petite jauge
+sous le libelle et une tuile `texte` affiche un espace reserve pour la
+valeur ("--") - de quoi voir tout de suite quel type est configure sur
+chaque emplacement. La jauge/valeur affichee dans le navigateur est un
+espace reserve (pas la vraie valeur HA en direct : seul l'ecran physique
+la recoit, via `ha_poller.py`).
+
 ## Types d'actions (`type` / cible)
 
 | type              | cible                             | effet                                    |

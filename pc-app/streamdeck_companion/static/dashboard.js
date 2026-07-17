@@ -50,6 +50,7 @@ function iconChar(key) {
 function makeTile(slot, index) {
   const tile = document.createElement("div");
   tile.className = "slot-tile shape-" + (SHAPE === "rond" ? "rond" : "carre");
+  if (slot.type && slot.type !== "bouton") tile.classList.add("has-widget");
   tile.draggable = true;
   tile.dataset.index = String(index);
 
@@ -62,6 +63,24 @@ function makeTile(slot, index) {
   label.className = "label";
   label.textContent = slot.label || `Slot ${index + 1}`;
   tile.appendChild(label);
+
+  /* Sur le vrai ecran, "barre"/"texte" affichent une jauge ou une valeur
+   * en bas du bouton (masquees pour "bouton") - meme logique ici pour que
+   * l'apercu distingue vraiment les 3 types. Pas de valeur live dans le
+   * navigateur (c'est ha_poller.py qui pousse la vraie valeur a l'ecran) :
+   * on affiche juste un espace reserve pour montrer OU et COMMENT elle
+   * s'affichera. */
+  if (slot.type === "barre") {
+    const bar = document.createElement("div");
+    bar.className = "widget-bar";
+    bar.appendChild(document.createElement("span"));
+    tile.appendChild(bar);
+  } else if (slot.type === "texte") {
+    const value = document.createElement("div");
+    value.className = "widget-value";
+    value.textContent = slot.ha_entity ? "--" : "";
+    tile.appendChild(value);
+  }
 
   tile.addEventListener("click", () => openModal(index));
   tile.addEventListener("dragstart", () => { dragSrcIndex = index; });
