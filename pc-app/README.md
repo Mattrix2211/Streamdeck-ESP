@@ -254,6 +254,38 @@ couleur", format `#RRGGBB`) qui met a jour le fond du bouton via
 reflasher le firmware** pour beneficier de cette fonctionnalite, un
 `git pull` cote appli PC ne suffit pas.
 
+## Reglage couleur/chaleur/intensite par appui long
+
+Sur un emplacement `bouton` eligible (meme condition que ci-dessus :
+action `home_assistant` domaine `light` + case "Afficher la couleur..."
+cochee), un **appui long** sur l'ecran ouvre un mode reglage en direct via
+les 3 encodeurs :
+
+- **Encodeur 1** : teinte (hue).
+- **Encodeur 2** : temperature de couleur (chaleur).
+- **Encodeur 3** : intensite (luminosite).
+
+Chaque cran d'encodeur met a jour l'apercu sur le bouton immediatement et
+appelle Home Assistant en direct (limite a ~8 appels/s max par axe pour ne
+pas le spammer si l'encodeur tourne vite - voir
+`device_client.py::_send_color_mode_update`). Le mode se ferme tout seul
+apres 10s d'inactivite, ou en touchant le bouton "X" qui apparait en haut
+a droite de l'ecran pendant le reglage. **Necessite de reflasher le
+firmware** (nouvel evenement `hold_N` par emplacement, bouton "X" flottant
+et switch `Mode couleur actif` dans `firmware/package.yaml`).
+
+## Ajustement tactile des widgets "barre"
+
+Un emplacement de type `barre` avec une source Home Assistant configuree
+(champ "Source Home Assistant") accepte maintenant le tactile directement
+sur l'ecran : toucher la **moitie gauche** diminue la valeur de 5%,
+la **moitie droite** l'augmente - via deux zones tactiles invisibles
+superposees au widget (voir `firmware/slot_widgets.yaml`), actives
+uniquement quand l'emplacement est bien de type `barre`. Domaines pris en
+charge : `light` (luminosite), `media_player` (volume), `fan` (vitesse),
+`cover` (position) - voir `ha_client.py::adjust_entity_percent()`.
+**Necessite de reflasher le firmware.**
+
 ## Icones
 
 Le selecteur d'icone (popup d'un emplacement) propose un catalogue curate
@@ -300,6 +332,15 @@ necessaire pour que les emplacements/encodeurs du Stream Deck fonctionnent
   pour ca). Le picker/l'enumeration des peripheriques (`pycaw`) est fiable,
   mais le changement effectif n'a pas pu etre teste sur une vraie machine
   Windows depuis ce sandbox de developpement - a confirmer.
+- Le mode reglage couleur/chaleur/intensite par appui long et
+  l'ajustement tactile des widgets "barre" reposent sur du code LVGL/C++
+  (appui long, zones tactiles superposees, evenements) qui n'a pas pu
+  etre compile ni teste sur du vrai materiel depuis ce sandbox Linux (pas
+  d'ESP32-P4 ni d'ecran tactile disponibles ici) - la logique cote appli
+  PC (calcul teinte/chaleur/intensite, ajustement pourcentage, limitation
+  de frequence) est testee unitairement avec des reponses HA simulees,
+  mais l'integration firmware complete reste a confirmer sur l'appareil
+  reel apres reflash.
 - Un changement d'IP/port/cle API est repris automatiquement au prochain
   essai de reconnexion (jusqu'a ~10s, `device_client.py::connect()` relit
   la config a chaque tentative) - pas besoin de redemarrer l'icone de la

@@ -158,6 +158,43 @@ def light_color_hex(state: dict) -> str:
     return "#FFE9B0"
 
 
+# Domaines dont un widget "barre" peut ajuster la valeur au tactile
+# (gauche/droite sur l'ecran, voir device_client.py::_adjust_barre) :
+# attribut a lire pour l'etat courant, echelle pour le convertir en 0-100,
+# service/parametre a appeler pour l'ecrire. "as_fraction" : le parametre
+# HA attend 0.0-1.0 plutot que 0-100 (ex volume_level).
+_PERCENT_ADJUSTABLE: dict[str, dict] = {
+    "light": {"attr": "brightness", "scale": 255, "service": "turn_on", "param": "brightness_pct"},
+    "media_player": {
+        "attr": "volume_level", "scale": 1.0, "service": "volume_set", "param": "volume_level", "as_fraction": True,
+    },
+    "fan": {"attr": "percentage", "scale": 100, "service": "set_percentage", "param": "percentage"},
+    "cover": {"attr": "current_position", "scale": 100, "service": "set_cover_position", "param": "position"},
+}
+
+
+def adjust_entity_percent(client: "HomeAssistantClient", entity_id: str, direction: int, step: int = 5) -> None:
+    """Augmente/diminue (direction +1/-1) la valeur d'une entite HA d'un
+    widget "barre" par pas de `step` %, pour l'ajustement tactile gauche/
+    droite sur l'ecran - lit l'etat courant pour partir de la bonne valeur
+    plutot que d'ecraser avec une valeur absolue arbitraire."""
+    domain = entity_id.split(".", 1)[0] if "." in entity_id else ""
+    spec = _PERCENT_ADJUSTABLE.get(domain)
+    if not spec:
+        raise ValueError(f"Ajustement tactile non pris en charge pour le domaine {domain!r}")
+    state = client.get_state(entity_id)
+    if state is None:
+        raise RuntimeError(f"Entite introuvable : {entity_id}")
+    raw = (state.get("attributes") or {}).get(spec["attr"])
+    try:
+        current_pct = round(float(raw) / spec["scale"] * 100) if raw is not None else 0
+    except (TypeError, ValueError, ZeroDivisionError):
+        current_pct = 0
+    new_pct = max(0, min(100, current_pct + direction * step))
+    value = new_pct / 100 if spec.get("as_fraction") else new_pct
+    client.call_service(domain, spec["service"], entity_id=entity_id, data={spec["param"]: value})
+
+
 def format_widget_value(state: dict, slot_type: str) -> str:
     """Convertit un etat HA en texte a pousser vers l'ecran.
 

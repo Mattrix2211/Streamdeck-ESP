@@ -234,12 +234,18 @@ select:
           if (x == "barre") {
             lv_obj_clear_flag(id(slot12_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot12_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot12_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot12_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else if (x == "texte") {
             lv_obj_add_flag(id(slot12_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_clear_flag(id(slot12_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot12_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot12_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else {
             lv_obj_add_flag(id(slot12_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot12_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot12_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot12_barre_inc), LV_OBJ_FLAG_HIDDEN);
           }
   - platform: template
     id: slot13_type
@@ -252,12 +258,18 @@ select:
           if (x == "barre") {
             lv_obj_clear_flag(id(slot13_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot13_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot13_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot13_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else if (x == "texte") {
             lv_obj_add_flag(id(slot13_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_clear_flag(id(slot13_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot13_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot13_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else {
             lv_obj_add_flag(id(slot13_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot13_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot13_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot13_barre_inc), LV_OBJ_FLAG_HIDDEN);
           }
   - platform: template
     id: slot14_type
@@ -270,12 +282,18 @@ select:
           if (x == "barre") {
             lv_obj_clear_flag(id(slot14_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot14_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot14_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot14_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else if (x == "texte") {
             lv_obj_add_flag(id(slot14_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_clear_flag(id(slot14_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot14_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot14_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else {
             lv_obj_add_flag(id(slot14_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot14_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot14_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot14_barre_inc), LV_OBJ_FLAG_HIDDEN);
           }
   - platform: template
     id: slot15_type
@@ -288,12 +306,18 @@ select:
           if (x == "barre") {
             lv_obj_clear_flag(id(slot15_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot15_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot15_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot15_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else if (x == "texte") {
             lv_obj_add_flag(id(slot15_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_clear_flag(id(slot15_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot15_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot15_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else {
             lv_obj_add_flag(id(slot15_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot15_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot15_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot15_barre_inc), LV_OBJ_FLAG_HIDDEN);
           }
   - platform: template
     id: slot16_type
@@ -306,12 +330,18 @@ select:
           if (x == "barre") {
             lv_obj_clear_flag(id(slot16_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot16_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot16_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot16_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else if (x == "texte") {
             lv_obj_add_flag(id(slot16_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_clear_flag(id(slot16_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot16_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot16_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else {
             lv_obj_add_flag(id(slot16_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot16_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot16_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot16_barre_inc), LV_OBJ_FLAG_HIDDEN);
           }
 
 switch:

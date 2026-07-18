@@ -87,7 +87,15 @@ changements de la page courante (chaque page ne touche que sa portion de
   coche, le meme sondage pousse aussi une couleur de fond
   (`ha_client.py::light_color_hex()` - RGB reel, ou approxime depuis la
   temperature de couleur, ou blanc chaud generique) vers une 5e entite
-  par emplacement (`Slot N - couleur`, voir `firmware/slots_*.yaml`).
+  par emplacement (`Slot N - couleur`, voir `firmware/slots_*.yaml`). Un
+  appui long sur ce meme bouton (evenement `hold_N`) ouvre un mode
+  reglage en direct via les 3 encodeurs (teinte/chaleur/intensite,
+  limite en frequence - `device_client.py::_handle_color_encoder`),
+  ferme par timeout ou par le bouton "X" flottant (`close_color_mode`).
+  Un emplacement `barre` avec une source HA accepte aussi le tactile
+  gauche/droite pour l'augmenter/diminuer directement
+  (`ha_client.py::adjust_entity_percent()`, evenements
+  `barre_inc_N`/`barre_dec_N`).
 - `icons.py` : catalogue d'icones (glyphes Material Icons, memes
   points de code que la police `font_icons` du firmware).
 - `app_library.py`/`custom_apps.py`/`browse.py` : bibliotheque

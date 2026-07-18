@@ -9,18 +9,9 @@
 # d'extension (colonne gauche GPIO1-5/20/32/33, droite GPIO45-47). GPIO5 est
 # le reset interne de la dalle, evitez-le. Verifiez contre votre revision.
 #
-# IMPORTANT - puce ES (engineering sample) : si `esphome run` affiche
-# "chip revision: v1.3" (silicium pre-production, PAS v3.0+), utilisez
-# ESPHome <= 2026.2.x pour compiler (`pip install "esphome<2026.3"`).
-# Depuis ESPHome 2026.3, le board esp32-p4-evboard cible par defaut la
-# production et le bootloader compile plante au demarrage sur du
-# silicium ES ("assert failed: ... esp_task_stack_is_sane_cache_disabled()"
-# juste apres "Disabling RNG early entropy source", avant meme app_main) -
-# confirme sur ce projet, ni un pin de version IDF ni
-# esp32.engineering_sample: true (ajoute en 2026.3, inexistant avant) ne
-# suffisent a compenser. Voir https://github.com/esphome/esphome/issues/15336
-# (rapporte comme fonctionnel en 2026.2.x, casse en 2026.3.x - PR de fix
-# liee non verifiee comme resolvant CE crash precis).
+# IMPORTANT - puce ES (engineering sample, "chip revision: v1.3") : voir
+# streamdeck.yaml (cle esp32.board) pour le detail du crash de boot et son
+# correctif - ESPHome <= 2026.2.x + board explicite requis.
 
 esp32:
   flash_size: 16MB
@@ -263,12 +254,19 @@ event:
   - platform: template
     id: action_button_event
     name: "Bouton d'action ecran"
+    # action_N clic, hold_N appui long (mode couleur), barre_inc/dec_N
+    # (tactile sur un widget barre), close_color_mode (bouton "X").
     event_types:
       [
-        "action_1", "action_2", "action_3", "action_4",
-        "action_5", "action_6", "action_7", "action_8",
-        "action_9", "action_10", "action_11", "action_12",
-        "action_13", "action_14", "action_15", "action_16",
+        "action_1", "action_2", "action_3", "action_4", "action_5", "action_6", "action_7", "action_8",
+        "action_9", "action_10", "action_11", "action_12", "action_13", "action_14", "action_15", "action_16",
+        "hold_1", "hold_2", "hold_3", "hold_4", "hold_5", "hold_6", "hold_7", "hold_8",
+        "hold_9", "hold_10", "hold_11", "hold_12", "hold_13", "hold_14", "hold_15", "hold_16",
+        "barre_inc_1", "barre_inc_2", "barre_inc_3", "barre_inc_4", "barre_inc_5", "barre_inc_6", "barre_inc_7", "barre_inc_8",
+        "barre_inc_9", "barre_inc_10", "barre_inc_11", "barre_inc_12", "barre_inc_13", "barre_inc_14", "barre_inc_15", "barre_inc_16",
+        "barre_dec_1", "barre_dec_2", "barre_dec_3", "barre_dec_4", "barre_dec_5", "barre_dec_6", "barre_dec_7", "barre_dec_8",
+        "barre_dec_9", "barre_dec_10", "barre_dec_11", "barre_dec_12", "barre_dec_13", "barre_dec_14", "barre_dec_15", "barre_dec_16",
+        "close_color_mode",
       ]
 
 # Texte pousse par l'appli PC (titre en cours, volume, notification...) et
@@ -285,6 +283,21 @@ text:
       - lvgl.label.update:
           id: lbl_pc_status
           text: !lambda "return x;"
+
+# Pilote la visibilite du bouton "X" flottant (voir plus bas) - l'appli PC
+# l'active en reponse a un appui long sur un emplacement lie a une ampoule.
+switch:
+  - platform: template
+    id: color_mode_active_switch
+    name: "Mode couleur actif"
+    optimistic: true
+    on_state:
+      - lambda: |-
+          if (x) {
+            lv_obj_clear_flag(id(color_mode_close_btn), LV_OBJ_FLAG_HIDDEN);
+          } else {
+            lv_obj_add_flag(id(color_mode_close_btn), LV_OBJ_FLAG_HIDDEN);
+          }
 
 # ---------------------------------------------------------------------------
 # 16 emplacements configurables (boutons/widgets) - entites generees dans
@@ -464,3 +477,6 @@ lvgl:
             text_color: 0x6B8BA4
             align: bottom_mid
             y: -8
+
+        # Sortie du mode reglage couleur (voir color_mode_active_switch)
+        - button: {id: color_mode_close_btn, width: 40, height: 40, radius: 20, align: top_right, x: -8, y: 8, hidden: true, bg_color: 0x1E4060, border_color: 0x00B4D8, border_width: 1, on_click: [{event.trigger: {id: action_button_event, event_type: "close_color_mode"}}], widgets: [{label: {text: "X", text_font: font_body, text_color: 0xFFFFFF, align: center}}]}

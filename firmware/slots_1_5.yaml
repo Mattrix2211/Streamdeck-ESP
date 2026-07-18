@@ -234,12 +234,18 @@ select:
           if (x == "barre") {
             lv_obj_clear_flag(id(slot1_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot1_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot1_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot1_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else if (x == "texte") {
             lv_obj_add_flag(id(slot1_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_clear_flag(id(slot1_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot1_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot1_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else {
             lv_obj_add_flag(id(slot1_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot1_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot1_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot1_barre_inc), LV_OBJ_FLAG_HIDDEN);
           }
   - platform: template
     id: slot2_type
@@ -252,12 +258,18 @@ select:
           if (x == "barre") {
             lv_obj_clear_flag(id(slot2_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot2_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot2_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot2_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else if (x == "texte") {
             lv_obj_add_flag(id(slot2_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_clear_flag(id(slot2_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot2_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot2_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else {
             lv_obj_add_flag(id(slot2_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot2_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot2_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot2_barre_inc), LV_OBJ_FLAG_HIDDEN);
           }
   - platform: template
     id: slot3_type
@@ -270,12 +282,18 @@ select:
           if (x == "barre") {
             lv_obj_clear_flag(id(slot3_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot3_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot3_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot3_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else if (x == "texte") {
             lv_obj_add_flag(id(slot3_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_clear_flag(id(slot3_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot3_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot3_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else {
             lv_obj_add_flag(id(slot3_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot3_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot3_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot3_barre_inc), LV_OBJ_FLAG_HIDDEN);
           }
   - platform: template
     id: slot4_type
@@ -288,12 +306,18 @@ select:
           if (x == "barre") {
             lv_obj_clear_flag(id(slot4_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot4_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot4_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot4_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else if (x == "texte") {
             lv_obj_add_flag(id(slot4_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_clear_flag(id(slot4_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot4_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot4_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else {
             lv_obj_add_flag(id(slot4_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot4_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot4_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot4_barre_inc), LV_OBJ_FLAG_HIDDEN);
           }
   - platform: template
     id: slot5_type
@@ -306,12 +330,18 @@ select:
           if (x == "barre") {
             lv_obj_clear_flag(id(slot5_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot5_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot5_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(slot5_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else if (x == "texte") {
             lv_obj_add_flag(id(slot5_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_clear_flag(id(slot5_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot5_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot5_barre_inc), LV_OBJ_FLAG_HIDDEN);
           } else {
             lv_obj_add_flag(id(slot5_bar), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(slot5_value_lbl), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot5_barre_dec), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(slot5_barre_inc), LV_OBJ_FLAG_HIDDEN);
           }
 
 switch:
