@@ -79,7 +79,10 @@ changements de la page courante (chaque page ne touche que sa portion de
 - `ha_client.py`/`ha_poller.py` sondent l'API REST de Home Assistant
   (facultatif) toutes les ~15s pour rafraichir les emplacements type
   widget, et executent le type d'action `home_assistant` (appel de
-  service).
+  service). `ha_client.py::list_entities()` alimente aussi le picker
+  d'entites recherchable de la popup d'emplacement (source d'un widget,
+  cible d'une action `home_assistant`), avec des services courants
+  curates par domaine (`COMMON_SERVICES`).
 - `icons.py` : catalogue d'icones (glyphes Material Icons, memes
   points de code que la police `font_icons` du firmware).
 - `app_library.py`/`custom_apps.py`/`browse.py` : bibliotheque

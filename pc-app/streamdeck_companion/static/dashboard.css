@@ -171,3 +171,20 @@ button.danger:hover { background: rgba(230,57,70,.12); }
 .app-tile .app-remove {
   font-size: 9px; color: var(--red); text-decoration: underline; margin-top: -2px;
 }
+
+/* --- Picker d'entites Home Assistant (source widget, action home_assistant) --- */
+.entity-list {
+  max-height: 160px; overflow-y: auto; margin-top: 4px;
+  border: 1px solid var(--slate); border-radius: 8px; background: var(--navy);
+}
+.entity-list .hint { padding: 8px 10px; margin: 0; }
+.entity-row {
+  display: flex; flex-direction: column; gap: 1px; padding: 6px 10px;
+  cursor: pointer; border-bottom: 1px solid var(--slate);
+}
+.entity-row:last-child { border-bottom: none; }
+.entity-row:hover { background: var(--slate); }
+.entity-row .entity-name { font-size: 13px; color: #fff; }
+.entity-row .entity-meta {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--fog);
+}

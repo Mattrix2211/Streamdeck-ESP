@@ -175,6 +175,7 @@ function updateModalFieldsVisibility() {
   document.getElementById("modal-action-fields").style.display = type === "bouton" ? "block" : "none";
   document.getElementById("modal-source-fields").style.display = type === "bouton" ? "none" : "block";
   updateLaunchPickerVisibility();
+  updateHaSourceVisibility();
 }
 
 function updateLaunchPickerVisibility() {
@@ -184,6 +185,7 @@ function updateLaunchPickerVisibility() {
     ? "Choisissez une application ci-dessus, ou tapez une commande"
     : "ctrl+shift+s / https://... / vol_up / light.toggle:light.bureau";
   if (isLaunch) loadAppLibraryIfNeeded();
+  updateHaActionVisibility();
 }
 
 function openModal(index) {

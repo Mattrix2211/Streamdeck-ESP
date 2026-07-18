@@ -137,8 +137,9 @@ qu'on utilise au quotidien.
 
 - **bouton** : declenche une action au clic (voir tableau ci-dessous).
 - **barre** : jauge 0-100, alimentee par l'etat d'une entite Home
-  Assistant numerique (volume, luminosite, batterie...) - reglee via
-  "Source Home Assistant (entity_id)" dans la popup.
+  Assistant numerique (volume, luminosite, batterie...) - choisie dans une
+  liste recherchable (voir "Choisir une entite Home Assistant" ci-dessous),
+  pas besoin de connaitre l'entity_id exact.
 - **texte** : affiche la valeur brute d'une entite HA + son unite (ex
   "21.5°C") - meme reglage de source.
 
@@ -163,7 +164,7 @@ la recoit, via `ha_poller.py`).
 | `launch`          | chemin ou commande (arguments acceptes) | lance une application/un jeu - voir "Choisir une application" ci-dessous, pas besoin de taper le chemin a la main |
 | `url`             | URL ou URI (`steam://...`, `discord://...`) | ouverte via le gestionnaire par defaut du systeme |
 | `media`           | `play_pause`/`next`/`previous`/`vol_up`/`vol_down`/`mute` | touche multimedia |
-| `home_assistant`  | dans la popup : domaine/service/entite (encodeurs : format compact `domaine.service:entite`, ex `light.toggle:light.bureau`) | appelle un service Home Assistant (bascule une lumiere/prise/scene...) |
+| `home_assistant`  | emplacement : entite + service choisis dans la popup (voir "Choisir une entite Home Assistant" ci-dessous) ; encodeurs : format compact `domaine.service:entite`, ex `light.toggle:light.bureau` | appelle un service Home Assistant (bascule une lumiere/prise/scene...) |
 
 ## Bibliotheque d'applications (type d'action `launch`)
 
@@ -200,6 +201,33 @@ Windows uniquement pour la detection automatique (necessite
 Sur les autres systemes, seule la detection automatique est indisponible -
 la tuile "+ Ajouter..." (via un selecteur de fichier natif, `tkinter`) et
 le champ texte libre restent utilisables partout.
+
+## Choisir une entite Home Assistant
+
+Comme pour les applications, la popup d'un emplacement propose une
+**liste recherchable de vos entites Home Assistant** (`streamdeck_companion/ha_client.py::list_entities()`)
+plutot que de taper un entity_id a la main - inspire de
+[cgiesche/streamdeck-homeassistant](https://github.com/cgiesche/streamdeck-homeassistant) :
+
+- **Source d'un widget** (type `barre`/`texte`) : tapez quelques lettres
+  du nom (ex "temp", "volume", "salon"), cliquez l'entite trouvee - son
+  `entity_id` remplit le champ automatiquement.
+- **Action `home_assistant`** (type `bouton`) : meme recherche, puis un
+  menu deroulant **"Service"** propose les services courants pour le
+  domaine de l'entite choisie (ex `light.*` -> toggle/turn_on/turn_off,
+  `media_player.*` -> play/pause/volume...) - pas besoin de connaitre le
+  nom exact d'un service Home Assistant. Le champ compact
+  `domaine.service:entite` en dessous se remplit tout seul, et reste
+  modifiable directement pour les cas avances.
+
+Necessite Home Assistant configure dans **Reglages** (URL + jeton d'acces
+longue duree). Si la connexion echoue, un message clair s'affiche
+(URL injoignable / jeton refuse) au lieu d'une erreur technique brute.
+
+**Limitation actuelle** : ce picker equipe la popup d'un **emplacement**.
+Les 3 encodeurs utilisent encore le champ texte compact
+`domaine.service:entite` a taper a la main (pas encore de picker dedie -
+possible dans un prochain chantier si besoin).
 
 ## Icones
 
@@ -260,6 +288,19 @@ necessaire pour que les emplacements/encodeurs du Stream Deck fonctionnent
   s'affiche comme une case vide sur l'ecran.
 - Les widgets Home Assistant (`barre`/`texte`) sont sondes par polling
   REST toutes les ~15s (`ha_poller.py`), pas en temps reel instantane.
+- Le picker d'entites Home Assistant charge **toutes** les entites de
+  l'installation (`GET /api/states`, pas de filtre par domaine cote
+  serveur) - fonctionne bien jusqu'a quelques centaines d'entites, la
+  recherche est limitee aux 50 premiers resultats affiches par requete.
+  Testee avec des donnees simulees (pas de vraie instance Home Assistant
+  accessible depuis le sandbox de developpement) - a confirmer sur votre
+  installation reelle.
+- Les services proposes par domaine dans le picker d'action
+  `home_assistant` sont une liste courante curatee
+  (`ha_client.py::COMMON_SERVICES`), pas une introspection complete de
+  l'API Home Assistant - pour un service plus specifique/rare, tapez
+  directement le format compact `domaine.service:entite` dans le champ en
+  dessous.
 - La detection automatique (`app_library.py`) ne liste que les raccourcis
   du menu Demarrer (utilisateur + tous les utilisateurs) - les applications
   sans raccourci Demarrer (portables, certaines apps du Microsoft Store)
@@ -277,7 +318,8 @@ necessaire pour que les emplacements/encodeurs du Stream Deck fonctionnent
   headless (rendu de la maquette d'ecran et des masques, popup emplacement
   et popup encodeur, glisser-deposer dans les deux sens et entre les deux,
   bibliotheque d'applications - recherche, selection, ajout/retrait
-  personnalise -, creation/edition/suppression de profils, sauvegarde,
+  personnalise -, picker d'entites Home Assistant - recherche, selection,
+  choix de service -, creation/edition/suppression de profils, sauvegarde,
   persistance apres rechargement) mais pas visuellement sur l'ecran
   physique - verifiez apres un push que les icones/couleurs/tailles vous
   conviennent et signalez tout ce qui parait cassé (ex une icone qui

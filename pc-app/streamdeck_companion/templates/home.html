@@ -61,12 +61,23 @@
           <div id="modal-app-grid" class="app-grid"></div>
           <p id="modal-app-status" class="hint"></p>
         </div>
+        <div id="modal-ha-action-fields">
+          <label>Entite Home Assistant</label>
+          <input type="text" id="modal-ha-action-search" placeholder="Rechercher une entite...">
+          <div id="modal-ha-action-list" class="entity-list"></div>
+          <p id="modal-ha-action-status" class="hint"></p>
+          <label>Service</label>
+          <select id="modal-ha-action-service"></select>
+        </div>
         <input type="text" id="modal-action-target"
                placeholder="ctrl+shift+s / https://... / vol_up / light.toggle:light.bureau">
       </div>
 
       <div id="modal-source-fields">
         <label>Source Home Assistant (entity_id)</label>
+        <input type="text" id="modal-ha-entity-search" placeholder="Rechercher une entite...">
+        <div id="modal-ha-entity-list" class="entity-list"></div>
+        <p id="modal-ha-entity-status" class="hint"></p>
         <input type="text" id="modal-ha-entity" placeholder="sensor.volume_pc / sensor.temperature_salon">
         <p class="hint">Rafraichie toutes les ~15s. "barre" attend une valeur numerique 0-100.</p>
       </div>
@@ -145,5 +156,6 @@
 </script>
 <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
 <script src="{{ url_for('static', filename='app-library.js') }}"></script>
+<script src="{{ url_for('static', filename='ha-entities.js') }}"></script>
 <script src="{{ url_for('static', filename='profiles.js') }}"></script>
 {% endblock %}

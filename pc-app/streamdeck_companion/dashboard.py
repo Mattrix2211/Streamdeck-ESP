@@ -21,9 +21,11 @@ import json
 import logging
 from pathlib import Path
 
+import requests
 from flask import Flask, jsonify, redirect, render_template, request, url_for
 
 from . import actions as action_runner
+from . import ha_client
 from . import icons
 from . import profiles as profile_utils
 from .app_library import list_installed_apps
@@ -269,6 +271,47 @@ def open_windows():
         LOG.exception("Echec de la lecture des applications ouvertes")
         return jsonify({"error": str(exc)}), 500
     return jsonify({"windows": windows})
+
+
+def _ha_error_message(exc: Exception) -> str:
+    """Message d'erreur lisible pour un utilisateur non-technique - les
+    exceptions brutes de `requests` (NameResolutionError, stack complet...)
+    ne veulent rien dire pour quelqu'un qui configure juste une URL."""
+    if isinstance(exc, requests.exceptions.Timeout):
+        return "Home Assistant ne repond pas (delai depasse) - verifiez l'URL dans Reglages."
+    if isinstance(exc, requests.exceptions.ConnectionError):
+        return "Impossible de joindre Home Assistant - verifiez l'URL dans Reglages."
+    if isinstance(exc, requests.exceptions.HTTPError):
+        status = exc.response.status_code if exc.response is not None else None
+        if status == 401:
+            return "Cle d'acces Home Assistant refusee - verifiez le jeton dans Reglages."
+        return f"Home Assistant a repondu une erreur (code {status})."
+    return str(exc)
+
+
+@app.route("/ha-entities", methods=["GET"])
+def ha_entities():
+    """Picker d'entites Home Assistant (source d'un widget barre/texte,
+    entite ciblee par une action 'home_assistant') : liste recherchable
+    plutot que de taper un entity_id a la main."""
+    config = load_config(_config_path)
+    ha_conf = config.get("home_assistant") or {}
+    client = ha_client.HomeAssistantClient(ha_conf.get("url", ""), ha_conf.get("token", ""))
+    if not client.configured:
+        return jsonify({"entities": [], "error": "Home Assistant n'est pas configure (voir Reglages)."})
+    try:
+        entities = client.list_entities()
+    except Exception as exc:
+        LOG.exception("Echec de la lecture des entites Home Assistant")
+        return jsonify({"entities": [], "error": _ha_error_message(exc)}), 500
+    return jsonify({"entities": entities})
+
+
+@app.route("/ha-services/<domain>", methods=["GET"])
+def ha_services(domain):
+    """Services HA courants pour un domaine (ex 'light' -> toggle/turn_on/
+    turn_off), pour le menu deroulant du picker d'action 'home_assistant'."""
+    return jsonify({"services": ha_client.common_services(domain)})
 
 
 @app.route("/reglages", methods=["GET"])
