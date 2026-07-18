@@ -186,6 +186,7 @@ function updateLaunchPickerVisibility() {
     : "ctrl+shift+s / https://... / vol_up / light.toggle:light.bureau";
   if (isLaunch) loadAppLibraryIfNeeded();
   updateHaActionVisibility();
+  updateAudioPickerVisibility();
 }
 
 function openModal(index) {

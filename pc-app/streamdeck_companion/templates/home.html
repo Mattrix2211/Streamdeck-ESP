@@ -73,6 +73,12 @@
             <input type="checkbox" id="modal-show-light-color">
           </div>
         </div>
+        <div id="modal-audio-fields">
+          <label>Peripherique de sortie audio</label>
+          <input type="text" id="modal-audio-search" placeholder="Rechercher un peripherique...">
+          <div id="modal-audio-list" class="entity-list"></div>
+          <p id="modal-audio-status" class="hint"></p>
+        </div>
         <input type="text" id="modal-action-target"
                placeholder="ctrl+shift+s / https://... / vol_up / light.toggle:light.bureau">
       </div>
@@ -161,5 +167,6 @@
 <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
 <script src="{{ url_for('static', filename='app-library.js') }}"></script>
 <script src="{{ url_for('static', filename='ha-entities.js') }}"></script>
+<script src="{{ url_for('static', filename='audio-devices.js') }}"></script>
 <script src="{{ url_for('static', filename='profiles.js') }}"></script>
 {% endblock %}

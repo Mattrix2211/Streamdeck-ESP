@@ -165,6 +165,7 @@ la recoit, via `ha_poller.py`).
 | `url`             | URL ou URI (`steam://...`, `discord://...`) | ouverte via le gestionnaire par defaut du systeme |
 | `media`           | `play_pause`/`next`/`previous`/`vol_up`/`vol_down`/`mute` | touche multimedia |
 | `home_assistant`  | emplacement : entite + service choisis dans la popup (voir "Choisir une entite Home Assistant" ci-dessous) ; encodeurs : format compact `domaine.service:entite`, ex `light.toggle:light.bureau` | appelle un service Home Assistant (bascule une lumiere/prise/scene...) |
+| `audio_output`    | emplacement : peripheriques choisis dans la popup (liste recherchable, `streamdeck_companion/audio_devices.py`) - identifiant opaque, pas destine a etre tape a la main | bascule le peripherique de sortie audio par defaut (casque/enceintes...) - Windows uniquement |
 
 ## Bibliotheque d'applications (type d'action `launch`)
 
@@ -292,6 +293,13 @@ necessaire pour que les emplacements/encodeurs du Stream Deck fonctionnent
 - `tray.py` n'a pu etre teste que hors environnement graphique Windows reel
   (logique de connexion/config verifiee en detail ; le rendu de l'icone
   lui-meme necessite un vrai bureau Windows pour etre confirme).
+- Le changement de sortie audio (`audio_devices.py`) passe par une interface
+  COM non documentee par Microsoft (`IPolicyConfig::SetDefaultEndpoint`,
+  identique a ce qu'utilisent les Parametres son de Windows en interne et
+  des outils comme EarTrumpet/SoundSwitch - aucune API publique n'existe
+  pour ca). Le picker/l'enumeration des peripheriques (`pycaw`) est fiable,
+  mais le changement effectif n'a pas pu etre teste sur une vraie machine
+  Windows depuis ce sandbox de developpement - a confirmer.
 - Un changement d'IP/port/cle API est repris automatiquement au prochain
   essai de reconnexion (jusqu'a ~10s, `device_client.py::connect()` relit
   la config a chaque tentative) - pas besoin de redemarrer l'icone de la

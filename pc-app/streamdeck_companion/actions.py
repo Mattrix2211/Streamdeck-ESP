@@ -35,6 +35,9 @@ def run(action: dict) -> None:
         webbrowser.open(target)
     elif kind == "media":
         _media(target)
+    elif kind == "audio_output":
+        from . import audio_devices
+        audio_devices.set_default_playback_device(target)
     else:
         raise ValueError(f"Type d'action inconnu: {kind!r}")
 

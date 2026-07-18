@@ -25,6 +25,7 @@ import requests
 from flask import Flask, jsonify, redirect, render_template, request, url_for
 
 from . import actions as action_runner
+from . import audio_devices
 from . import ha_client
 from . import icons
 from . import profiles as profile_utils
@@ -42,7 +43,7 @@ app = Flask(__name__)
 _config_path: Path = DEFAULT_CONFIG_PATH
 _device_client: DeviceClient | None = None
 
-ACTION_TYPES = ["none", "keys", "launch", "url", "media", "home_assistant"]
+ACTION_TYPES = ["none", "keys", "launch", "url", "media", "home_assistant", "audio_output"]
 SLOT_TYPES = ["bouton", "barre", "texte"]
 DIRECTIONS = ["clockwise", "anticlockwise", "press"]
 
@@ -313,6 +314,19 @@ def ha_services(domain):
     """Services HA courants pour un domaine (ex 'light' -> toggle/turn_on/
     turn_off), pour le menu deroulant du picker d'action 'home_assistant'."""
     return jsonify({"services": ha_client.common_services(domain)})
+
+
+@app.route("/audio-devices", methods=["GET"])
+def audio_devices_route():
+    """Picker de l'action 'audio_output' (popup d'emplacement) : liste des
+    peripheriques de sortie audio actifs, pour basculer casque/enceintes
+    depuis un bouton sans taper d'identifiant a la main."""
+    try:
+        devices = audio_devices.list_playback_devices()
+    except Exception as exc:
+        LOG.exception("Echec de la lecture des peripheriques audio")
+        return jsonify({"devices": [], "error": str(exc)}), 500
+    return jsonify({"devices": devices})
 
 
 @app.route("/reglages", methods=["GET"])
