@@ -23,29 +23,40 @@ def list_installed_apps() -> list[dict[str, str]]:
     if SYSTEM != "Windows":
         raise RuntimeError("La bibliotheque d'applications n'est disponible que sur Windows")
 
+    import pythoncom
     import winshell
     from win32com.client import Dispatch
 
-    shell = Dispatch("WScript.Shell")
     seen_targets: set[str] = set()
     apps: list[dict[str, str]] = []
 
-    # "Programs" = raccourcis d'applications (le sous-dossier utile) ; le
-    # dossier utilisateur ET le dossier commun (tous utilisateurs) pour
-    # couvrir les applis installees pour soi seul ou pour toute la machine.
-    for folder in (winshell.programs(), winshell.common_programs()):
-        for lnk_path in Path(folder).rglob("*.lnk"):
-            name = lnk_path.stem
-            if any(hint in name.lower() for hint in _EXCLUDE_NAME_HINTS):
-                continue
-            try:
-                target = shell.CreateShortCut(str(lnk_path)).Targetpath
-            except Exception:
-                continue
-            if not target or target in seen_targets:
-                continue
-            seen_targets.add(target)
-            apps.append({"name": name, "target": f'"{target}"' if " " in target else target})
+    # Dispatch() cree un objet COM, qui exige que l'appartement COM du
+    # thread courant ait ete initialise - ce qui n'est pas garanti sur les
+    # threads du pool de Flask (threaded=True), d'ou CoInitialize/
+    # CoUninitialize explicites autour de son utilisation.
+    pythoncom.CoInitialize()
+    try:
+        shell = Dispatch("WScript.Shell")
+
+        # "Programs" = raccourcis d'applications (le sous-dossier utile) ; le
+        # dossier utilisateur (common=0) ET le dossier commun a tous les
+        # utilisateurs (common=1) pour couvrir les applis installees pour soi
+        # seul ou pour toute la machine.
+        for folder in (winshell.programs(), winshell.programs(common=1)):
+            for lnk_path in Path(folder).rglob("*.lnk"):
+                name = lnk_path.stem
+                if any(hint in name.lower() for hint in _EXCLUDE_NAME_HINTS):
+                    continue
+                try:
+                    target = shell.CreateShortCut(str(lnk_path)).Targetpath
+                except Exception:
+                    continue
+                if not target or target in seen_targets:
+                    continue
+                seen_targets.add(target)
+                apps.append({"name": name, "target": f'"{target}"' if " " in target else target})
+    finally:
+        pythoncom.CoUninitialize()
 
     apps.sort(key=lambda a: a["name"].lower())
     return apps

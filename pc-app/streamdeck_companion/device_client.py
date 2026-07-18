@@ -159,11 +159,12 @@ class DeviceClient:
     def _run_home_assistant_action(self, action: dict) -> None:
         ha_conf = self.config.get("home_assistant") or {}
         client = ha_client.HomeAssistantClient(ha_conf.get("url", ""), ha_conf.get("token", ""))
-        domain = action.get("domain")
-        service = action.get("service")
+        target = action.get("target") or {}
+        domain = target.get("domain")
+        service = target.get("service")
         if not domain or not service:
             raise ValueError("Action Home Assistant incomplete (domain/service manquant)")
-        client.call_service(domain, service, entity_id=action.get("entity_id"), data=action.get("data") or {})
+        client.call_service(domain, service, entity_id=target.get("entity_id"), data=target.get("data") or {})
 
     def push_config(self) -> None:
         """Pousse la config des 16 emplacements (libelle/icone/type/
