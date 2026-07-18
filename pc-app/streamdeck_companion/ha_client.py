@@ -38,6 +38,7 @@ COMMON_SERVICES: dict[str, list[str]] = {
     "automation": ["trigger", "turn_on", "turn_off"],
     "vacuum": ["start", "pause", "stop", "return_to_base"],
     "alarm_control_panel": ["alarm_arm_away", "alarm_arm_home", "alarm_disarm"],
+    "update": ["install", "skip", "clear_skipped"],
 }
 DEFAULT_SERVICES = ["turn_on", "turn_off", "toggle"]
 
