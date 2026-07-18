@@ -23,33 +23,50 @@ POLL_INTERVAL = 15.0
 def poll_once(device_client: DeviceClient) -> dict[int, str]:
     """Une passe de sondage. Retourne les valeurs poussees (utile pour les
     tests). Ne fait rien si Home Assistant n'est pas configure ou si le
-    client n'est pas connecte a l'ecran."""
+    client n'est pas connecte a l'ecran. Lit les emplacements du profil
+    ACTIF (pas d'un eventuel config['slots'] racine, qui n'existe plus
+    depuis l'introduction des profils - voir profiles.py)."""
     config = device_client.config
     ha_conf = config.get("home_assistant") or {}
     client = ha.HomeAssistantClient(ha_conf.get("url", ""), ha_conf.get("token", ""))
     if not client.configured:
         return {}
-    slots = config.get("slots") or []
+    slots = device_client.active_profile().get("slots") or []
     values: dict[int, str] = {}
+    colors: dict[int, str] = {}
     for idx, slot in enumerate(slots):
         if not slot:
             continue
         slot_type = slot.get("type", "bouton")
-        if slot_type not in ("barre", "texte"):
-            continue
-        entity_id = (slot.get("source") or {}).get("entity_id")
-        if not entity_id:
-            continue
-        try:
-            state = client.get_state(entity_id)
-        except Exception:
-            LOG.exception("Echec de lecture de l'etat HA pour %s", entity_id)
-            continue
-        if state is None:
-            continue
-        values[idx] = ha.format_widget_value(state, slot_type)
-    if values and device_client.connected:
-        device_client.schedule_push_values(values)
+        if slot_type in ("barre", "texte"):
+            entity_id = slot.get("ha_entity")
+            if entity_id:
+                try:
+                    state = client.get_state(entity_id)
+                except Exception:
+                    LOG.exception("Echec de lecture de l'etat HA pour %s", entity_id)
+                    state = None
+                if state is not None:
+                    values[idx] = ha.format_widget_value(state, slot_type)
+
+        action = slot.get("action") or {}
+        if action.get("type") == "home_assistant" and slot.get("show_light_color"):
+            target = action.get("target") or {}
+            entity_id = target.get("entity_id")
+            if target.get("domain") == "light" and entity_id:
+                try:
+                    state = client.get_state(entity_id)
+                except Exception:
+                    LOG.exception("Echec de lecture de l'etat HA pour %s", entity_id)
+                    state = None
+                if state is not None:
+                    colors[idx] = ha.light_color_hex(state)
+
+    if device_client.connected:
+        if values:
+            device_client.schedule_push_values(values)
+        if colors:
+            device_client.schedule_push_slot_colors(colors)
     return values
 
 

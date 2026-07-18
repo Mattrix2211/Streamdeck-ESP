@@ -82,7 +82,12 @@ changements de la page courante (chaque page ne touche que sa portion de
   service). `ha_client.py::list_entities()` alimente aussi le picker
   d'entites recherchable de la popup d'emplacement (source d'un widget,
   cible d'une action `home_assistant`), avec des services courants
-  curates par domaine (`COMMON_SERVICES`).
+  curates par domaine (`COMMON_SERVICES`). Pour un bouton cible une
+  ampoule (domaine `light`) avec "Afficher la couleur de l'ampoule"
+  coche, le meme sondage pousse aussi une couleur de fond
+  (`ha_client.py::light_color_hex()` - RGB reel, ou approxime depuis la
+  temperature de couleur, ou blanc chaud generique) vers une 5e entite
+  par emplacement (`Slot N - couleur`, voir `firmware/slots_*.yaml`).
 - `icons.py` : catalogue d'icones (glyphes Material Icons, memes
   points de code que la police `font_icons` du firmware).
 - `app_library.py`/`custom_apps.py`/`browse.py` : bibliotheque

@@ -229,6 +229,30 @@ Les 3 encodeurs utilisent encore le champ texte compact
 `domaine.service:entite` a taper a la main (pas encore de picker dedie -
 possible dans un prochain chantier si besoin).
 
+## Couleur d'une ampoule sur le bouton
+
+Pour un emplacement `bouton` dont l'action `home_assistant` cible une
+entite du domaine `light`, une case **"Afficher la couleur de l'ampoule
+sur le bouton"** apparait sous le choix du service. Une fois cochee :
+
+- `ha_poller.py` lit l'etat de l'ampoule a chaque sondage (~15s, meme
+  cycle que les widgets) et pousse une couleur hex vers l'ecran
+  (`streamdeck_companion/ha_client.py::light_color_hex()`).
+- **Ampoule RGB** : sa vraie couleur (`attributes.rgb_color`).
+- **Ampoule "blanc variable"** (temperature de couleur, sans RGB propre) :
+  couleur approximee depuis `color_temp_kelvin`/`color_temp` (algorithme
+  de Tanner Helland - assez fidele pour un indicateur visuel, pas une
+  reproduction exacte).
+- **Ampoule on/off simple** (aucune info de couleur) : un blanc chaud
+  generique tant qu'elle est allumee.
+- **Eteinte** : le bouton revient a sa couleur par defaut.
+
+Cote firmware, chaque emplacement expose une 5e entite `text` ("Slot N -
+couleur", format `#RRGGBB`) qui met a jour le fond du bouton via
+`lvgl.obj.update` (voir `firmware/slots_*.yaml`) - **necessite de
+reflasher le firmware** pour beneficier de cette fonctionnalite, un
+`git pull` cote appli PC ne suffit pas.
+
 ## Icones
 
 Le selecteur d'icone (popup d'un emplacement) propose un catalogue curate
@@ -287,7 +311,16 @@ necessaire pour que les emplacements/encodeurs du Stream Deck fonctionnent
   `glyphs:` de `font_icons` dans `firmware/package.yaml`, sinon il
   s'affiche comme une case vide sur l'ecran.
 - Les widgets Home Assistant (`barre`/`texte`) sont sondes par polling
-  REST toutes les ~15s (`ha_poller.py`), pas en temps reel instantane.
+  REST toutes les ~15s (`ha_poller.py`), pas en temps reel instantane -
+  meme cadence pour la couleur d'une ampoule liee a un bouton (pas de
+  changement instantane au moment du clic, jusqu'a ~15s de decalage).
+- L'approximation de couleur pour les ampoules "blanc variable" (sans
+  RGB propre, juste une temperature de couleur) est une conversion
+  standard temperature -> RGB (Tanner Helland), pas une calibration
+  fidele a un modele d'ampoule precis - suffisant comme indicateur visuel.
+- La couleur de bouton necessite de **reflasher le firmware** (nouvelle
+  entite `Slot N - couleur` par emplacement, voir `firmware/slots_*.yaml`)
+  en plus de mettre a jour l'appli PC.
 - Le picker d'entites Home Assistant charge **toutes** les entites de
   l'installation (`GET /api/states`, pas de filtre par domaine cote
   serveur) - fonctionne bien jusqu'a quelques centaines d'entites, la

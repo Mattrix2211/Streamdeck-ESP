@@ -160,6 +160,7 @@ def fields_to_profile(raw_profile: dict) -> dict:
         action_type = slot.get("action", {}).get("type", "none")
         action_field = slot.pop("action_field", "")
         slot["action"] = {"type": action_type, "target": field_to_target(action_type, action_field)}
+        slot["show_light_color"] = bool(slot.get("show_light_color"))
         slot["icon_char"] = icons.icon_char(slot.get("icon", ""))
         slot["label"] = (slot.get("label") or "").strip()[:24] or slot["label"]
     name = (raw_profile.get("name") or "").strip()[:24] or profile_utils.DEFAULT_PROFILE_NAME

@@ -14,6 +14,8 @@ Utilise pour :
 
 from __future__ import annotations
 
+import math
+
 import requests
 
 # Services HA courants par domaine, pour le menu deroulant du picker
@@ -106,6 +108,54 @@ class HomeAssistantClient:
             payload.setdefault("entity_id", entity_id)
         resp = requests.post(url, headers=self._headers(), json=payload, timeout=self.timeout)
         resp.raise_for_status()
+
+
+def _kelvin_to_hex(kelvin: float) -> str:
+    """Approxime une couleur RGB a partir d'une temperature de couleur
+    (algorithme de Tanner Helland), pour les ampoules "blanc variable" qui
+    n'exposent pas de rgb_color propre - juste assez fidele pour un
+    indicateur visuel sur un petit bouton, pas une reproduction exacte."""
+    temp = max(1000.0, min(40000.0, kelvin)) / 100.0
+    if temp <= 66:
+        red = 255.0
+        green = 99.4708025861 * math.log(temp) - 161.1195681661
+    else:
+        red = 329.698727446 * ((temp - 60) ** -0.1332047592)
+        green = 288.1221695283 * ((temp - 60) ** -0.0755148492)
+    if temp >= 66:
+        blue = 255.0
+    elif temp <= 19:
+        blue = 0.0
+    else:
+        blue = 138.5177312231 * math.log(temp - 10) - 305.0447927307
+
+    def clamp(v: float) -> int:
+        return max(0, min(255, round(v)))
+
+    return f"#{clamp(red):02X}{clamp(green):02X}{clamp(blue):02X}"
+
+
+def light_color_hex(state: dict) -> str:
+    """Couleur hex (format '#RRGGBB') a pousser vers le slot lie a une
+    ampoule : sa vraie couleur RGB si l'ampoule en expose une, sinon une
+    approximation depuis sa temperature de couleur (ampoules "blanc
+    variable"), sinon un blanc chaud generique (ampoule on/off simple,
+    sans aucune info de couleur). Chaine vide si eteinte - le firmware
+    revient alors a la couleur par defaut du bouton (voir
+    firmware/slots_*.yaml, entites 'Slot N - couleur')."""
+    if (state or {}).get("state") != "on":
+        return ""
+    attrs = state.get("attributes") or {}
+    rgb = attrs.get("rgb_color")
+    if isinstance(rgb, (list, tuple)) and len(rgb) == 3:
+        r, g, b = (max(0, min(255, int(c))) for c in rgb)
+        return f"#{r:02X}{g:02X}{b:02X}"
+    kelvin = attrs.get("color_temp_kelvin")
+    if not kelvin and attrs.get("color_temp"):
+        kelvin = 1_000_000 / attrs["color_temp"]  # mired -> kelvin
+    if kelvin:
+        return _kelvin_to_hex(kelvin)
+    return "#FFE9B0"
 
 
 def format_widget_value(state: dict, slot_type: str) -> str:

@@ -27,6 +27,7 @@ SLOT_COUNT = 16
 SLOT_LABEL_NAMES = [f"Slot {i} - libelle" for i in range(1, SLOT_COUNT + 1)]
 SLOT_VALUE_NAMES = [f"Slot {i} - valeur" for i in range(1, SLOT_COUNT + 1)]
 SLOT_ICON_NAMES = [f"Slot {i} - icone" for i in range(1, SLOT_COUNT + 1)]
+SLOT_COLOR_NAMES = [f"Slot {i} - couleur" for i in range(1, SLOT_COUNT + 1)]
 SLOT_TYPE_NAMES = [f"Slot {i} - type" for i in range(1, SLOT_COUNT + 1)]
 SLOT_VISIBLE_NAMES = [f"Slot {i} - visible" for i in range(1, SLOT_COUNT + 1)]
 
@@ -83,6 +84,12 @@ class DeviceClient:
             or (self.profiles[0] if self.profiles else profile_utils.default_profile())
         )
 
+    def active_profile(self) -> dict:
+        """Accesseur public du profil actif, pour les modules externes qui
+        doivent lire ses emplacements (ex: ha_poller.py) sans acceder a
+        l'attribut prefixe _active_profile()."""
+        return self._active_profile()
+
     def reload_config_if_changed(self) -> None:
         if not self.config_path.exists():
             return
@@ -103,7 +110,7 @@ class DeviceClient:
         await self.client.connect(login=False)
         entities, _services = await self.client.list_entities_services()
         tracked_text_select = (
-            *SLOT_LABEL_NAMES, *SLOT_VALUE_NAMES, *SLOT_ICON_NAMES, *SLOT_TYPE_NAMES,
+            *SLOT_LABEL_NAMES, *SLOT_VALUE_NAMES, *SLOT_ICON_NAMES, *SLOT_COLOR_NAMES, *SLOT_TYPE_NAMES,
             SHAPE_ENTITY_NAME, STATUS_ENTITY_NAME,
         )
         for ent in entities:
@@ -209,6 +216,20 @@ class DeviceClient:
             if key is not None:
                 self.client.text_command(key, str(value)[:24])
 
+    def push_slot_colors(self, colors: dict[int, str]) -> None:
+        """Pousse la couleur de fond (widgets/boutons lies a une ampoule,
+        voir ha_poller.py::poll_once) pour les index d'emplacement donnes
+        (0-based) - chaine vide pour revenir a la couleur par defaut du
+        firmware (ampoule eteinte)."""
+        if self.client is None or not self.connected:
+            return
+        for idx, color in colors.items():
+            if not (0 <= idx < SLOT_COUNT):
+                continue
+            key = self.entity_keys.get(SLOT_COLOR_NAMES[idx])
+            if key is not None:
+                self.client.text_command(key, color)
+
     def schedule_push(self, timeout: float = 5.0) -> None:
         """Appelable depuis N'IMPORTE QUEL thread (ex: la page de config
         Flask) : programme push_config() sur la boucle asyncio de ce
@@ -218,6 +239,9 @@ class DeviceClient:
 
     def schedule_push_values(self, values: dict[int, str], timeout: float = 5.0) -> None:
         self._run_threadsafe(lambda: self.push_slot_values(values), timeout)
+
+    def schedule_push_slot_colors(self, colors: dict[int, str], timeout: float = 5.0) -> None:
+        self._run_threadsafe(lambda: self.push_slot_colors(colors), timeout)
 
     def set_active_profile(self, name: str) -> None:
         """Change le profil affiche/actif et pousse sa config vers l'ecran

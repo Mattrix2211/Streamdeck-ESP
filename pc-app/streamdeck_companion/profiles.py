@@ -25,6 +25,7 @@ def default_slot(i: int) -> dict:
         "visible": i < 12,
         "action": {"type": "none", "target": ""},
         "ha_entity": "",
+        "show_light_color": False,
     }
 
 

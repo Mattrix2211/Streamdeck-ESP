@@ -90,6 +90,19 @@ function updateHaActionVisibility() {
       renderEntityList("modal-ha-action-list", document.getElementById("modal-ha-action-search").value, selectHaActionEntity);
     });
   }
+  updateHaColorRowVisibility();
+}
+
+/* La case "afficher la couleur de l'ampoule" n'a de sens que pour une
+ * cible du domaine "light" - determine a partir de modal-action-target
+ * (deja tenu a jour que l'entite vienne du picker ou soit tapee a la main
+ * au format compact "domaine.service:entite"), pas de select.dataset qui
+ * n'est renseigne qu'apres une interaction avec le picker dans CETTE
+ * ouverture de popup. */
+function updateHaColorRowVisibility() {
+  const target = document.getElementById("modal-action-target").value || "";
+  const isLight = document.getElementById("modal-action-type").value === "home_assistant" && target.startsWith("light.");
+  document.getElementById("modal-ha-color-row").style.display = isLight ? "block" : "none";
 }
 
 function selectHaActionEntity(entity) {
@@ -117,12 +130,14 @@ function composeHaActionTarget() {
   const entityId = select.dataset.entityId;
   if (!domain || !entityId || !select.value) return;
   document.getElementById("modal-action-target").value = `${domain}.${select.value}:${entityId}`;
+  updateHaColorRowVisibility();
 }
 
 document.getElementById("modal-ha-action-search").addEventListener("input", (e) => {
   renderEntityList("modal-ha-action-list", e.target.value, selectHaActionEntity);
 });
 document.getElementById("modal-ha-action-service").addEventListener("change", composeHaActionTarget);
+document.getElementById("modal-action-target").addEventListener("input", updateHaColorRowVisibility);
 /* updateHaActionVisibility() est deja appelee sur le meme evenement via
  * updateLaunchPickerVisibility() dans dashboard.js - pas de listener
  * redondant ici. */

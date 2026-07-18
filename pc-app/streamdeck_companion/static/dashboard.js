@@ -198,6 +198,7 @@ function openModal(index) {
   document.getElementById("modal-action-type").value = (slot.action && slot.action.type) || "none";
   document.getElementById("modal-action-target").value = slot.action_field || "";
   document.getElementById("modal-ha-entity").value = slot.ha_entity || "";
+  document.getElementById("modal-show-light-color").checked = !!slot.show_light_color;
   selectedAppTarget = slot.action_field || null;
   renderIconPicker(slot.icon || "");
   updateModalFieldsVisibility();
@@ -223,6 +224,7 @@ document.getElementById("modal-apply").addEventListener("click", () => {
   slot.action = { type: document.getElementById("modal-action-type").value, target: null };
   slot.action_field = document.getElementById("modal-action-target").value;
   slot.ha_entity = document.getElementById("modal-ha-entity").value.trim();
+  slot.show_light_color = document.getElementById("modal-show-light-color").checked;
   renderGrid();
   closeModal();
 });

@@ -37,6 +37,15 @@ text:
     on_value:
       - lvgl.label.update: { id: slot1_icon_lbl, text: !lambda "return x;" }
   - platform: template
+    id: slot1_color
+    name: "Slot 1 - couleur"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 7
+    on_value:
+      - lvgl.obj.update: {id: slot1_btn, bg_color: !lambda 'return x.length() == 7 ? Color(strtoul(x.substr(1,2).c_str(), nullptr, 16), strtoul(x.substr(3,2).c_str(), nullptr, 16), strtoul(x.substr(5,2).c_str(), nullptr, 16)) : Color(0x0F, 0x29, 0x42);'}
+  - platform: template
     id: slot2_label
     name: "Slot 2 - libelle"
     mode: text
@@ -71,6 +80,15 @@ text:
     max_length: 8
     on_value:
       - lvgl.label.update: { id: slot2_icon_lbl, text: !lambda "return x;" }
+  - platform: template
+    id: slot2_color
+    name: "Slot 2 - couleur"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 7
+    on_value:
+      - lvgl.obj.update: {id: slot2_btn, bg_color: !lambda 'return x.length() == 7 ? Color(strtoul(x.substr(1,2).c_str(), nullptr, 16), strtoul(x.substr(3,2).c_str(), nullptr, 16), strtoul(x.substr(5,2).c_str(), nullptr, 16)) : Color(0x0F, 0x29, 0x42);'}
   - platform: template
     id: slot3_label
     name: "Slot 3 - libelle"
@@ -107,6 +125,15 @@ text:
     on_value:
       - lvgl.label.update: { id: slot3_icon_lbl, text: !lambda "return x;" }
   - platform: template
+    id: slot3_color
+    name: "Slot 3 - couleur"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 7
+    on_value:
+      - lvgl.obj.update: {id: slot3_btn, bg_color: !lambda 'return x.length() == 7 ? Color(strtoul(x.substr(1,2).c_str(), nullptr, 16), strtoul(x.substr(3,2).c_str(), nullptr, 16), strtoul(x.substr(5,2).c_str(), nullptr, 16)) : Color(0x0F, 0x29, 0x42);'}
+  - platform: template
     id: slot4_label
     name: "Slot 4 - libelle"
     mode: text
@@ -142,6 +169,15 @@ text:
     on_value:
       - lvgl.label.update: { id: slot4_icon_lbl, text: !lambda "return x;" }
   - platform: template
+    id: slot4_color
+    name: "Slot 4 - couleur"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 7
+    on_value:
+      - lvgl.obj.update: {id: slot4_btn, bg_color: !lambda 'return x.length() == 7 ? Color(strtoul(x.substr(1,2).c_str(), nullptr, 16), strtoul(x.substr(3,2).c_str(), nullptr, 16), strtoul(x.substr(5,2).c_str(), nullptr, 16)) : Color(0x0F, 0x29, 0x42);'}
+  - platform: template
     id: slot5_label
     name: "Slot 5 - libelle"
     mode: text
@@ -176,6 +212,15 @@ text:
     max_length: 8
     on_value:
       - lvgl.label.update: { id: slot5_icon_lbl, text: !lambda "return x;" }
+  - platform: template
+    id: slot5_color
+    name: "Slot 5 - couleur"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 7
+    on_value:
+      - lvgl.obj.update: {id: slot5_btn, bg_color: !lambda 'return x.length() == 7 ? Color(strtoul(x.substr(1,2).c_str(), nullptr, 16), strtoul(x.substr(3,2).c_str(), nullptr, 16), strtoul(x.substr(5,2).c_str(), nullptr, 16)) : Color(0x0F, 0x29, 0x42);'}
 
 select:
   - platform: template
