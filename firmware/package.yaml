@@ -14,6 +14,13 @@ esp32:
   cpu_frequency: 360MHZ
   framework:
     type: esp-idf
+    # Version figee : IDF 5.5.3/5.5.4 provoquent un boot-loop connu sur
+    # ESP32-P4 (assert cache_utils.c / HP_SYS_HP_WDT_RESET des le
+    # chargement de l'app, avant meme app_main) - regression confirmee
+    # entre 5.5.1 (OK) et 5.5.3+ (KO), voir
+    # https://github.com/espressif/esp-idf/issues/18294. 5.5.1 est la
+    # derniere version connue stable pour ce chip.
+    version: 5.5.1
     advanced:
       enable_idf_experimental_features: true
 
