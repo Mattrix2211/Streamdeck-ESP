@@ -158,8 +158,12 @@ button.danger:hover { background: rgba(230,57,70,.12); }
 }
 .app-tile:hover { background: var(--slate); }
 .app-tile.selected { border-color: var(--signal); background: var(--horizon); }
-.app-tile .app-icon { font-family: 'Material Icons'; font-size: 22px; color: var(--signal); line-height: 1; }
+.app-tile .app-icon { font-family: 'Material Icons'; font-size: 22px; color: var(--signal); line-height: 1; position: relative; }
 .app-tile.add-tile .app-icon { font-family: 'Inter'; font-weight: 700; }
+.app-tile .app-icon .live-dot {
+  position: absolute; top: -2px; right: -6px; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--green-tech); border: 1px solid var(--ocean);
+}
 .app-tile .app-name {
   font-size: 10px; color: var(--mist); max-width: 100%;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;

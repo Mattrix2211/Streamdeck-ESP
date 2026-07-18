@@ -46,10 +46,12 @@ def foreground_process_name() -> str | None:
 
 
 def list_open_windows() -> list[dict[str, str]]:
-    """Liste [{title, process}] des applications actuellement ouvertes sur
-    le PC (une entree par processus, dedupliquee), pour choisir un
-    declencheur de profil directement dans une liste plutot que de devoir
-    "detecter" la fenetre active (piege : cliquer un bouton dans le
+    """Liste [{title, process, target}] des applications actuellement
+    ouvertes sur le PC (une entree par processus, dedupliquee) - `target`
+    est le chemin complet de l'executable (via psutil), utilisable comme
+    cible d'action 'launch' pour un emplacement, exactement comme `process`
+    sert de declencheur de profil. Meme source pour les deux usages plutot
+    que de "detecter" la fenetre active (piege : cliquer un bouton dans le
     navigateur remet toujours le navigateur au premier plan avant que la
     detection s'execute). Windows uniquement."""
     if SYSTEM != "Windows":
@@ -71,14 +73,17 @@ def list_open_windows() -> list[dict[str, str]]:
         if not pid:
             return
         try:
-            process = psutil.Process(pid).name()
+            proc = psutil.Process(pid)
+            process = proc.name()
+            exe_path = proc.exe()
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             return
         key = process.lower()
         if key in seen or key == "streamdeck_companion.exe":
             return
         seen.add(key)
-        windows.append({"title": title, "process": process})
+        target = f'"{exe_path}"' if exe_path and " " in exe_path else (exe_path or process)
+        windows.append({"title": title, "process": process, "target": target})
 
     win32gui.EnumWindows(_on_window, None)
     windows.sort(key=lambda w: w["title"].lower())

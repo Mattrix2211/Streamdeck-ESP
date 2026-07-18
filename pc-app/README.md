@@ -172,11 +172,17 @@ public), la popup d'un emplacement affiche une vraie bibliotheque
 d'applications - grille avec icones et recherche, comme un logiciel de
 Stream Deck du commerce - des que le type d'action est `launch` :
 
+- **Applications ouvertes en ce moment** (point vert) : meme source que le
+  declencheur de profil (`profile_watcher.py::list_open_windows()`) - le
+  chemin exact de l'executable est resolu automatiquement, pratique quand
+  l'appli tourne deja et que vous voulez juste pointer dessus sans chercher
+  son raccourci.
 - **Applications detectees** : les raccourcis du menu Demarrer (utilisateur
   + tous les utilisateurs), listes automatiquement
   (`streamdeck_companion/app_library.py`).
 - **Barre de recherche** : filtre la grille en tapant les premieres lettres
-  du nom.
+  du nom. Une meme application presente dans plusieurs sources n'apparait
+  qu'une fois (priorite a la version "ouverte en ce moment").
 - **Tuile "+ Ajouter..."** : ouvre l'explorateur de fichiers Windows pour
   choisir un `.exe`/`.lnk` non liste (jeu portable, appli sans raccourci
   Demarrer) - l'application choisie **rejoint durablement la bibliotheque**
