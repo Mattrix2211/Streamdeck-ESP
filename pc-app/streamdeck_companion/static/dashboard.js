@@ -1,21 +1,38 @@
-/* Maquette fidele de l'ecran (memes proportions/disposition que le
+/* Fichier principal (state partage + maquette d'ecran + popups
+ * emplacement/encodeur) - voir aussi app-library.js (bibliotheque
+ * d'applications du picker "launch") et profiles.js (onglets de profils),
+ * charges apres ce fichier et qui referencent son state/ses fonctions.
+ *
+ * Maquette fidele de l'ecran (memes proportions/disposition que le
  * firmware) : les emplacements visibles s'affichent dans la grille de
  * l'ecran, les masques dans une "tray" a part (rien de tout ca n'apparait
- * sur l'ecran reel). Popup de config par emplacement, glisser-deposer
- * (echange) entre n'importe quels deux emplacements, meme entre l'ecran
- * et la tray. Pas de framework - vanilla JS. */
+ * sur l'ecran reel). Popup de config par emplacement/encodeur, glisser-
+ * deposer (echange) entre n'importe quels deux emplacements. Plusieurs
+ * profils (onglets) - chacun sa propre grille - basculent automatiquement
+ * selon l'application au premier plan sur le PC (voir profile_watcher.py).
+ * Pas de framework - vanilla JS. */
 
-let slots = INITIAL_SLOTS.map((s) => ({ ...s }));
-let encoders = INITIAL_ENCODERS.map((e) => ({ ...e }));
+let profiles = JSON.parse(JSON.stringify(INITIAL_PROFILES));
+let activeEditIndex = Math.max(0, profiles.findIndex((p) => p.name === ACTIVE_PROFILE_NAME));
+let liveActiveProfileName = ACTIVE_PROFILE_NAME;
+let manualOverride = MANUAL_OVERRIDE;
+/* `slots`/`encoders` referencent toujours le profil en cours d'edition
+ * (activeEditIndex) - memes tableaux, pas une copie : les mutations faites
+ * via les popups s'appliquent donc directement a `profiles[activeEditIndex]`.
+ * switchProfileTab() les re-pointe vers le profil choisi. */
+let slots = profiles[activeEditIndex].slots;
+let encoders = profiles[activeEditIndex].encoders;
 let dragSrcIndex = null;
 let currentIndex = null;
 let currentEncoderIndex = null;
+let editingProfileIndex = null;
 
 const screenGrid = document.getElementById("slot-grid");
 const hiddenTray = document.getElementById("hidden-tray");
 const encoderMock = document.getElementById("encoder-mock");
 const modal = document.getElementById("slot-modal");
 const encoderModal = document.getElementById("encoder-modal");
+const profileModal = document.getElementById("profile-modal");
 const iconPicker = document.getElementById("icon-picker");
 
 function renderIconPicker(selectedIcon) {
@@ -169,122 +186,6 @@ function updateLaunchPickerVisibility() {
   if (isLaunch) loadAppLibraryIfNeeded();
 }
 
-/* Bibliotheque d'applications du picker "launch" : detectees (menu
- * Demarrer, via app_library.py) + personnalisees (ajoutees via la tuile
- * "+ Ajouter", persistees cote serveur - custom_apps.py). Chargee une
- * seule fois par session, la tuile "+ Ajouter" met a jour le cache local
- * ensuite sans recharger. */
-let appLibrary = null;
-let selectedAppTarget = null;
-
-function loadAppLibraryIfNeeded() {
-  if (appLibrary !== null) { renderAppGrid(); return; }
-  const status = document.getElementById("modal-app-status");
-  status.textContent = "Chargement de la bibliotheque d'applications...";
-  fetch("/installed-apps")
-    .then((r) => r.json())
-    .then((data) => {
-      appLibrary = { detected: data.apps || [], custom: data.custom || [] };
-      status.textContent = data.detect_error
-        ? "Detection automatique indisponible sur ce systeme - ajoutez vos applications avec \"+ Ajouter\"."
-        : "";
-      renderAppGrid();
-    })
-    .catch(() => {
-      appLibrary = { detected: [], custom: [] };
-      status.textContent = "Impossible de charger la bibliotheque d'applications.";
-      renderAppGrid();
-    });
-}
-
-function renderAppGrid() {
-  const grid = document.getElementById("modal-app-grid");
-  grid.innerHTML = "";
-  if (!appLibrary) return;
-
-  const query = document.getElementById("modal-app-search").value.trim().toLowerCase();
-  const all = [
-    ...appLibrary.custom.map((a) => ({ ...a, custom: true })),
-    ...appLibrary.detected,
-  ].filter((a) => a.name.toLowerCase().includes(query));
-
-  all.forEach((app) => grid.appendChild(makeAppTile(app)));
-
-  const addTile = document.createElement("div");
-  addTile.className = "app-tile add-tile";
-  addTile.title = "Ajouter une application a la bibliotheque";
-  addTile.innerHTML = '<div class="app-icon">+</div><div class="app-name">Ajouter...</div>';
-  addTile.addEventListener("click", addCustomApp);
-  grid.appendChild(addTile);
-}
-
-function makeAppTile(app) {
-  const tile = document.createElement("div");
-  tile.className = "app-tile" + (app.target === selectedAppTarget ? " selected" : "");
-  tile.title = app.name;
-
-  const icon = document.createElement("div");
-  icon.className = "app-icon";
-  icon.textContent = "\uE5C3"; /* "apps" (Material Icons) - glyphe generique */
-  tile.appendChild(icon);
-
-  const name = document.createElement("div");
-  name.className = "app-name";
-  name.textContent = app.name;
-  tile.appendChild(name);
-
-  tile.addEventListener("click", () => selectApp(app));
-
-  if (app.custom) {
-    const remove = document.createElement("div");
-    remove.className = "app-remove";
-    remove.textContent = "Retirer";
-    remove.addEventListener("click", (e) => { e.stopPropagation(); removeCustomApp(app.target); });
-    tile.appendChild(remove);
-  }
-
-  return tile;
-}
-
-function selectApp(app) {
-  selectedAppTarget = app.target;
-  document.getElementById("modal-action-target").value = app.target;
-  const labelField = document.getElementById("modal-label");
-  if (!labelField.value.trim() || /^Slot \d+$/.test(labelField.value.trim())) {
-    labelField.value = app.name;
-  }
-  renderAppGrid();
-}
-
-function addCustomApp() {
-  fetch("/custom-apps", { method: "POST" })
-    .then((r) => r.json())
-    .then((data) => {
-      if (data.error) {
-        alert("Impossible d'ouvrir le selecteur de fichier : " + data.error);
-        return;
-      }
-      if (!data.target) return;
-      appLibrary.custom = data.apps || appLibrary.custom;
-      selectApp({ name: data.name, target: data.target });
-    })
-    .catch(() => alert("Impossible de contacter l'appli pour ouvrir le selecteur de fichier."));
-}
-
-function removeCustomApp(target) {
-  fetch("/custom-apps/remove", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: "target=" + encodeURIComponent(target),
-  })
-    .then((r) => r.json())
-    .then((data) => {
-      appLibrary.custom = data.apps || [];
-      renderAppGrid();
-    })
-    .catch(() => {});
-}
-
 function openModal(index) {
   currentIndex = index;
   const slot = slots[index];
@@ -308,7 +209,6 @@ function closeModal() {
 
 document.getElementById("modal-type").addEventListener("change", updateModalFieldsVisibility);
 document.getElementById("modal-action-type").addEventListener("change", updateLaunchPickerVisibility);
-document.getElementById("modal-app-search").addEventListener("input", renderAppGrid);
 document.getElementById("modal-cancel").addEventListener("click", closeModal);
 
 document.getElementById("modal-apply").addEventListener("click", () => {
@@ -357,9 +257,5 @@ document.getElementById("encoder-modal-apply").addEventListener("click", () => {
 });
 
 document.getElementById("config-form").addEventListener("submit", () => {
-  document.getElementById("slots_json").value = JSON.stringify(slots);
-  document.getElementById("encoders_json").value = JSON.stringify(encoders);
+  document.getElementById("profiles_json").value = JSON.stringify(profiles);
 });
-
-renderGrid();
-renderEncoderMock();

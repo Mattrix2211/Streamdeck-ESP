@@ -2,9 +2,13 @@
 
 Deux pages, comme gerer les pages d'applications sur un telephone :
 
-- **Accueil** : la grille des 16 emplacements ET les 3 encodeurs - chaque
+- **Accueil** : un ou plusieurs **profils** (onglets), chacun avec sa
+  propre grille de 16 emplacements ET ses 3 encodeurs - chaque
   emplacement/encodeur se configure via sa propre popup (glisser-deposer
-  pour reordonner les emplacements). C'est la seule page dont vous avez
+  pour reordonner les emplacements). L'ecran **bascule automatiquement**
+  sur le bon profil selon l'application au premier plan sur le PC (ex : la
+  grille change toute seule en passant sur OBS, Discord, un jeu...) - voir
+  "Profils par application" plus bas. C'est la seule page dont vous avez
   besoin au quotidien.
 - **Reglages** (icone &#9881;) : connexion a l'ecran, cle API, Home
   Assistant, forme des boutons - demandee automatiquement au tout premier
@@ -89,6 +93,37 @@ appui). Chaque encodeur affiche sur l'ecran une barre 0-100% (type "barre
 de son") au lieu d'un simple compteur qui s'incremente sans limite -
 pratique pour un encodeur de volume par exemple. La valeur repart de 0
 a chaque redemarrage de l'ecran (pas de memorisation du dernier niveau).
+
+## Profils par application
+
+Au-dessus de la maquette, une barre d'onglets liste vos **profils** - chacun
+une grille de 16 emplacements + 3 encodeurs independante. Un point vert sur
+un onglet indique le profil **reellement affiche sur l'ecran en ce moment**.
+
+- **Creer un profil** : "+ Nouveau profil" - donnez-lui un nom et un
+  **declencheur** (le nom du processus, ex `obs64.exe`). Le bouton
+  "Detecter l'appli active" remplit le declencheur automatiquement avec
+  l'application actuellement au premier plan sur votre PC (lancez-la,
+  revenez sur cette page, cliquez) - pas besoin de connaitre le nom exact
+  du `.exe`.
+- **Bascule automatique** : des que l'application du declencheur passe au
+  premier plan, l'ecran change de grille tout seul, sans intervention
+  (`streamdeck_companion/profile_watcher.py`, sonde la fenetre active
+  toutes les ~1.5s). Le profil sans declencheur (typiquement "Defaut")
+  s'affiche quand aucun declencheur ne correspond.
+  Le premier profil dont le declencheur correspond gagne, dans l'ordre
+  de creation - evitez plusieurs profils avec le meme declencheur.
+- **Forcer un profil manuellement** : le bouton "Forcer ce profil" fige
+  l'ecran sur l'onglet actuellement affiche (pratique pour previsualiser un
+  profil qu'on vient d'editer sans attendre que son application prenne le
+  focus) ; "Automatique" a cote reprend la bascule normale.
+- **Modifier/supprimer** un profil : cliquez l'icone crayon sur son onglet.
+  Le profil sans declencheur ne peut pas etre supprime s'il ne reste que lui.
+
+Chaque onglet garde ses propres modifications en memoire meme en changeant
+d'onglet - "Enregistrer et envoyer a l'ecran" sauvegarde **tous les profils
+d'un coup**, mais ne pousse vers l'ecran que celui reellement actif (les
+autres sont juste enregistres, prets a s'activer a leur tour).
 
 ### Reglages (`/reglages`)
 
@@ -235,7 +270,21 @@ necessaire pour que les emplacements/encodeurs du Stream Deck fonctionnent
   headless (rendu de la maquette d'ecran et des masques, popup emplacement
   et popup encodeur, glisser-deposer dans les deux sens et entre les deux,
   bibliotheque d'applications - recherche, selection, ajout/retrait
-  personnalise -, sauvegarde, persistance apres rechargement) mais pas
-  visuellement sur l'ecran physique - verifiez apres un push que les
-  icones/couleurs/tailles vous conviennent et signalez tout ce qui parait
-  cassé (ex une icone qui s'affiche comme une case vide).
+  personnalise -, creation/edition/suppression de profils, sauvegarde,
+  persistance apres rechargement) mais pas visuellement sur l'ecran
+  physique - verifiez apres un push que les icones/couleurs/tailles vous
+  conviennent et signalez tout ce qui parait cassé (ex une icone qui
+  s'affiche comme une case vide).
+- La bascule automatique de profil (`profile_watcher.py`) est Windows
+  uniquement (necessite `pywin32`+`psutil` pour identifier la fenetre au
+  premier plan) - sur les autres systemes, seule la bascule manuelle
+  ("Forcer ce profil"/"Automatique") est disponible. Non verifiee sur une
+  vraie machine Windows (logique de correspondance testee unitairement
+  dans le sandbox de developpement, qui n'a pas de fenetre/bureau reel).
+- La correspondance d'un declencheur se fait par **nom de processus exact**
+  (ex `obs64.exe`), pas par titre de fenetre ni par plusieurs criteres -
+  simple et previsible, mais deux applications qui partagent le meme nom de
+  processus ne peuvent pas avoir de profils distincts.
+- Le sondage de la fenetre active a lieu toutes les ~1.5s : la bascule
+  automatique n'est donc pas instantanee (delai perceptible mais bref en
+  changeant d'application).

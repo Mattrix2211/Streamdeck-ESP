@@ -2,6 +2,15 @@
 {% block content %}
   <p class="sub">Aperçu fidele de l'ecran (memes proportions et disposition). Cliquez un emplacement ou un encodeur pour le configurer, glissez-deposez les emplacements pour reordonner.</p>
 
+  <div class="profile-bar">
+    <div id="profile-tabs" class="profile-tabs"></div>
+    <div class="profile-status">
+      <span id="profile-status-text" class="hint"></span>
+      <button type="button" id="profile-force-btn" class="secondary">Forcer ce profil</button>
+      <button type="button" id="profile-auto-btn" class="secondary">Automatique</button>
+    </div>
+  </div>
+
   <form method="post" action="{{ url_for('save') }}" id="config-form">
     <div class="screen-mock">
       <div class="screen-header">
@@ -21,8 +30,7 @@
       <div id="hidden-tray" class="hidden-tray"></div>
     </div>
 
-    <input type="hidden" name="slots_json" id="slots_json">
-    <input type="hidden" name="encoders_json" id="encoders_json">
+    <input type="hidden" name="profiles_json" id="profiles_json">
     <button type="submit" id="save-button">Enregistrer et envoyer a l'ecran</button>
   </form>
 
@@ -96,14 +104,43 @@
       </div>
     </div>
   </div>
+
+  <div id="profile-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <h2 id="profile-modal-title">Nouveau profil</h2>
+      <label>Nom du profil</label>
+      <input type="text" id="profile-modal-name" maxlength="24" placeholder="OBS, Discord, Jeu...">
+
+      <label>Declencheur (nom du processus)</label>
+      <div class="target-row">
+        <input type="text" id="profile-modal-trigger" placeholder="ex: obs64.exe">
+        <button type="button" id="profile-modal-detect" class="secondary">Detecter l'appli active</button>
+      </div>
+      <p class="hint">
+        L'ecran basculera automatiquement sur ce profil des que cette
+        application passera au premier plan sur le PC. Laissez vide pour
+        un profil utilise par defaut (quand aucun declencheur ne correspond) -
+        un seul profil sans declencheur est necessaire.
+      </p>
+
+      <div class="modal-buttons">
+        <button type="button" id="profile-modal-cancel" class="secondary">Annuler</button>
+        <button type="button" id="profile-modal-delete" class="danger">Supprimer</button>
+        <button type="button" id="profile-modal-save">Enregistrer</button>
+      </div>
+    </div>
+  </div>
 {% endblock %}
 {% block scripts %}
 <script>
-  const INITIAL_SLOTS = {{ slots | tojson }};
-  const INITIAL_ENCODERS = {{ encoders | tojson }};
+  const INITIAL_PROFILES = {{ profiles | tojson }};
+  const ACTIVE_PROFILE_NAME = {{ active_profile_name | tojson }};
+  const MANUAL_OVERRIDE = {{ manual_override | tojson }};
   const DIRECTIONS = {{ directions | tojson }};
   const ICON_CHOICES = {{ icon_choices | tojson }};
   const SHAPE = {{ shape | tojson }};
 </script>
 <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='app-library.js') }}"></script>
+<script src="{{ url_for('static', filename='profiles.js') }}"></script>
 {% endblock %}

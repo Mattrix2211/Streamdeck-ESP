@@ -2,12 +2,14 @@
 Windows (system tray), sans fenetre de terminal visible : c'est la facon
 recommandee de faire tourner ce programme au quotidien.
 
-Deux choses tournent en fond :
+Trois choses tournent en fond :
   - device_client.DeviceClient : connexion persistante a l'ecran (thread
     dedie avec sa propre boucle asyncio), execute les actions configurees.
   - dashboard.py : page web de configuration (autre thread), lit/ecrit
     dashboard_config.yaml et demande a DeviceClient de pousser les
     changements vers l'ecran.
+  - profile_watcher.py : surveille l'application au premier plan et bascule
+    automatiquement le profil actif (voir profiles.py).
 
 Lancer :
     pythonw -m streamdeck_companion.tray      (pythonw = pas de console)
@@ -32,6 +34,8 @@ from PIL import Image, ImageDraw
 
 from . import dashboard
 from . import ha_poller
+from . import profile_watcher
+from . import profiles as profile_utils
 from .device_client import DEFAULT_CONFIG_PATH, DeviceClient, load_config, save_config
 
 LOG = logging.getLogger("streamdeck_tray")
@@ -52,7 +56,7 @@ def make_icon_image() -> Image.Image:
     return img
 
 
-def build_menu(config: dict) -> pystray.Menu:
+def build_menu(config: dict, device_client: DeviceClient) -> pystray.Menu:
     ha_conf = config.get("home_assistant") or {}
     ha_url = ha_conf.get("url") or "http://homeassistant.local:8123"
 
@@ -62,12 +66,25 @@ def build_menu(config: dict) -> pystray.Menu:
     def open_home_assistant(_icon, _item):
         webbrowser.open(ha_url)
 
+    def active_profile_label(_item):
+        name = device_client.active_profile_name or "Defaut"
+        suffix = " (fige)" if device_client.manual_override else " (auto)"
+        return f"Profil actif : {name}{suffix}"
+
+    def resume_auto(_icon, _item):
+        device_client.schedule_clear_override()
+
     def quit_app(icon, _item):
         icon.stop()
         os._exit(0)  # noqa: SLF001 - threads daemon, on arrete tout le process direct
 
     return pystray.Menu(
         pystray.MenuItem("Stream Deck", None, enabled=False),
+        pystray.MenuItem(active_profile_label, None, enabled=False),
+        pystray.MenuItem(
+            "Reprendre la bascule automatique", resume_auto,
+            visible=lambda _item: bool(device_client.manual_override),
+        ),
         pystray.MenuItem("Configurer le Stream Deck", open_dashboard, default=True),
         pystray.MenuItem("Ouvrir Home Assistant", open_home_assistant),
         pystray.MenuItem("Quitter", quit_app),
@@ -96,15 +113,12 @@ def ensure_config_exists(config_path: Path) -> None:
     charge de demander les infos manquantes des l'ouverture de l'appli."""
     if config_path.exists():
         return
-    from . import dashboard as _dashboard  # import tardif : evite un cycle au chargement du module
-
     config_path.parent.mkdir(parents=True, exist_ok=True)
     save_config(config_path, {
         "connection": {"host": "", "port": 6053, "api_key": ""},
         "shape": "carre",
         "home_assistant": {"url": "", "token": ""},
-        "slots": _dashboard.default_slots(),
-        "encoders": _dashboard.default_encoders(),
+        "profiles": [profile_utils.default_profile()],
     })
     LOG.info("Fichier de config cree: %s", config_path)
 
@@ -129,8 +143,14 @@ def main() -> None:
     )
     ha_thread.start()
 
+    profile_stop_event = threading.Event()
+    profile_thread = threading.Thread(
+        target=profile_watcher.run_forever, args=(device_client, profile_stop_event), daemon=True
+    )
+    profile_thread.start()
+
     config = load_config(config_path)
-    icon = pystray.Icon("streamdeck", make_icon_image(), "Stream Deck", menu=build_menu(config))
+    icon = pystray.Icon("streamdeck", make_icon_image(), "Stream Deck", menu=build_menu(config, device_client))
     icon.run()
 
 

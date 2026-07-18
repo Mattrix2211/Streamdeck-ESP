@@ -1,9 +1,11 @@
 """Connexion persistante et directe au Stream Deck : ecoute les boutons et
 encodeurs, execute les actions configurees localement (aucun code a ecrire,
 tout se regle depuis la page de configuration - voir dashboard.py), et
-pousse la config des 16 emplacements (libelle/icone/type/visibilite) ainsi
-que la forme des boutons vers l'ecran en reutilisant CETTE MEME connexion
-(pas de reconnexion separee a chaque changement).
+pousse la config du profil actif (16 emplacements + forme) vers l'ecran en
+reutilisant CETTE MEME connexion (pas de reconnexion separee a chaque
+changement). Le profil actif change automatiquement selon l'application
+au premier plan sur le PC (voir profile_watcher.py) ou manuellement
+(voir schedule_force_profile/schedule_clear_override).
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ from aioesphomeapi import APIClient, Event, EventInfo, SelectInfo, SwitchInfo, T
 
 from . import actions as action_runner
 from . import ha_client
+from . import profiles as profile_utils
 
 LOG = logging.getLogger("streamdeck_client")
 
@@ -63,10 +66,22 @@ class DeviceClient:
         self.key_to_entity_name: dict[int, str] = {}
         self.entity_keys: dict[str, int] = {}  # nom d'entite -> key
         self.connected = False
+        self.profiles: list[dict] = []
+        self.active_profile_name: str | None = None
+        # Nom de profil force manuellement (voir schedule_force_profile) -
+        # None = bascule automatique selon l'appli au premier plan.
+        self.manual_override: str | None = None
 
     def _load_config(self) -> None:
         self.config = load_config(self.config_path)
         self.config_mtime = self.config_path.stat().st_mtime if self.config_path.exists() else None
+        self.profiles = profile_utils.migrate_profiles(self.config)
+
+    def _active_profile(self) -> dict:
+        return (
+            profile_utils.find_profile(self.profiles, self.active_profile_name)
+            or (self.profiles[0] if self.profiles else profile_utils.default_profile())
+        )
 
     def reload_config_if_changed(self) -> None:
         if not self.config_path.exists():
@@ -105,17 +120,22 @@ class DeviceClient:
             self.client.text_command(status_key, "PC en ligne")
 
     def _resolve_action(self, entity_name: str, event_type: str) -> dict | None:
+        """Resout l'action configuree dans le profil ACTIF (celui
+        actuellement affiche sur l'ecran) - pas necessairement le premier
+        profil : si OBS a le focus, un clic sur l'ecran declenche l'action
+        du profil "OBS", pas celle du profil "Defaut"."""
+        active = self._active_profile()
         if entity_name == ACTION_EVENT_ENTITY:
             try:
                 idx = int(event_type.rsplit("_", 1)[1]) - 1  # "action_16" -> 15
             except (IndexError, ValueError):
                 return None
-            slots = self.config.get("slots", [])
+            slots = active.get("slots", [])
             slot = slots[idx] if 0 <= idx < len(slots) else None
             return (slot or {}).get("action")
         if entity_name in ENCODER_EVENT_ENTITIES:
             enc_idx = ENCODER_EVENT_ENTITIES.index(entity_name)
-            encoders = self.config.get("encoders", [])
+            encoders = active.get("encoders", [])
             return encoders[enc_idx].get(event_type) if enc_idx < len(encoders) else None
         return None
 
@@ -147,12 +167,13 @@ class DeviceClient:
 
     def push_config(self) -> None:
         """Pousse la config des 16 emplacements (libelle/icone/type/
-        visibilite) et la forme vers l'ecran, via la connexion deja
-        ouverte. Doit etre appelee depuis le thread/la boucle de cette
-        instance (voir schedule_push pour un appel cross-thread)."""
+        visibilite) du profil ACTIF et la forme vers l'ecran, via la
+        connexion deja ouverte. Doit etre appelee depuis le thread/la
+        boucle de cette instance (voir schedule_push pour un appel
+        cross-thread)."""
         if self.client is None or not self.connected:
             raise RuntimeError("Pas encore connecte a l'ecran")
-        slots = self.config.get("slots", [])
+        slots = self._active_profile().get("slots", [])
         names = zip(SLOT_LABEL_NAMES, SLOT_ICON_NAMES, SLOT_TYPE_NAMES, SLOT_VISIBLE_NAMES)
         for i, (label_name, icon_name, type_name, visible_name) in enumerate(names):
             slot = slots[i] if i < len(slots) else None
@@ -196,6 +217,32 @@ class DeviceClient:
 
     def schedule_push_values(self, values: dict[int, str], timeout: float = 5.0) -> None:
         self._run_threadsafe(lambda: self.push_slot_values(values), timeout)
+
+    def set_active_profile(self, name: str) -> None:
+        """Change le profil affiche/actif et pousse sa config vers l'ecran
+        si elle a change. Appelee depuis la boucle de cette instance -
+        voir schedule_set_active_profile pour un appel cross-thread
+        (profile_watcher.py tourne dans son propre thread)."""
+        if name == self.active_profile_name:
+            return
+        self.active_profile_name = name
+        if self.connected:
+            self.push_config()
+
+    def schedule_set_active_profile(self, name: str, timeout: float = 5.0) -> None:
+        self._run_threadsafe(lambda: self.set_active_profile(name), timeout)
+
+    def schedule_force_profile(self, name: str, timeout: float = 5.0) -> None:
+        """Fige le profil actif sur `name` (bouton "Forcer ce profil" de la
+        page de config) - la bascule automatique (profile_watcher.py)
+        n'y touchera plus tant que schedule_clear_override() n'est pas
+        appelee."""
+        self.manual_override = name
+        self.schedule_set_active_profile(name, timeout)
+
+    def schedule_clear_override(self) -> None:
+        """Reprend la bascule automatique (bouton "Automatique")."""
+        self.manual_override = None
 
     def _run_threadsafe(self, fn, timeout: float) -> None:
         if self.loop is None:

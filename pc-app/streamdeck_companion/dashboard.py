@@ -25,10 +25,12 @@ from flask import Flask, jsonify, redirect, render_template, request, url_for
 
 from . import actions as action_runner
 from . import icons
+from . import profiles as profile_utils
 from .app_library import list_installed_apps
 from .browse import browse_for_executable
 from .custom_apps import add_custom_app, list_custom_apps, remove_custom_app
 from .device_client import DEFAULT_CONFIG_PATH, SLOT_COUNT, DeviceClient, load_config, save_config
+from .profile_watcher import foreground_process_name
 
 LOG = logging.getLogger("streamdeck_dashboard")
 
@@ -76,33 +78,13 @@ def format_ha_target(action: dict) -> str:
     return f"{domain}.{service}:{entity_id}" if domain and service else ""
 
 
-def default_slot(i: int) -> dict:
-    return {
-        "label": f"Slot {i + 1}",
-        "icon": "",
-        "type": "bouton",
-        "visible": i < 12,
-        "action": {"type": "none", "target": ""},
-        "ha_entity": "",
-    }
-
-
-def default_slots() -> list[dict]:
-    return [default_slot(i) for i in range(SLOT_COUNT)]
-
-
-def default_encoders() -> list[dict]:
-    empty = {"type": "none", "target": ""}
-    return [{"clockwise": dict(empty), "anticlockwise": dict(empty), "press": dict(empty)} for _ in range(3)]
-
-
 def normalize_slots(raw_slots: list[dict] | None) -> list[dict]:
     """Complete a exactement SLOT_COUNT emplacements (tronque/complete avec
     des valeurs par defaut si la config sur disque en a moins/plus)."""
     slots = list(raw_slots or [])
     normalized = []
     for i in range(SLOT_COUNT):
-        slot = {**default_slot(i), **(slots[i] if i < len(slots) else {})}
+        slot = {**profile_utils.default_slot(i), **(slots[i] if i < len(slots) else {})}
         action = {"type": "none", "target": ""} if slot["type"] != "bouton" else slot.get("action") or {"type": "none", "target": ""}
         slot["action"] = action
         normalized.append(slot)
@@ -135,7 +117,7 @@ def encoders_to_fields(encoders: list[dict]) -> list[dict]:
             }
             for direction in DIRECTIONS
         }
-        for enc in (encoders or default_encoders())
+        for enc in (encoders or profile_utils.default_encoders())
     ]
 
 
@@ -153,19 +135,56 @@ def fields_to_encoders(raw_encoders: list[dict]) -> list[dict]:
     return encoders
 
 
+def profile_to_fields(profile: dict) -> dict:
+    """Version d'un profil prete pour le template/JS : slots completes a
+    SLOT_COUNT avec leur action_field, encoders en forme champ texte."""
+    slots = normalize_slots(profile.get("slots"))
+    for slot in slots:
+        slot["action_field"] = target_to_field(slot["action"].get("type", "none"), slot["action"].get("target"))
+    return {
+        "name": profile.get("name", profile_utils.DEFAULT_PROFILE_NAME),
+        "trigger": profile.get("trigger"),
+        "slots": slots,
+        "encoders": encoders_to_fields(profile.get("encoders")),
+    }
+
+
+def fields_to_profile(raw_profile: dict) -> dict:
+    """Inverse de profile_to_fields : reconvertit un profil recu du
+    formulaire (slots/encoders en forme champ texte) vers le format
+    persistable dans dashboard_config.yaml."""
+    slots = normalize_slots(raw_profile.get("slots"))
+    for slot in slots:
+        action_type = slot.get("action", {}).get("type", "none")
+        action_field = slot.pop("action_field", "")
+        slot["action"] = {"type": action_type, "target": field_to_target(action_type, action_field)}
+        slot["icon_char"] = icons.icon_char(slot.get("icon", ""))
+        slot["label"] = (slot.get("label") or "").strip()[:24] or slot["label"]
+    name = (raw_profile.get("name") or "").strip()[:24] or profile_utils.DEFAULT_PROFILE_NAME
+    trigger = raw_profile.get("trigger")
+    trigger = {"process": trigger["process"].strip()} if trigger and (trigger.get("process") or "").strip() else None
+    return {
+        "name": name,
+        "trigger": trigger,
+        "slots": slots,
+        "encoders": fields_to_encoders(raw_profile.get("encoders") or []),
+    }
+
+
 @app.route("/", methods=["GET"])
 def index():
     config = load_config(_config_path)
     if not (config.get("connection") or {}).get("host"):
         return redirect(url_for("settings", premiere_fois="1"))
-    slots = normalize_slots(config.get("slots"))
-    for slot in slots:
-        slot["action_field"] = target_to_field(slot["action"].get("type", "none"), slot["action"].get("target"))
+    profiles = [profile_to_fields(p) for p in profile_utils.migrate_profiles(config)]
+    active_profile_name = _device_client.active_profile_name if _device_client else None
+    manual_override = bool(_device_client and _device_client.manual_override)
     return render_template(
         "home.html",
         active_page="home",
-        slots=slots,
-        encoders=encoders_to_fields(config.get("encoders")),
+        profiles=profiles,
+        active_profile_name=active_profile_name or (profiles[0]["name"] if profiles else None),
+        manual_override=manual_override,
         shape=config.get("shape", "carre"),
         action_types=ACTION_TYPES,
         slot_types=SLOT_TYPES,
@@ -180,30 +199,75 @@ def index():
 def save():
     config = load_config(_config_path)
     try:
-        raw_slots = json.loads(request.form.get("slots_json", "[]"))
+        raw_profiles = json.loads(request.form.get("profiles_json", "[]"))
     except (TypeError, ValueError):
-        raw_slots = []
-    slots = normalize_slots(raw_slots)
-    for slot in slots:
-        action_type = slot.get("action", {}).get("type", "none")
-        action_field = slot.pop("action_field", "")
-        slot["action"] = {"type": action_type, "target": field_to_target(action_type, action_field)}
-        slot["icon_char"] = icons.icon_char(slot.get("icon", ""))
-        slot["label"] = (slot.get("label") or "").strip()[:24] or slot["label"]
-    config["slots"] = slots
-
-    try:
-        raw_encoders = json.loads(request.form.get("encoders_json", "[]"))
-    except (TypeError, ValueError):
-        raw_encoders = []
-    config["encoders"] = fields_to_encoders(raw_encoders)
-
+        raw_profiles = []
+    if raw_profiles:
+        profiles = [fields_to_profile(p) for p in raw_profiles]
+        config["profiles"] = profiles
+        config.pop("slots", None)  # ancien format pre-profils, remplace par profiles[0]
+        config.pop("encoders", None)
+    else:
+        # profiles_json vide/invalide : ne pas ecraser la config existante.
+        profiles = profile_utils.migrate_profiles(config)
     save_config(_config_path, config)
+
+    if _device_client is not None:
+        _device_client.profiles = profiles
 
     error = push_to_screen()
     if error:
         return redirect(url_for("index", error=error))
     return redirect(url_for("index", saved="1"))
+
+
+@app.route("/profiles/force", methods=["POST"])
+def force_profile():
+    """Bouton "Forcer ce profil" d'un onglet : fige l'ecran sur ce profil
+    jusqu'a "Automatique" (utile pour previsualiser un profil qu'on vient
+    d'editer sans attendre que son application soit au premier plan)."""
+    name = request.form.get("name", "")
+    if _device_client is None:
+        return jsonify({"error": "Non connecte a l'ecran"}), 400
+    try:
+        _device_client.schedule_force_profile(name)
+    except Exception as exc:
+        LOG.exception("Echec du changement de profil force")
+        return jsonify({"error": str(exc)}), 500
+    return jsonify({"ok": True, "active_profile_name": _device_client.active_profile_name})
+
+
+@app.route("/profiles/auto", methods=["POST"])
+def auto_profile():
+    """Reprend la bascule automatique de profil (profile_watcher.py)."""
+    if _device_client is not None:
+        _device_client.schedule_clear_override()
+    return jsonify({"ok": True})
+
+
+@app.route("/profiles/status", methods=["GET"])
+def profiles_status():
+    """Sondee periodiquement par la page pour afficher quel profil est
+    reellement actif sur l'ecran (bascule automatique en arriere-plan)."""
+    if _device_client is None:
+        return jsonify({"active_profile_name": None, "manual_override": False})
+    return jsonify({
+        "active_profile_name": _device_client.active_profile_name,
+        "manual_override": bool(_device_client.manual_override),
+    })
+
+
+@app.route("/foreground-process", methods=["GET"])
+def foreground_process():
+    """Bouton "Detecter l'appli active" de la popup profil : renvoie le nom
+    du processus au premier plan sur le PC en ce moment (Windows
+    uniquement) pour eviter d'avoir a le chercher/taper a la main."""
+    try:
+        process = foreground_process_name()
+    except Exception as exc:
+        LOG.exception("Echec de la detection de l'application active")
+        return jsonify({"error": str(exc)}), 500
+    return jsonify({"process": process})
 
 
 @app.route("/reglages", methods=["GET"])
@@ -234,8 +298,7 @@ def save_settings():
         "url": request.form.get("ha_url", "").strip(),
         "token": request.form.get("ha_token", "").strip(),
     }
-    config.setdefault("slots", default_slots())
-    config.setdefault("encoders", default_encoders())
+    config["profiles"] = profile_utils.migrate_profiles(config)
     save_config(_config_path, config)
 
     error = push_to_screen()

@@ -42,13 +42,16 @@
 Tout se regle dans l'appli PC (`http://127.0.0.1:8080`), en 2 pages pour
 eviter la surcharge (esprit "gerer ses pages d'applications sur un
 telephone") :
-- **Accueil** (`/`) : maquette fidele de l'ecran (memes proportions et
-  disposition que le firmware) avec les 16 emplacements
-  (bouton/barre/texte, icone, action) et les 3 encodeurs, chacun
-  configurable via sa propre popup - les emplacements masques sont a part
-  sous la maquette, glisser-deposer pour reordonner/echanger dans les deux
-  sections - la seule page du quotidien. Le type d'action `launch` propose
-  une bibliotheque d'applications (grille avec recherche, applications
+- **Accueil** (`/`) : un ou plusieurs **profils** (onglets), chacun une
+  maquette fidele de l'ecran (memes proportions et disposition que le
+  firmware) avec ses propres 16 emplacements (bouton/barre/texte, icone,
+  action) et 3 encodeurs, configurables via popup - les emplacements
+  masques sont a part sous la maquette, glisser-deposer pour
+  reordonner/echanger dans les deux sections - la seule page du quotidien.
+  L'ecran bascule automatiquement sur le profil dont le declencheur
+  correspond a l'application au premier plan sur le PC (voir "Profils par
+  application" plus bas). Le type d'action `launch` propose une
+  bibliotheque d'applications (grille avec recherche, applications
   detectees + personnalisees) plutot que de taper un chemin.
 - **Reglages** (`/reglages`) : connexion, forme carre/rond, Home
   Assistant - demandee automatiquement au tout premier lancement
@@ -61,13 +64,18 @@ changements de la page courante (chaque page ne touche que sa portion de
 
 - `device_client.py` maintient une connexion permanente et directe a
   l'ecran (IP configuree une fois, pas de mDNS) : elle ecoute les
-  emplacements/encodeurs ET sert a pousser leur config (libelle, icone,
-  type, visibilite, valeur des widgets) - meme connexion, pas de
-  reconnexion a chaque changement.
+  emplacements/encodeurs ET sert a pousser la config du **profil actif**
+  (libelle, icone, type, visibilite, valeur des widgets) - meme connexion,
+  pas de reconnexion a chaque changement (de config comme de profil).
 - `dashboard.py` (+ `templates/base.html`+`home.html`+`settings.html`,
   `static/dashboard.js`) sont les 2 pages web (thread Flask separe), qui
   communiquent avec `device_client.py` via `asyncio.run_coroutine_threadsafe`
   pour rester thread-safe.
+- `profiles.py` : modele des profils (migration de l'ancien format,
+  correspondance declencheur -> profil) - partage par `dashboard.py` et
+  `device_client.py`.
+- `profile_watcher.py` : sonde la fenetre au premier plan sur le PC toutes
+  les ~1.5s (Windows uniquement) et bascule le profil actif en consequence.
 - `ha_client.py`/`ha_poller.py` sondent l'API REST de Home Assistant
   (facultatif) toutes les ~15s pour rafraichir les emplacements type
   widget, et executent le type d'action `home_assistant` (appel de
@@ -78,8 +86,9 @@ changements de la page courante (chaque page ne touche que sa portion de
   d'applications du picker "launch" - detection des raccourcis du menu
   Demarrer, applications personnalisees persistees dans
   `dashboard_config.yaml`, selecteur de fichier natif pour les ajouter.
-- `tray.py` orchestre le tout (connexion, dashboard, sondeur HA) dans une
-  icone de barre des taches, sans fenetre de terminal.
+- `tray.py` orchestre le tout (connexion, dashboard, sondeur HA, sondeur de
+  profil) dans une icone de barre des taches, sans fenetre de terminal - le
+  menu affiche le profil actuellement actif.
 - Home Assistant continue de voir l'appareil nativement (integration
   ESPHome auto-decouverte) et peut faire ses propres automations en
   parallele, mais ce n'est **pas necessaire** pour que le Stream Deck
@@ -101,6 +110,36 @@ sont toujours presents dans le firmware (`firmware/slots_*.yaml` +
 12 boutons), 4 desactives - a activer depuis la popup d'un emplacement
 ("Visible sur l'ecran") quand besoin.
 
+## Profils par application
+
+Un Stream Deck du commerce change de grille selon l'application active -
+c'est le principal ecart avec une solution maison basique, comble ici par
+un systeme de profils :
+
+- Chaque profil (`dashboard_config.yaml`, cle `profiles`) a un `name`, un
+  `trigger` optionnel (`{process: "nom.exe"}` ou `null`) et sa propre paire
+  `slots`/`encoders`. Le premier profil sans `trigger` sert de repli.
+- `profile_watcher.py::run_forever()` tourne dans son propre thread
+  (Windows uniquement) : toutes les ~1.5s, il identifie le processus de la
+  fenetre au premier plan (`win32gui.GetForegroundWindow()` +
+  `win32process.GetWindowThreadProcessId()` + `psutil`), le compare aux
+  declencheurs via `profiles.match_profile()`, et appelle
+  `device_client.schedule_set_active_profile()` si le profil correspondant
+  a change - qui pousse alors sa config vers l'ecran (meme mecanisme que
+  `push_config()`) et redirige la resolution des actions (`_resolve_action`)
+  vers ce nouveau profil, pour que les boutons physiques declenchent bien
+  les actions du profil affiche.
+- **Bascule manuelle** : `device_client.manual_override` (nom de profil ou
+  `None`) est mis a jour par les boutons "Forcer ce profil"/"Automatique"
+  de la page web (`/profiles/force`, `/profiles/auto`) ; quand il est
+  renseigne, `profile_watcher.py` n'y touche plus jusqu'a "Automatique".
+- La page web sonde `/profiles/status` toutes les ~3s pour afficher (point
+  vert sur l'onglet, texte de statut) quel profil est reellement actif sur
+  l'ecran, independamment de l'onglet en cours d'edition.
+- Migration transparente : `profiles.migrate_profiles()` convertit une
+  config pre-profils (`slots`/`encoders` a la racine, format d'avant ce
+  chantier) en un unique profil "Defaut" au premier chargement.
+
 ## Flux "emplacement -> PC"
 
 1. L'utilisateur touche un emplacement de type `bouton` sur l'ecran (LVGL)
@@ -120,7 +159,8 @@ sont toujours presents dans le firmware (`firmware/slots_*.yaml` +
 
 - **Config des emplacements + forme** : `dashboard.py` (page "Enregistrer
   et envoyer a l'ecran") appelle `device_client.schedule_push()`, qui
-  pousse libelle/icone/type/visibilite de chaque emplacement + la forme.
+  pousse libelle/icone/type/visibilite de chaque emplacement du **profil
+  actif** + la forme (voir "Profils par application").
 - **Valeur des widgets** (`barre`/`texte`) : `ha_poller.py` sonde Home
   Assistant toutes les ~15s et appelle
   `device_client.schedule_push_values()` pour ne rafraichir que les
