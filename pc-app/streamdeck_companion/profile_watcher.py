@@ -45,6 +45,46 @@ def foreground_process_name() -> str | None:
         return None
 
 
+def list_open_windows() -> list[dict[str, str]]:
+    """Liste [{title, process}] des applications actuellement ouvertes sur
+    le PC (une entree par processus, dedupliquee), pour choisir un
+    declencheur de profil directement dans une liste plutot que de devoir
+    "detecter" la fenetre active (piege : cliquer un bouton dans le
+    navigateur remet toujours le navigateur au premier plan avant que la
+    detection s'execute). Windows uniquement."""
+    if SYSTEM != "Windows":
+        return []
+    import psutil
+    import win32gui
+    import win32process
+
+    seen: set[str] = set()
+    windows: list[dict[str, str]] = []
+
+    def _on_window(hwnd: int, _extra) -> None:
+        if not win32gui.IsWindowVisible(hwnd):
+            return
+        title = win32gui.GetWindowText(hwnd).strip()
+        if not title:
+            return
+        _, pid = win32process.GetWindowThreadProcessId(hwnd)
+        if not pid:
+            return
+        try:
+            process = psutil.Process(pid).name()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            return
+        key = process.lower()
+        if key in seen or key == "streamdeck_companion.exe":
+            return
+        seen.add(key)
+        windows.append({"title": title, "process": process})
+
+    win32gui.EnumWindows(_on_window, None)
+    windows.sort(key=lambda w: w["title"].lower())
+    return windows
+
+
 def run_forever(device_client: DeviceClient, stop_event: threading.Event) -> None:
     if SYSTEM != "Windows":
         LOG.info("Bascule automatique de profil indisponible sur cette plateforme (Windows uniquement)")

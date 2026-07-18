@@ -111,11 +111,14 @@
       <label>Nom du profil</label>
       <input type="text" id="profile-modal-name" maxlength="24" placeholder="OBS, Discord, Jeu...">
 
+      <label>Choisir parmi les applications ouvertes</label>
+      <select id="profile-modal-open-windows">
+        <option value="">— Chargement des applications ouvertes... —</option>
+      </select>
+      <p id="profile-modal-open-windows-status" class="hint"></p>
+
       <label>Declencheur (nom du processus)</label>
-      <div class="target-row">
-        <input type="text" id="profile-modal-trigger" placeholder="ex: obs64.exe">
-        <button type="button" id="profile-modal-detect" class="secondary">Detecter l'appli active</button>
-      </div>
+      <input type="text" id="profile-modal-trigger" placeholder="ex: obs64.exe">
       <p class="hint">
         L'ecran basculera automatiquement sur ce profil des que cette
         application passera au premier plan sur le PC. Laissez vide pour

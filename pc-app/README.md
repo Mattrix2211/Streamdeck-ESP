@@ -101,11 +101,12 @@ une grille de 16 emplacements + 3 encodeurs independante. Un point vert sur
 un onglet indique le profil **reellement affiche sur l'ecran en ce moment**.
 
 - **Creer un profil** : "+ Nouveau profil" - donnez-lui un nom et un
-  **declencheur** (le nom du processus, ex `obs64.exe`). Le bouton
-  "Detecter l'appli active" remplit le declencheur automatiquement avec
-  l'application actuellement au premier plan sur votre PC (lancez-la,
-  revenez sur cette page, cliquez) - pas besoin de connaitre le nom exact
-  du `.exe`.
+  **declencheur** (le nom du processus, ex `obs64.exe`). Un menu deroulant
+  liste directement toutes les applications actuellement ouvertes sur
+  votre PC (comme Alt+Tab) - choisissez la vôtre dedans, le declencheur et
+  un nom de profil suggere se remplissent tout seuls. Pas besoin de
+  connaitre le nom exact du `.exe`, ni de jongler entre cette page et
+  l'application a detecter.
 - **Bascule automatique** : des que l'application du declencheur passe au
   premier plan, l'ecran change de grille tout seul, sans intervention
   (`streamdeck_companion/profile_watcher.py`, sonde la fenetre active

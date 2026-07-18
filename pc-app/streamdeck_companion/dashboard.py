@@ -30,7 +30,7 @@ from .app_library import list_installed_apps
 from .browse import browse_for_executable
 from .custom_apps import add_custom_app, list_custom_apps, remove_custom_app
 from .device_client import DEFAULT_CONFIG_PATH, SLOT_COUNT, DeviceClient, load_config, save_config
-from .profile_watcher import foreground_process_name
+from .profile_watcher import list_open_windows
 
 LOG = logging.getLogger("streamdeck_dashboard")
 
@@ -257,17 +257,18 @@ def profiles_status():
     })
 
 
-@app.route("/foreground-process", methods=["GET"])
-def foreground_process():
-    """Bouton "Detecter l'appli active" de la popup profil : renvoie le nom
-    du processus au premier plan sur le PC en ce moment (Windows
-    uniquement) pour eviter d'avoir a le chercher/taper a la main."""
+@app.route("/open-windows", methods=["GET"])
+def open_windows():
+    """Popup profil : liste les applications actuellement ouvertes sur le
+    PC pour choisir un declencheur directement dedans, plutot que de
+    "detecter" la fenetre active (qui detecte toujours le navigateur, vu
+    qu'il faut y cliquer un bouton pour declencher la detection)."""
     try:
-        process = foreground_process_name()
+        windows = list_open_windows()
     except Exception as exc:
-        LOG.exception("Echec de la detection de l'application active")
+        LOG.exception("Echec de la lecture des applications ouvertes")
         return jsonify({"error": str(exc)}), 500
-    return jsonify({"process": process})
+    return jsonify({"windows": windows})
 
 
 @app.route("/reglages", methods=["GET"])

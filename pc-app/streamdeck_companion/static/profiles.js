@@ -123,6 +123,7 @@ function openProfileModal(index) {
   document.getElementById("profile-modal-name").value = isNew ? "" : profiles[index].name;
   document.getElementById("profile-modal-trigger").value = isNew ? "" : ((profiles[index].trigger && profiles[index].trigger.process) || "");
   document.getElementById("profile-modal-delete").style.display = (isNew || profiles.length <= 1) ? "none" : "inline-block";
+  loadOpenWindows();
   profileModal.classList.remove("hidden");
 }
 
@@ -133,17 +134,42 @@ function closeProfileModal() {
 
 document.getElementById("profile-modal-cancel").addEventListener("click", closeProfileModal);
 
-document.getElementById("profile-modal-detect").addEventListener("click", () => {
-  fetch("/foreground-process")
+/* Liste des applications ouvertes (Alt+Tab) plutot qu'un bouton "Detecter
+ * l'appli active" - celui-ci detectait toujours le navigateur, puisqu'il
+ * faut y cliquer pour declencher la detection. Rechargee a chaque
+ * ouverture de la popup pour rester a jour. */
+function loadOpenWindows() {
+  const select = document.getElementById("profile-modal-open-windows");
+  const status = document.getElementById("profile-modal-open-windows-status");
+  select.innerHTML = '<option value="">— Chargement des applications ouvertes... —</option>';
+  fetch("/open-windows")
     .then((r) => r.json())
     .then((data) => {
-      if (data.process) {
-        document.getElementById("profile-modal-trigger").value = data.process;
-      } else {
-        alert("Impossible de detecter l'application active" + (data.error ? " : " + data.error : " (fonctionnalite Windows uniquement)."));
-      }
+      const windows = data.windows || [];
+      select.innerHTML = '<option value="">— Choisir une application ouverte —</option>';
+      windows.forEach((w) => {
+        const opt = document.createElement("option");
+        opt.value = w.process;
+        opt.textContent = `${w.title} (${w.process})`;
+        select.appendChild(opt);
+      });
+      status.textContent = windows.length
+        ? ""
+        : "Aucune application detectee - fonctionnalite Windows uniquement, ou tapez le nom du processus a la main ci-dessous.";
     })
-    .catch(() => alert("Impossible de contacter l'appli."));
+    .catch(() => {
+      select.innerHTML = '<option value="">— Indisponible —</option>';
+      status.textContent = "Impossible de charger la liste - tapez le nom du processus a la main ci-dessous.";
+    });
+}
+
+document.getElementById("profile-modal-open-windows").addEventListener("change", (e) => {
+  if (!e.target.value) return;
+  document.getElementById("profile-modal-trigger").value = e.target.value;
+  const nameField = document.getElementById("profile-modal-name");
+  if (!nameField.value.trim()) {
+    nameField.value = e.target.selectedOptions[0].textContent.replace(/\s*\([^)]*\)$/, "");
+  }
 });
 
 document.getElementById("profile-modal-save").addEventListener("click", () => {
