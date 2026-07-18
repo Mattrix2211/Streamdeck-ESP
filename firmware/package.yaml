@@ -8,18 +8,23 @@
 # GPIO encodeurs : uniquement ceux confirmes disponibles sur le header
 # d'extension (colonne gauche GPIO1-5/20/32/33, droite GPIO45-47). GPIO5 est
 # le reset interne de la dalle, evitez-le. Verifiez contre votre revision.
+#
+# IMPORTANT - puce ES (engineering sample) : si `esphome run` affiche
+# "chip revision: v1.3" (silicium pre-production, PAS v3.0+), utilisez
+# ESPHome <= 2026.2.x pour compiler (`pip install "esphome<2026.3"`).
+# Depuis ESPHome 2026.3, le board esp32-p4-evboard cible par defaut la
+# production et le bootloader compile plante au demarrage sur du
+# silicium ES ("assert failed: ... esp_task_stack_is_sane_cache_disabled()"
+# juste apres "Disabling RNG early entropy source", avant meme app_main) -
+# confirme sur ce projet, ni un pin de version IDF ni
+# esp32.engineering_sample: true (ajoute en 2026.3, inexistant avant) ne
+# suffisent a compenser. Voir https://github.com/esphome/esphome/issues/15336
+# (rapporte comme fonctionnel en 2026.2.x, casse en 2026.3.x - PR de fix
+# liee non verifiee comme resolvant CE crash precis).
 
 esp32:
   flash_size: 16MB
   cpu_frequency: 360MHZ
-  # engineering_sample: puce ES (chip revision v1.3, "ES pre rev.300"),
-  # PAS un P4 de production (rev >= 3.0) - depuis ESPHome 2026.3, le board
-  # esp32-p4-evboard cible par defaut la production, sans ce flag le
-  # bootloader est compile pour la mauvaise revision de silicium et plante
-  # au demarrage ("assert failed: ... esp_task_stack_is_sane_cache_disabled()"
-  # avant meme app_main, y compris a IDF 5.5.1 - donc pas une histoire de
-  # version IDF, voir https://github.com/esphome/esphome/issues/15336).
-  engineering_sample: true
   framework:
     type: esp-idf
     advanced:
