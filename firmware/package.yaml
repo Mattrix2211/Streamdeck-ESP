@@ -12,15 +12,16 @@
 esp32:
   flash_size: 16MB
   cpu_frequency: 360MHZ
+  # engineering_sample: puce ES (chip revision v1.3, "ES pre rev.300"),
+  # PAS un P4 de production (rev >= 3.0) - depuis ESPHome 2026.3, le board
+  # esp32-p4-evboard cible par defaut la production, sans ce flag le
+  # bootloader est compile pour la mauvaise revision de silicium et plante
+  # au demarrage ("assert failed: ... esp_task_stack_is_sane_cache_disabled()"
+  # avant meme app_main, y compris a IDF 5.5.1 - donc pas une histoire de
+  # version IDF, voir https://github.com/esphome/esphome/issues/15336).
+  engineering_sample: true
   framework:
     type: esp-idf
-    # Version figee : IDF 5.5.3/5.5.4 provoquent un boot-loop connu sur
-    # ESP32-P4 (assert cache_utils.c / HP_SYS_HP_WDT_RESET des le
-    # chargement de l'app, avant meme app_main) - regression confirmee
-    # entre 5.5.1 (OK) et 5.5.3+ (KO), voir
-    # https://github.com/espressif/esp-idf/issues/18294. 5.5.1 est la
-    # derniere version connue stable pour ce chip.
-    version: 5.5.1
     advanced:
       enable_idf_experimental_features: true
 
