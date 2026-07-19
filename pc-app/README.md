@@ -265,10 +265,12 @@ les 3 encodeurs :
 - **Encodeur 2** : temperature de couleur (chaleur).
 - **Encodeur 3** : intensite (luminosite).
 
-Un panneau apparait au centre de l'ecran pendant le reglage, avec une barre
-verticale par axe (teinte/chaleur/intensite) qui se met a jour en direct a
-chaque cran d'encodeur - pour voir ou on en est sans devoir regarder le
-bouton lui-meme. Chaque cran met aussi a jour l'apercu couleur sur le
+Un panneau apparait au centre de l'ecran pendant le reglage : une bande
+arc-en-ciel pour la teinte et une bande chaude/froide pour la temperature
+de couleur, chacune avec un curseur qui se deplace en direct sur la
+position exacte a chaque cran d'encodeur, plus une barre pleine classique
+pour l'intensite - pour voir ou on en est sans devoir regarder le bouton
+lui-meme. Chaque cran met aussi a jour l'apercu couleur sur le
 bouton immediatement et appelle Home Assistant en direct (limite a ~8
 appels/s max par axe pour ne pas le spammer si l'encodeur tourne vite -
 voir `color_mode.py::_send_update`). Le mode se ferme tout seul apres 10s
