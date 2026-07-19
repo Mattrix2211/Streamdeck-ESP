@@ -93,6 +93,7 @@ button.danger:hover { background: rgba(230,57,70,.12); }
 .slot-tile:hover { border-color: var(--signal); }
 .slot-tile.drag-over { border-color: var(--signal); background: var(--horizon); }
 .slot-tile .icon { font-family: 'Material Icons'; font-size: clamp(10px, 2.4vw, 20px); color: var(--signal); line-height: 1; }
+.slot-tile .icon img { width: clamp(14px, 3.2vw, 26px); height: clamp(14px, 3.2vw, 26px); border-radius: 5px; display: block; }
 .slot-tile .label {
   font-size: clamp(7px, 1.6vw, 12px); text-align: center; max-width: 100%;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;

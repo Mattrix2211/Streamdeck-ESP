@@ -391,10 +391,19 @@ class DeviceClient:
         await self.connect()
         self.client.subscribe_states(self.on_state)
         try:
+            tick = 0
             while True:
                 await asyncio.sleep(2)
                 self.reload_config_if_changed()
                 self.color_mode.check_timeout()
+                tick += 1
+                if tick % 5 == 0:
+                    # Sonde active toutes les ~10s : un reflash de l'ecran
+                    # (reboot complet) ne fait pas forcement lever d'erreur
+                    # immediate cote client - sans ca, la connexion reste
+                    # "vivante" indefiniment sans plus jamais rien recevoir,
+                    # et tray.py ne retente jamais de se reconnecter.
+                    await self.client.device_info()
         finally:
             self.connected = False
             status_key = self.entity_keys.get(STATUS_ENTITY_NAME)

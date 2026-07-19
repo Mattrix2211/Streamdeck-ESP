@@ -76,7 +76,16 @@ function makeTile(slot, index) {
 
   const icon = document.createElement("div");
   icon.className = "icon";
-  icon.textContent = iconChar(slot.icon);
+  const launchTarget = slot.action && slot.action.type === "launch" ? slot.action.target : "";
+  if (launchTarget) {
+    const img = document.createElement("img");
+    img.src = "/preview-icon.png?target=" + encodeURIComponent(launchTarget);
+    img.alt = "";
+    img.onerror = () => { img.replaceWith(document.createTextNode(iconChar(slot.icon))); };
+    icon.appendChild(img);
+  } else {
+    icon.textContent = iconChar(slot.icon);
+  }
   tile.appendChild(icon);
 
   const label = document.createElement("div");

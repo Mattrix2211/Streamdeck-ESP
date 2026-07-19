@@ -22,7 +22,7 @@ import logging
 from pathlib import Path
 
 import requests
-from flask import Flask, jsonify, redirect, render_template, request, url_for
+from flask import Flask, Response, jsonify, redirect, render_template, request, url_for
 
 from . import actions as action_runner
 from . import audio_devices
@@ -379,6 +379,19 @@ def save_settings():
     if error:
         return redirect(url_for("settings", error=error))
     return redirect(url_for("index" if request.form.get("premiere_fois") == "1" else "settings", saved="1"))
+
+
+@app.route("/preview-icon.png", methods=["GET"])
+def preview_icon():
+    """Vraie icone d'une cible 'launch' pour l'apercu dans le navigateur
+    (grille d'emplacements) - endpoint distinct de icon_server.py (qui sert
+    l'ecran physique via le profil ACTIF) : ici on extrait directement la
+    cible passee en parametre, peu importe le profil en cours d'edition."""
+    target = request.args.get("target", "")
+    png = icon_extract.extract_icon_png(target) if target else None
+    if png is None:
+        return Response(status=404)
+    return Response(png, mimetype="image/png")
 
 
 @app.route("/installed-apps", methods=["GET"])
