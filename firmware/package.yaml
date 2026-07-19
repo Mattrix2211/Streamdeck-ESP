@@ -8,10 +8,9 @@
 # GPIO encodeurs : uniquement ceux confirmes disponibles sur le header
 # d'extension (colonne gauche GPIO1-5/20/32/33, droite GPIO45-47). GPIO5 est
 # le reset interne de la dalle, evitez-le. Verifiez contre votre revision.
-#
 # IMPORTANT - puce ES (engineering sample, "chip revision: v1.3") : voir
-# streamdeck.yaml (cle esp32.board) pour le detail du crash de boot et son
-# correctif - ESPHome <= 2026.2.x + board explicite requis.
+# streamdeck.yaml (cle esp32.board) pour le crash de boot et son correctif -
+# ESPHome <= 2026.2.x + board explicite requis.
 
 esp32:
   flash_size: 16MB
@@ -127,6 +126,8 @@ binary_sensor:
       number: GPIO32
       mode: INPUT_PULLUP
       inverted: true
+    filters:
+      - delayed_on_off: 25ms
     on_press:
       - event.trigger: { id: encoder2_event, event_type: "press" }
       - lvgl.obj.update:
@@ -145,6 +146,8 @@ binary_sensor:
       number: GPIO46
       mode: INPUT_PULLUP
       inverted: true
+    filters:
+      - delayed_on_off: 25ms
     on_press:
       - event.trigger: { id: encoder3_event, event_type: "press" }
       - lvgl.obj.update:
@@ -284,8 +287,16 @@ text:
           id: lbl_pc_status
           text: !lambda "return x;"
 
-# Pilote la visibilite du bouton "X" flottant (voir plus bas) - l'appli PC
-# l'active en reponse a un appui long sur un emplacement lie a une ampoule.
+# Entites number optimistes pilotant les 3 barres du panneau de reglage
+# couleur (voir lvgl pages plus bas) - poussees par l'appli PC (number_command).
+number:
+  - {platform: template, id: color_mode_hue_number, name: "Mode couleur - teinte (valeur)", optimistic: true, min_value: 0, max_value: 359, step: 1, initial_value: 0, on_value: [{lvgl.bar.update: {id: color_mode_bar_hue, value: !lambda "return (int) x;"}}, {lvgl.label.update: {id: color_mode_lbl_hue, text: !lambda "return to_string((int) x) + \"°\";"}}]}
+  - {platform: template, id: color_mode_kelvin_number, name: "Mode couleur - chaleur (valeur)", optimistic: true, min_value: 2000, max_value: 6500, step: 1, initial_value: 3000, on_value: [{lvgl.bar.update: {id: color_mode_bar_kelvin, value: !lambda "return (int) x;"}}, {lvgl.label.update: {id: color_mode_lbl_kelvin, text: !lambda "return to_string((int) x) + \"K\";"}}]}
+  - {platform: template, id: color_mode_brightness_number, name: "Mode couleur - intensite (valeur)", optimistic: true, min_value: 0, max_value: 100, step: 1, initial_value: 100, on_value: [{lvgl.bar.update: {id: color_mode_bar_brightness, value: !lambda "return (int) x;"}}, {lvgl.label.update: {id: color_mode_lbl_brightness, text: !lambda "return to_string((int) x) + \"%\";"}}]}
+
+# Pilote la visibilite du bouton "X" flottant et du panneau de reglage
+# couleur (voir plus bas) - l'appli PC l'active en reponse a un appui long
+# sur un emplacement lie a une ampoule.
 switch:
   - platform: template
     id: color_mode_active_switch
@@ -295,8 +306,10 @@ switch:
       - lambda: |-
           if (x) {
             lv_obj_clear_flag(id(color_mode_close_btn), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(color_mode_panel), LV_OBJ_FLAG_HIDDEN);
           } else {
             lv_obj_add_flag(id(color_mode_close_btn), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(color_mode_panel), LV_OBJ_FLAG_HIDDEN);
           }
 
 # ---------------------------------------------------------------------------
@@ -477,6 +490,10 @@ lvgl:
             text_color: 0x6B8BA4
             align: bottom_mid
             y: -8
+
+        # Panneau du mode reglage couleur : 3 barres verticales (teinte/
+        # chaleur/intensite), voir device_client.py::_push_color_mode_bars.
+        - obj: {id: color_mode_panel, width: 520, height: 340, align: center, hidden: true, bg_color: 0x0F2942, bg_opa: 245, border_color: 0x00B4D8, border_width: 2, radius: 16, pad_all: 16, layout: {type: flex, flex_flow: column, flex_align_cross: center, flex_align_main: start, pad_row: 12}, widgets: [{label: {text: "Reglage couleur", text_font: font_title, text_color: 0xFFFFFF}}, {obj: {width: "100%", height: 250, bg_opa: transp, border_width: 0, layout: {type: flex, flex_flow: row, flex_align_cross: center, flex_align_main: space_evenly}, widgets: [{obj: {width: 150, height: 250, bg_opa: transp, border_width: 0, layout: {type: flex, flex_flow: column, flex_align_cross: center, flex_align_main: space_between}, widgets: [{label: {text: "Teinte", text_font: font_body, text_color: 0x8FAFC7}}, {bar: {id: color_mode_bar_hue, width: 40, height: 150, min_value: 0, max_value: 359, value: 0, bg_color: 0x1A3A52, indicator: {bg_color: 0x00B4D8}}}, {label: {id: color_mode_lbl_hue, text: "0°", text_font: font_mono, text_color: 0xFFFFFF}}]}}, {obj: {width: 150, height: 250, bg_opa: transp, border_width: 0, layout: {type: flex, flex_flow: column, flex_align_cross: center, flex_align_main: space_between}, widgets: [{label: {text: "Chaleur", text_font: font_body, text_color: 0x8FAFC7}}, {bar: {id: color_mode_bar_kelvin, width: 40, height: 150, min_value: 2000, max_value: 6500, value: 3000, bg_color: 0x1A3A52, indicator: {bg_color: 0xFFE9B0}}}, {label: {id: color_mode_lbl_kelvin, text: "3000K", text_font: font_mono, text_color: 0xFFFFFF}}]}}, {obj: {width: 150, height: 250, bg_opa: transp, border_width: 0, layout: {type: flex, flex_flow: column, flex_align_cross: center, flex_align_main: space_between}, widgets: [{label: {text: "Intensite", text_font: font_body, text_color: 0x8FAFC7}}, {bar: {id: color_mode_bar_brightness, width: 40, height: 150, min_value: 0, max_value: 100, value: 100, bg_color: 0x1A3A52, indicator: {bg_color: 0x16B84E}}}, {label: {id: color_mode_lbl_brightness, text: "100%", text_font: font_mono, text_color: 0xFFFFFF}}]}}]}}]}
 
         # Sortie du mode reglage couleur (voir color_mode_active_switch)
         - button: {id: color_mode_close_btn, width: 40, height: 40, radius: 20, align: top_right, x: -8, y: 8, hidden: true, bg_color: 0x1E4060, border_color: 0x00B4D8, border_width: 1, on_click: [{event.trigger: {id: action_button_event, event_type: "close_color_mode"}}], widgets: [{label: {text: "X", text_font: font_body, text_color: 0xFFFFFF, align: center}}]}

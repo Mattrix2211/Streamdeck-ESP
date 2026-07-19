@@ -90,9 +90,12 @@ changements de la page courante (chaque page ne touche que sa portion de
   par emplacement (`Slot N - couleur`, voir `firmware/slots_*.yaml`). Un
   appui long sur ce meme bouton (evenement `hold_N`) ouvre un mode
   reglage en direct via les 3 encodeurs (teinte/chaleur/intensite,
-  limite en frequence - `device_client.py::_handle_color_encoder`),
-  ferme par timeout ou par le bouton "X" flottant (`close_color_mode`).
-  Un emplacement `barre` avec une source HA accepte aussi le tactile
+  limite en frequence - `color_mode.py::ColorModeController`, extrait de
+  `device_client.py` pour rester sous la limite de lignes par fichier),
+  affichant un panneau a l'ecran avec une barre par axe (entites `number`
+  `Mode couleur - */valeur`, voir `firmware/package.yaml`), ferme par
+  timeout ou par le bouton "X" flottant (`close_color_mode`). Un
+  emplacement `barre` avec une source HA accepte aussi le tactile
   gauche/droite pour l'augmenter/diminuer directement
   (`ha_client.py::adjust_entity_percent()`, evenements
   `barre_inc_N`/`barre_dec_N`).

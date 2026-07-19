@@ -265,14 +265,17 @@ les 3 encodeurs :
 - **Encodeur 2** : temperature de couleur (chaleur).
 - **Encodeur 3** : intensite (luminosite).
 
-Chaque cran d'encodeur met a jour l'apercu sur le bouton immediatement et
-appelle Home Assistant en direct (limite a ~8 appels/s max par axe pour ne
-pas le spammer si l'encodeur tourne vite - voir
-`device_client.py::_send_color_mode_update`). Le mode se ferme tout seul
-apres 10s d'inactivite, ou en touchant le bouton "X" qui apparait en haut
-a droite de l'ecran pendant le reglage. **Necessite de reflasher le
-firmware** (nouvel evenement `hold_N` par emplacement, bouton "X" flottant
-et switch `Mode couleur actif` dans `firmware/package.yaml`).
+Un panneau apparait au centre de l'ecran pendant le reglage, avec une barre
+verticale par axe (teinte/chaleur/intensite) qui se met a jour en direct a
+chaque cran d'encodeur - pour voir ou on en est sans devoir regarder le
+bouton lui-meme. Chaque cran met aussi a jour l'apercu couleur sur le
+bouton immediatement et appelle Home Assistant en direct (limite a ~8
+appels/s max par axe pour ne pas le spammer si l'encodeur tourne vite -
+voir `color_mode.py::_send_update`). Le mode se ferme tout seul apres 10s
+d'inactivite, ou en touchant le bouton "X" qui apparait en haut a droite de
+l'ecran pendant le reglage. **Necessite de reflasher le firmware** (nouvel
+evenement `hold_N` par emplacement, panneau + barres + bouton "X" flottant
+et switch `Mode couleur actif`/entites `number` dans `firmware/package.yaml`).
 
 ## Ajustement tactile des widgets "barre"
 
@@ -325,22 +328,29 @@ necessaire pour que les emplacements/encodeurs du Stream Deck fonctionnent
 - `tray.py` n'a pu etre teste que hors environnement graphique Windows reel
   (logique de connexion/config verifiee en detail ; le rendu de l'icone
   lui-meme necessite un vrai bureau Windows pour etre confirme).
-- Le changement de sortie audio (`audio_devices.py`) passe par une interface
-  COM non documentee par Microsoft (`IPolicyConfig::SetDefaultEndpoint`,
-  identique a ce qu'utilisent les Parametres son de Windows en interne et
-  des outils comme EarTrumpet/SoundSwitch - aucune API publique n'existe
-  pour ca). Le picker/l'enumeration des peripheriques (`pycaw`) est fiable,
-  mais le changement effectif n'a pas pu etre teste sur une vraie machine
-  Windows depuis ce sandbox de developpement - a confirmer.
-- Le mode reglage couleur/chaleur/intensite par appui long et
-  l'ajustement tactile des widgets "barre" reposent sur du code LVGL/C++
-  (appui long, zones tactiles superposees, evenements) qui n'a pas pu
-  etre compile ni teste sur du vrai materiel depuis ce sandbox Linux (pas
-  d'ESP32-P4 ni d'ecran tactile disponibles ici) - la logique cote appli
-  PC (calcul teinte/chaleur/intensite, ajustement pourcentage, limitation
-  de frequence) est testee unitairement avec des reponses HA simulees,
-  mais l'integration firmware complete reste a confirmer sur l'appareil
-  reel apres reflash.
+- Le changement de sortie audio (`audio_devices.py`, interface COM non
+  documentee `IPolicyConfig::SetDefaultEndpoint`) est **confirme fonctionnel**
+  sur une vraie machine Windows.
+- Le mode reglage couleur (appui long) est **confirme fonctionnel pour
+  l'axe teinte (encodeur 1)** sur l'appareil reel (log de debug complet :
+  evenements `clockwise`/`anticlockwise`, apercu couleur mis a jour en
+  continu). **Les encodeurs 2 et 3 (chaleur/intensite) ne produisent aucun
+  evenement de rotation** sur l'appareil de test - seulement des appuis
+  parasites rapides et repetes sur leurs GPIO de bouton respectifs
+  (GPIO32/GPIO46) quand on les tourne, ce qui pointe vers un probleme de
+  cablage/soudure/debouncing materiel specifique a ces deux encodeurs
+  plutot qu'un bug logiciel (la chaine complete evenement -> Python ->
+  ecran est prouvee correcte par l'encodeur 1). Un filtre de debounce
+  (`delayed_on_off: 25ms`) a ete ajoute sur ces deux boutons a titre
+  preventif, mais ne resoudra pas un vrai probleme de cablage/soudure - a
+  verifier physiquement (l'axe tourne-t-il librement ? le cablage GPIO4/
+  GPIO20/GPIO32 et GPIO33/GPIO45/GPIO46 est-il ferme ?).
+  L'ajustement tactile des widgets "barre" repose sur le meme type de code
+  LVGL/C++ et n'a pas pu etre teste independamment depuis ce sandbox Linux
+  (pas d'ESP32-P4 ni d'ecran tactile disponibles ici) - la logique cote
+  appli PC (calcul teinte/chaleur/intensite, ajustement pourcentage,
+  limitation de frequence) est testee unitairement avec des reponses HA
+  simulees.
 - Un changement d'IP/port/cle API est repris automatiquement au prochain
   essai de reconnexion (jusqu'a ~10s, `device_client.py::connect()` relit
   la config a chaque tentative) - pas besoin de redemarrer l'icone de la

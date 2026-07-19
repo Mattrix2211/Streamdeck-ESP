@@ -11,15 +11,14 @@ au premier plan sur le PC (voir profile_watcher.py) ou manuellement
 from __future__ import annotations
 
 import asyncio
-import colorsys
 import logging
-import time
 from pathlib import Path
 
 import yaml
-from aioesphomeapi import APIClient, Event, EventInfo, SelectInfo, SwitchInfo, TextInfo
+from aioesphomeapi import APIClient, Event, EventInfo, NumberInfo, SelectInfo, SwitchInfo, TextInfo
 
 from . import actions as action_runner
+from . import color_mode as color_mode_module
 from . import ha_client
 from . import profiles as profile_utils
 
@@ -37,20 +36,6 @@ SHAPE_ENTITY_NAME = "Forme des boutons"
 ACTION_EVENT_ENTITY = "Bouton d'action ecran"
 ENCODER_EVENT_ENTITIES = [f"Encodeur {i} - evenement" for i in range(1, 4)]
 STATUS_ENTITY_NAME = "Statut PC"
-COLOR_MODE_SWITCH_NAME = "Mode couleur actif"
-
-# Reglage couleur/chaleur/intensite par appui long (voir _enter_color_mode) :
-# encodeur 1 = teinte, encodeur 2 = temperature de couleur, encodeur 3 =
-# luminosite - appliques en direct sur l'ampoule (limite en frequence pour
-# ne pas spammer Home Assistant), avec un apercu pousse sur le bouton lui-
-# meme. Sort automatiquement apres COLOR_MODE_TIMEOUT secondes d'inactivite,
-# ou via le bouton "X" (evenement 'close_color_mode').
-COLOR_MODE_TIMEOUT = 10.0
-COLOR_MODE_MIN_INTERVAL = 0.12
-HUE_STEP = 10
-KELVIN_STEP = 100
-KELVIN_MIN, KELVIN_MAX = 2000, 6500
-BRIGHTNESS_STEP = 5
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent.parent / "dashboard_config.yaml"
 
@@ -88,15 +73,9 @@ class DeviceClient:
         # Nom de profil force manuellement (voir schedule_force_profile) -
         # None = bascule automatique selon l'appli au premier plan.
         self.manual_override: str | None = None
-        # Mode reglage couleur/chaleur/intensite (appui long, voir
-        # _enter_color_mode) - None = inactif.
-        self.color_mode_slot: int | None = None
-        self.color_mode_entity: str | None = None
-        self.color_mode_hue = 0.0
-        self.color_mode_kelvin = 3000.0
-        self.color_mode_brightness = 100.0
-        self.color_mode_last_activity = 0.0
-        self._color_mode_last_sent: dict[str, float] = {}
+        # Mode reglage couleur/chaleur/intensite (appui long sur un
+        # emplacement lie a une ampoule) - voir color_mode.py.
+        self.color_mode = color_mode_module.ColorModeController(self)
 
     def _load_config(self) -> None:
         self.config = load_config(self.config_path)
@@ -143,7 +122,9 @@ class DeviceClient:
                 self.key_to_entity_name[ent.key] = ent.name
             if isinstance(ent, (TextInfo, SelectInfo)) and ent.name in tracked_text_select:
                 self.entity_keys[ent.name] = ent.key
-            if isinstance(ent, SwitchInfo) and ent.name in (*SLOT_VISIBLE_NAMES, COLOR_MODE_SWITCH_NAME):
+            if isinstance(ent, SwitchInfo) and ent.name in (*SLOT_VISIBLE_NAMES, color_mode_module.SWITCH_NAME):
+                self.entity_keys[ent.name] = ent.key
+            if isinstance(ent, NumberInfo) and ent.name in color_mode_module.NUMBER_NAMES.values():
                 self.entity_keys[ent.name] = ent.key
         self.connected = True
         LOG.info("Connecte a %s (%d bouton/encodeur mappes)", conn.get("host"), len(self.key_to_entity_name))
@@ -181,21 +162,21 @@ class DeviceClient:
         if entity_name == ACTION_EVENT_ENTITY:
             event_type = state.event_type
             if event_type == "close_color_mode":
-                self._exit_color_mode()
+                self.color_mode.exit()
                 return
             if event_type.startswith("hold_"):
                 try:
                     idx = int(event_type.split("_", 1)[1]) - 1
                 except ValueError:
                     return
-                self._enter_color_mode(idx)
+                self.color_mode.enter(idx)
                 return
             if event_type.startswith("barre_inc_") or event_type.startswith("barre_dec_"):
                 self._adjust_barre(event_type)
                 return
 
-        if self.color_mode_slot is not None and entity_name in ENCODER_EVENT_ENTITIES:
-            self._handle_color_encoder(entity_name, state.event_type)
+        if self.color_mode.slot is not None and entity_name in ENCODER_EVENT_ENTITIES:
+            self.color_mode.handle_encoder(ENCODER_EVENT_ENTITIES.index(entity_name), state.event_type)
             return
 
         action = self._resolve_action(entity_name, state.event_type)
@@ -208,126 +189,6 @@ class DeviceClient:
                 action_runner.run(action)
         except Exception:
             LOG.exception("Echec de l'action pour %s/%s : %r", entity_name, state.event_type, action)
-
-    def _enter_color_mode(self, slot_idx: int) -> None:
-        """Appui long sur un emplacement lie a une ampoule (action
-        home_assistant, domaine light, "Afficher la couleur..." coche) :
-        les 3 encodeurs pilotent alors teinte/temperature/luminosite en
-        direct, jusqu'a fermeture (bouton "X" ou timeout, voir
-        _check_color_mode_timeout)."""
-        active = self._active_profile()
-        slots = active.get("slots", [])
-        if not (0 <= slot_idx < len(slots)):
-            return
-        slot = slots[slot_idx] or {}
-        action = slot.get("action") or {}
-        target = action.get("target") or {}
-        if action.get("type") != "home_assistant" or target.get("domain") != "light" or not slot.get("show_light_color"):
-            return
-        entity_id = target.get("entity_id")
-        if not entity_id:
-            return
-
-        hue, kelvin, brightness = 0.0, 3000.0, 100.0
-        ha_conf = self.config.get("home_assistant") or {}
-        client = ha_client.HomeAssistantClient(ha_conf.get("url", ""), ha_conf.get("token", ""))
-        try:
-            state = client.get_state(entity_id)
-            if state:
-                attrs = state.get("attributes") or {}
-                hs = attrs.get("hs_color")
-                if hs:
-                    hue = float(hs[0])
-                kelvin = float(attrs.get("color_temp_kelvin") or kelvin)
-                raw_brightness = attrs.get("brightness")
-                if raw_brightness is not None:
-                    brightness = max(0.0, min(100.0, float(raw_brightness) / 255 * 100))
-        except Exception:
-            LOG.exception("Echec de lecture de l'etat initial pour le mode couleur (%s)", entity_id)
-
-        self.color_mode_slot = slot_idx
-        self.color_mode_entity = entity_id
-        self.color_mode_hue = hue
-        self.color_mode_kelvin = kelvin
-        self.color_mode_brightness = brightness
-        self.color_mode_last_activity = time.monotonic()
-        self._color_mode_last_sent = {}
-        self._push_color_mode_switch(True)
-
-    def _exit_color_mode(self) -> None:
-        self.color_mode_slot = None
-        self.color_mode_entity = None
-        self._push_color_mode_switch(False)
-
-    def _push_color_mode_switch(self, active: bool) -> None:
-        if self.client is None or not self.connected:
-            return
-        key = self.entity_keys.get(COLOR_MODE_SWITCH_NAME)
-        if key is not None:
-            self.client.switch_command(key, active)
-
-    def _handle_color_encoder(self, entity_name: str, direction: str) -> None:
-        if direction not in ("clockwise", "anticlockwise"):
-            return
-        sign = 1 if direction == "clockwise" else -1
-        axis_by_entity = {
-            ENCODER_EVENT_ENTITIES[0]: "hue",
-            ENCODER_EVENT_ENTITIES[1]: "kelvin",
-            ENCODER_EVENT_ENTITIES[2]: "brightness",
-        }
-        axis = axis_by_entity.get(entity_name)
-        if axis is None:
-            return
-        self.color_mode_last_activity = time.monotonic()
-        if axis == "hue":
-            self.color_mode_hue = (self.color_mode_hue + sign * HUE_STEP) % 360
-        elif axis == "kelvin":
-            self.color_mode_kelvin = max(KELVIN_MIN, min(KELVIN_MAX, self.color_mode_kelvin + sign * KELVIN_STEP))
-        else:
-            self.color_mode_brightness = max(0.0, min(100.0, self.color_mode_brightness + sign * BRIGHTNESS_STEP))
-        self._push_color_mode_preview()
-        self._send_color_mode_update(axis)
-
-    def _push_color_mode_preview(self) -> None:
-        """Apercu local immediat sur le bouton lui-meme (teinte + luminosite
-        - la temperature de couleur n'est pas combinee dans l'apercu, un
-        vrai bulbe RGB et un bulbe "blanc variable" ne melangent pas les
-        deux, simplification volontaire pour ce petit indicateur)."""
-        if self.color_mode_slot is None:
-            return
-        r, g, b = colorsys.hsv_to_rgb(self.color_mode_hue / 360, 1.0, max(0.15, self.color_mode_brightness / 100))
-        hex_color = f"#{int(r * 255):02X}{int(g * 255):02X}{int(b * 255):02X}"
-        self.push_slot_colors({self.color_mode_slot: hex_color})
-
-    def _send_color_mode_update(self, axis: str) -> None:
-        """Appelle Home Assistant pour l'axe modifie, limite en frequence
-        (COLOR_MODE_MIN_INTERVAL) pour ne pas le spammer si l'encodeur
-        tourne vite - les crans sautes restent visibles dans l'apercu local
-        (_push_color_mode_preview, jamais limite) mais pas forcement
-        repercutes individuellement sur l'ampoule reelle."""
-        if self.color_mode_entity is None:
-            return
-        now = time.monotonic()
-        if now - self._color_mode_last_sent.get(axis, 0.0) < COLOR_MODE_MIN_INTERVAL:
-            return
-        self._color_mode_last_sent[axis] = now
-        ha_conf = self.config.get("home_assistant") or {}
-        client = ha_client.HomeAssistantClient(ha_conf.get("url", ""), ha_conf.get("token", ""))
-        try:
-            if axis == "hue":
-                client.call_service("light", "turn_on", entity_id=self.color_mode_entity, data={"hs_color": [self.color_mode_hue, 100]})
-            elif axis == "kelvin":
-                client.call_service("light", "turn_on", entity_id=self.color_mode_entity, data={"color_temp_kelvin": int(self.color_mode_kelvin)})
-            else:
-                client.call_service("light", "turn_on", entity_id=self.color_mode_entity, data={"brightness_pct": int(self.color_mode_brightness)})
-        except Exception:
-            LOG.exception("Echec de la mise a jour %s pour %s", axis, self.color_mode_entity)
-
-    def _check_color_mode_timeout(self) -> None:
-        if self.color_mode_slot is None:
-            return
-        if time.monotonic() - self.color_mode_last_activity > COLOR_MODE_TIMEOUT:
-            self._exit_color_mode()
 
     def _adjust_barre(self, event_type: str) -> None:
         """Tactile gauche/droite sur un widget barre (voir slot_widgets.yaml)
@@ -445,7 +306,7 @@ class DeviceClient:
         (profile_watcher.py tourne dans son propre thread)."""
         if name == self.active_profile_name:
             return
-        self._exit_color_mode()
+        self.color_mode.exit()
         self.active_profile_name = name
         if self.connected:
             self.push_config()
@@ -482,7 +343,7 @@ class DeviceClient:
             while True:
                 await asyncio.sleep(2)
                 self.reload_config_if_changed()
-                self._check_color_mode_timeout()
+                self.color_mode.check_timeout()
         finally:
             self.connected = False
             status_key = self.entity_keys.get(STATUS_ENTITY_NAME)
