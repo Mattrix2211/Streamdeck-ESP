@@ -112,6 +112,15 @@ def extract_icon_png(target: str) -> bytes | None:
 
     try:
         icon = Image.open(ico_buf)
+        # Un .ico embarque generalement plusieurs resolutions (16/32/48/256...)
+        # - Pillow charge par defaut la PREMIERE du fichier, pas la plus
+        # grande (l'ordre depend de l'outil qui a construit l'executable,
+        # souvent du plus petit au plus grand) : sans ca on recupere souvent
+        # une icone 16x16 remontee en 40x40, floue et avec moins de couleurs.
+        sizes = icon.info.get("sizes") or [icon.size]
+        best = max(sizes, key=lambda s: s[0] * s[1])
+        if best != icon.size:
+            icon.size = best
         icon.load()
     except Exception:
         return None
