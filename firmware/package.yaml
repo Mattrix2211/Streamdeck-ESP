@@ -4,13 +4,12 @@
 # (ESP32-P4 + ESP32-C6, ecran IPS 7" 1024x600, tactile GT911, Wi-Fi/BT via
 # le C6 en co-processeur SDIO). HA et l'appli PC (pc-app/) se connectent
 # tous deux a la MEME API native ESPHome chiffree (aioesphomeapi cote PC).
-#
 # GPIO encodeurs : uniquement ceux confirmes disponibles sur le header
-# d'extension (colonne gauche GPIO1-5/20/32/33, droite GPIO45-47). GPIO5 est
-# le reset interne de la dalle, evitez-le. Verifiez contre votre revision.
-# IMPORTANT - puce ES (engineering sample, "chip revision: v1.3") : voir
-# streamdeck.yaml (cle esp32.board) pour le crash de boot et son correctif -
-# ESPHome <= 2026.2.x + board explicite requis.
+# d'extension (colonne gauche GPIO1-5/20/32/33, droite GPIO45-47). GPIO5 =
+# reset interne de la dalle, evitez-le. Verifiez contre votre revision.
+# IMPORTANT - puce ES (engineering sample) : voir streamdeck.yaml (cle
+# esp32.board) pour le crash de boot et son correctif - ESPHome <= 2026.2.x
+# + board explicite requis.
 
 esp32:
   flash_size: 16MB
@@ -307,17 +306,18 @@ switch:
           if (x) {
             lv_obj_clear_flag(id(color_mode_close_btn), LV_OBJ_FLAG_HIDDEN);
             lv_obj_clear_flag(id(color_mode_panel), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(id(encoder_cards_row), LV_OBJ_FLAG_HIDDEN);
           } else {
             lv_obj_add_flag(id(color_mode_close_btn), LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(id(color_mode_panel), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(id(encoder_cards_row), LV_OBJ_FLAG_HIDDEN);
           }
 
 # ---------------------------------------------------------------------------
 # 16 emplacements configurables (boutons/widgets) - entites generees dans
-# slots_1_5.yaml / slots_6_11.yaml / slots_12_16.yaml (decoupees pour rester
-# sous 500 lignes chacune). Chaque emplacement expose : libelle, valeur,
-# icone, type (bouton/barre/texte) et visibilite - tout pilotable a chaud
-# depuis l'appli PC (pc-app/streamdeck_companion) sans reflasher.
+# slots_1_5/6_11/12_16.yaml (decoupees pour rester sous 500 lignes chacune).
+# Chaque emplacement expose libelle/valeur/icone/type/visibilite, pilotable
+# a chaud depuis l'appli PC (pc-app/streamdeck_companion) sans reflasher.
 # ---------------------------------------------------------------------------
 packages:
   slots_1_5: !include slots_1_5.yaml
@@ -326,10 +326,9 @@ packages:
 
 # ---------------------------------------------------------------------------
 # Forme des boutons - modifiable a chaud (carre ou rond) depuis Home
-# Assistant (service select.select_option) ou l'appli PC. radius 12 = coins
-# arrondis (carre), radius 999 = LVGL plafonne au maximum possible -> cercle.
-# S'applique aux 16 emplacements (inoffensif sur les emplacements de type
-# widget, qui n'utilisent que le style de coin du conteneur).
+# Assistant ou l'appli PC. radius 12 = coins arrondis, radius 999 = LVGL
+# plafonne au max -> cercle. S'applique aux 16 emplacements (inoffensif sur
+# les widgets, qui n'utilisent que le style de coin du conteneur).
 # ---------------------------------------------------------------------------
 select:
   - platform: template
@@ -396,13 +395,12 @@ font:
     id: font_mono_bold
     size: 22
 
-# Pas d'image externe ici volontairement : les chemins de fichiers dans un
-# package importe via `packages: url:` (Home Assistant) se resolvent par
-# rapport au fichier LOCAL qui importe le package, pas par rapport a ce
-# fichier recupere sur GitHub - une image externe casserait donc la
-# compilation cote HA a chaque fois sans copie manuelle. Le logo requin du
-# design system (firmware/images/logo.png) reste disponible dans le repo
-# pour un usage web/print, mais n'est pas affiche sur cet ecran.
+# Pas d'image externe ici volontairement : un chemin de fichier dans un
+# package importe via `packages: url:` (HA) se resolvent par rapport au
+# fichier LOCAL qui importe le package, pas par ce fichier recupere sur
+# GitHub - casserait la compilation cote HA (d'ou le panneau couleur en
+# formes LVGL plutot qu'en degrade image). logo.png reste dans le repo
+# pour un usage web/print, pas affiche sur cet ecran.
 
 # ---------------------------------------------------------------------------
 # Interface LVGL - palette design system :
@@ -468,8 +466,10 @@ lvgl:
               pad_column: 12
             widgets: !include slot_widgets.yaml
 
-        # Bas d'ecran : 3 cartes encodeurs + statut PC
+        # Bas d'ecran : 3 cartes encodeurs + statut PC - masque pendant le
+        # mode reglage couleur (voir color_mode_active_switch).
         - obj:
+            id: encoder_cards_row
             height: 80
             width: 100%
             y: 488

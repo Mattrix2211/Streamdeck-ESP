@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from pathlib import Path
 
 import yaml
@@ -76,6 +77,12 @@ class DeviceClient:
         # Mode reglage couleur/chaleur/intensite (appui long sur un
         # emplacement lie a une ampoule) - voir color_mode.py.
         self.color_mode = color_mode_module.ColorModeController(self)
+        # LVGL envoie un "click" (action_N) juste apres un "long press"
+        # (hold_N) au relachement du doigt - sans ca, un appui long
+        # declenche AUSSI l'action normale du bouton (ex: eteint la lumiere
+        # en plus d'ouvrir le mode couleur). On ignore ce click fantome.
+        self._pending_hold_slot: int | None = None
+        self._pending_hold_time = 0.0
 
     def _load_config(self) -> None:
         self.config = load_config(self.config_path)
@@ -169,11 +176,21 @@ class DeviceClient:
                     idx = int(event_type.split("_", 1)[1]) - 1
                 except ValueError:
                     return
+                self._pending_hold_slot = idx
+                self._pending_hold_time = time.monotonic()
                 self.color_mode.enter(idx)
                 return
             if event_type.startswith("barre_inc_") or event_type.startswith("barre_dec_"):
                 self._adjust_barre(event_type)
                 return
+            if event_type.startswith("action_"):
+                try:
+                    idx = int(event_type.rsplit("_", 1)[1]) - 1
+                except (IndexError, ValueError):
+                    idx = None
+                if idx is not None and idx == self._pending_hold_slot and time.monotonic() - self._pending_hold_time < 2.0:
+                    self._pending_hold_slot = None
+                    return
 
         if self.color_mode.slot is not None and entity_name in ENCODER_EVENT_ENTITIES:
             self.color_mode.handle_encoder(ENCODER_EVENT_ENTITIES.index(entity_name), state.event_type)

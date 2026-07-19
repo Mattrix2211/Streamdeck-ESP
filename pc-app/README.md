@@ -275,9 +275,15 @@ bouton immediatement et appelle Home Assistant en direct (limite a ~8
 appels/s max par axe pour ne pas le spammer si l'encodeur tourne vite -
 voir `color_mode.py::_send_update`). Le mode se ferme tout seul apres 10s
 d'inactivite, ou en touchant le bouton "X" qui apparait en haut a droite de
-l'ecran pendant le reglage. **Necessite de reflasher le firmware** (nouvel
-evenement `hold_N` par emplacement, panneau + barres + bouton "X" flottant
-et switch `Mode couleur actif`/entites `number` dans `firmware/package.yaml`).
+l'ecran pendant le reglage - les 3 cartes encodeurs du bas d'ecran sont
+masquees pendant ce temps pour ne pas melanger leur % normal avec le
+panneau. LVGL envoie un "click" juste apres le "long press" au relachement
+du doigt : `device_client.py` l'ignore (`_pending_hold_slot`) pour eviter
+que l'appui long declenche AUSSI l'action normale du bouton (ex: eteindre/
+allumer l'ampoule en plus d'ouvrir le mode couleur). **Necessite de
+reflasher le firmware** (nouvel evenement `hold_N` par emplacement,
+panneau + barres + bouton "X" flottant et switch `Mode couleur actif`/
+entites `number` dans `firmware/package.yaml`).
 
 ## Ajustement tactile des widgets "barre"
 
