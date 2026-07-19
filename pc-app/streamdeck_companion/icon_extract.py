@@ -16,7 +16,7 @@ from pathlib import Path
 
 from .actions import SYSTEM
 
-ICON_SIZE = 32
+ICON_SIZE = 40
 # Couleur de fond des boutons (voir firmware/package.yaml, slot*_btn
 # bg_color) - l'icone est aplatie dessus plutot que d'envoyer un PNG avec
 # alpha, pour ne pas avoir a gerer la transparence cote firmware.
