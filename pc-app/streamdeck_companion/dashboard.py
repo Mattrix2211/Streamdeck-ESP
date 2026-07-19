@@ -27,6 +27,7 @@ from flask import Flask, jsonify, redirect, render_template, request, url_for
 from . import actions as action_runner
 from . import audio_devices
 from . import ha_client
+from . import icon_extract
 from . import icons
 from . import profiles as profile_utils
 from .app_library import list_installed_apps
@@ -152,6 +153,20 @@ def profile_to_fields(profile: dict) -> dict:
     }
 
 
+def _resolve_icon_char(slot: dict) -> str:
+    """Icone poussee vers l'ecran (voir device_client.py::push_config) :
+    icone reelle de l'appli/jeu si l'action est 'launch' et que
+    l'extraction reussit tout de suite (voir icon_extract.py - Windows
+    uniquement, appelle deja l'extraction pour peupler son cache et
+    valider la cible), sinon le glyphe Material Icons choisi (icons.py)."""
+    action = slot.get("action") or {}
+    if action.get("type") == "launch":
+        target = action.get("target") or ""
+        if icon_extract.extract_icon_png(target) is not None:
+            return f"REAL:{icon_extract.icon_version(target)}"
+    return icons.icon_char(slot.get("icon", ""))
+
+
 def fields_to_profile(raw_profile: dict) -> dict:
     """Inverse de profile_to_fields : reconvertit un profil recu du
     formulaire (slots/encoders en forme champ texte) vers le format
@@ -162,7 +177,7 @@ def fields_to_profile(raw_profile: dict) -> dict:
         action_field = slot.pop("action_field", "")
         slot["action"] = {"type": action_type, "target": field_to_target(action_type, action_field)}
         slot["show_light_color"] = bool(slot.get("show_light_color"))
-        slot["icon_char"] = icons.icon_char(slot.get("icon", ""))
+        slot["icon_char"] = _resolve_icon_char(slot)
         slot["label"] = (slot.get("label") or "").strip()[:24] or slot["label"]
     name = (raw_profile.get("name") or "").strip()[:24] or profile_utils.DEFAULT_PROFILE_NAME
     trigger = raw_profile.get("trigger")

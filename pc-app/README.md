@@ -303,7 +303,43 @@ Le selecteur d'icone (popup d'un emplacement) propose un catalogue curate
 de glyphes Material Icons (`streamdeck_companion/icons.py`) - meme police
 chargee dans le navigateur et sur l'ecran (`gfonts://Material Icons` dans
 `firmware/package.yaml`), donc l'apercu correspond a ce qui s'affiche
-reellement. Pas d'upload d'image personnalisee (voir Limitations).
+reellement. Pas d'upload d'image personnalisee arbitraire (voir Limitations).
+
+### Vraies icones d'appli/jeu
+
+Pour un emplacement de type `bouton` avec une action **launch** (lancer
+une appli/jeu), l'ecran affiche desormais automatiquement la **vraie
+icone** de l'executable (Discord, Steam, un jeu precis...) a la place du
+glyphe generique - rien a configurer, ca remplace le glyphe des que la
+cible pointe vers un `.exe`/`.lnk` valide (sinon le glyphe manuel reste
+affiche en repli). Fonctionnement (Windows uniquement) :
+
+- `icon_extract.py` extrait l'icone reelle via `icoextract` (resource
+  icone de l'executable, ou de la cible resolue + `IconLocation` d'un
+  raccourci `.lnk`), l'aplatit sur le fond des boutons avec Pillow (evite
+  de gerer la transparence PNG cote firmware) et met en cache en memoire.
+- `icon_server.py` est un **second serveur HTTP separe**, sur le port
+  8081 et ecoutant sur toutes les interfaces (contrairement au dashboard
+  principal qui reste en 127.0.0.1 uniquement) - il ne sert QUE ces
+  icones deja resolues (rien de sensible), pour que l'ecran (sur le
+  meme reseau local) puisse les telecharger sans exposer le reste de la
+  configuration (raccourcis, jeton Home Assistant...) sur le reseau.
+- Cote firmware, chaque emplacement a une entite `online_image` dediee
+  (`firmware/slot_icons.yaml`) declenchee via `online_image.set_url`
+  quand `Slot N - icone` recoit une valeur `REAL:<version>` plutot qu'un
+  glyphe (voir `firmware/slots_*.yaml`) - `device_client.py` pousse aussi
+  l'URL locale de l'appli PC (`PC - URL locale`) a chaque connexion.
+
+**Necessite de reflasher le firmware** (nouveau composant `http_request:`,
+16 entites `online_image`, widgets image par emplacement). C'est la partie
+la plus consequente ajoutee a ce firmware a ce jour (nouveau composant
+jamais utilise auparavant dans ce projet) - n'ayant pas pu compiler ce
+firmware depuis ce sandbox (pas d'installation ESPHome ici), la config a
+ete verifiee ligne a ligne contre le schema reel du composant (cle par
+cle, valeurs d'enum, methodes C++ disponibles) mais un premier
+`esphome run` pourrait remonter une erreur de configuration a corriger -
+contrairement a un crash materiel, ce serait detecte et affiche
+**avant** le flash, sans risque pour l'appareil.
 
 ## Integration Home Assistant
 
@@ -339,30 +375,24 @@ necessaire pour que les emplacements/encodeurs du Stream Deck fonctionnent
 - Le changement de sortie audio (`audio_devices.py`, interface COM non
   documentee `IPolicyConfig::SetDefaultEndpoint`) est **confirme fonctionnel**
   sur une vraie machine Windows.
-- Le mode reglage couleur (appui long) est **confirme fonctionnel pour
-  l'axe teinte (encodeur 1)** sur l'appareil reel (log de debug complet :
-  evenements `clockwise`/`anticlockwise`, apercu couleur mis a jour en
-  continu). **Les encodeurs 2 et 3 (chaleur/intensite) ne produisent aucun
-  evenement de rotation** sur l'appareil de test - seulement des appuis
-  parasites rapides et repetes sur leurs GPIO de bouton respectifs
-  (GPIO32/GPIO46) quand on les tourne, ce qui pointe vers un probleme de
-  cablage/soudure/debouncing materiel specifique a ces deux encodeurs
-  plutot qu'un bug logiciel (la chaine complete evenement -> Python ->
-  ecran est prouvee correcte par l'encodeur 1). Un filtre de debounce
-  (`delayed_on_off: 25ms`) a ete ajoute sur ces deux boutons a titre
-  preventif, mais ne resoudra pas un vrai probleme de cablage/soudure - a
-  verifier physiquement (l'axe tourne-t-il librement ? le cablage GPIO4/
-  GPIO20/GPIO32 et GPIO33/GPIO45/GPIO46 est-il ferme ?).
-  L'ajustement tactile des widgets "barre" repose sur le meme type de code
-  LVGL/C++ et n'a pas pu etre teste independamment depuis ce sandbox Linux
-  (pas d'ESP32-P4 ni d'ecran tactile disponibles ici) - la logique cote
-  appli PC (calcul teinte/chaleur/intensite, ajustement pourcentage,
-  limitation de frequence) est testee unitairement avec des reponses HA
-  simulees.
+- Le mode reglage couleur (appui long, panneau avec bandes teinte/chaleur/
+  intensite) et l'ajustement tactile des widgets "barre" sont **confirmes
+  fonctionnels sur l'appareil reel** (les 3 encodeurs, y compris 2 et 3
+  dont les appuis parasites initiaux ont ete corriges par le filtre de
+  debounce `delayed_on_off: 25ms`).
 - Un changement d'IP/port/cle API est repris automatiquement au prochain
   essai de reconnexion (jusqu'a ~10s, `device_client.py::connect()` relit
   la config a chaque tentative) - pas besoin de redemarrer l'icone de la
   barre des taches.
+- Les vraies icones d'appli/jeu (`icon_extract.py`/`icon_server.py`,
+  composant firmware `online_image`) n'ont pas pu etre testees sur
+  l'appareil reel depuis ce sandbox (ni compilation ESPHome, ni Windows
+  pour `icoextract`/l'extraction d'icone) - schema/logique verifies contre
+  la source du composant, mais c'est la partie la plus consequente
+  ajoutee a ce firmware, a tester avec attention au premier reflash. Le
+  serveur d'icones (`icon_server.py`, port 8081) ecoute sur toutes les
+  interfaces reseau (necessaire pour que l'ecran le joigne) - separe du
+  dashboard principal (127.0.0.1 uniquement) pour ne rien exposer d'autre.
 - Le bouton "media" (`play_pause` etc.) envoie une touche multimedia - il
   n'affiche pas l'etat de lecture reel (recuperer l'etat "en cours de
   lecture" de facon fiable et multi-plateforme demanderait une integration

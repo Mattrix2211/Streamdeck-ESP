@@ -33,9 +33,8 @@ text:
     mode: text
     optimistic: true
     initial_value: ""
-    max_length: 8
-    on_value:
-      - lvgl.label.update: { id: slot6_icon_lbl, text: !lambda "return x;" }
+    max_length: 20
+    on_value: [{if: {condition: {lambda: 'return x.rfind("REAL:", 0) == 0;'}, then: [{lambda: "lv_obj_add_flag(id(slot6_icon_lbl), LV_OBJ_FLAG_HIDDEN); lv_obj_clear_flag(id(slot6_icon_widget), LV_OBJ_FLAG_HIDDEN);"}, {online_image.set_url: {id: slot6_icon_img, url: !lambda 'return id(pc_base_url_text).state + "/slot-icon/6.png?v=" + x.substr(5);'}}], else: [{lambda: "lv_obj_clear_flag(id(slot6_icon_lbl), LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(id(slot6_icon_widget), LV_OBJ_FLAG_HIDDEN);"}, {lvgl.label.update: {id: slot6_icon_lbl, text: !lambda "return x;"}}]}}]
   - platform: template
     id: slot6_color
     name: "Slot 6 - couleur"
@@ -77,9 +76,8 @@ text:
     mode: text
     optimistic: true
     initial_value: ""
-    max_length: 8
-    on_value:
-      - lvgl.label.update: { id: slot7_icon_lbl, text: !lambda "return x;" }
+    max_length: 20
+    on_value: [{if: {condition: {lambda: 'return x.rfind("REAL:", 0) == 0;'}, then: [{lambda: "lv_obj_add_flag(id(slot7_icon_lbl), LV_OBJ_FLAG_HIDDEN); lv_obj_clear_flag(id(slot7_icon_widget), LV_OBJ_FLAG_HIDDEN);"}, {online_image.set_url: {id: slot7_icon_img, url: !lambda 'return id(pc_base_url_text).state + "/slot-icon/7.png?v=" + x.substr(5);'}}], else: [{lambda: "lv_obj_clear_flag(id(slot7_icon_lbl), LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(id(slot7_icon_widget), LV_OBJ_FLAG_HIDDEN);"}, {lvgl.label.update: {id: slot7_icon_lbl, text: !lambda "return x;"}}]}}]
   - platform: template
     id: slot7_color
     name: "Slot 7 - couleur"
@@ -121,9 +119,8 @@ text:
     mode: text
     optimistic: true
     initial_value: ""
-    max_length: 8
-    on_value:
-      - lvgl.label.update: { id: slot8_icon_lbl, text: !lambda "return x;" }
+    max_length: 20
+    on_value: [{if: {condition: {lambda: 'return x.rfind("REAL:", 0) == 0;'}, then: [{lambda: "lv_obj_add_flag(id(slot8_icon_lbl), LV_OBJ_FLAG_HIDDEN); lv_obj_clear_flag(id(slot8_icon_widget), LV_OBJ_FLAG_HIDDEN);"}, {online_image.set_url: {id: slot8_icon_img, url: !lambda 'return id(pc_base_url_text).state + "/slot-icon/8.png?v=" + x.substr(5);'}}], else: [{lambda: "lv_obj_clear_flag(id(slot8_icon_lbl), LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(id(slot8_icon_widget), LV_OBJ_FLAG_HIDDEN);"}, {lvgl.label.update: {id: slot8_icon_lbl, text: !lambda "return x;"}}]}}]
   - platform: template
     id: slot8_color
     name: "Slot 8 - couleur"
@@ -165,9 +162,8 @@ text:
     mode: text
     optimistic: true
     initial_value: ""
-    max_length: 8
-    on_value:
-      - lvgl.label.update: { id: slot9_icon_lbl, text: !lambda "return x;" }
+    max_length: 20
+    on_value: [{if: {condition: {lambda: 'return x.rfind("REAL:", 0) == 0;'}, then: [{lambda: "lv_obj_add_flag(id(slot9_icon_lbl), LV_OBJ_FLAG_HIDDEN); lv_obj_clear_flag(id(slot9_icon_widget), LV_OBJ_FLAG_HIDDEN);"}, {online_image.set_url: {id: slot9_icon_img, url: !lambda 'return id(pc_base_url_text).state + "/slot-icon/9.png?v=" + x.substr(5);'}}], else: [{lambda: "lv_obj_clear_flag(id(slot9_icon_lbl), LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(id(slot9_icon_widget), LV_OBJ_FLAG_HIDDEN);"}, {lvgl.label.update: {id: slot9_icon_lbl, text: !lambda "return x;"}}]}}]
   - platform: template
     id: slot9_color
     name: "Slot 9 - couleur"
@@ -209,9 +205,8 @@ text:
     mode: text
     optimistic: true
     initial_value: ""
-    max_length: 8
-    on_value:
-      - lvgl.label.update: { id: slot10_icon_lbl, text: !lambda "return x;" }
+    max_length: 20
+    on_value: [{if: {condition: {lambda: 'return x.rfind("REAL:", 0) == 0;'}, then: [{lambda: "lv_obj_add_flag(id(slot10_icon_lbl), LV_OBJ_FLAG_HIDDEN); lv_obj_clear_flag(id(slot10_icon_widget), LV_OBJ_FLAG_HIDDEN);"}, {online_image.set_url: {id: slot10_icon_img, url: !lambda 'return id(pc_base_url_text).state + "/slot-icon/10.png?v=" + x.substr(5);'}}], else: [{lambda: "lv_obj_clear_flag(id(slot10_icon_lbl), LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(id(slot10_icon_widget), LV_OBJ_FLAG_HIDDEN);"}, {lvgl.label.update: {id: slot10_icon_lbl, text: !lambda "return x;"}}]}}]
   - platform: template
     id: slot10_color
     name: "Slot 10 - couleur"
@@ -253,9 +248,8 @@ text:
     mode: text
     optimistic: true
     initial_value: ""
-    max_length: 8
-    on_value:
-      - lvgl.label.update: { id: slot11_icon_lbl, text: !lambda "return x;" }
+    max_length: 20
+    on_value: [{if: {condition: {lambda: 'return x.rfind("REAL:", 0) == 0;'}, then: [{lambda: "lv_obj_add_flag(id(slot11_icon_lbl), LV_OBJ_FLAG_HIDDEN); lv_obj_clear_flag(id(slot11_icon_widget), LV_OBJ_FLAG_HIDDEN);"}, {online_image.set_url: {id: slot11_icon_img, url: !lambda 'return id(pc_base_url_text).state + "/slot-icon/11.png?v=" + x.substr(5);'}}], else: [{lambda: "lv_obj_clear_flag(id(slot11_icon_lbl), LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(id(slot11_icon_widget), LV_OBJ_FLAG_HIDDEN);"}, {lvgl.label.update: {id: slot11_icon_lbl, text: !lambda "return x;"}}]}}]
   - platform: template
     id: slot11_color
     name: "Slot 11 - couleur"

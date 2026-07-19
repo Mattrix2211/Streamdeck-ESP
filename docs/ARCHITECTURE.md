@@ -100,14 +100,26 @@ changements de la page courante (chaque page ne touche que sa portion de
   (`ha_client.py::adjust_entity_percent()`, evenements
   `barre_inc_N`/`barre_dec_N`).
 - `icons.py` : catalogue d'icones (glyphes Material Icons, memes
-  points de code que la police `font_icons` du firmware).
+  points de code que la police `font_icons` du firmware) - repli pour les
+  emplacements sans icone reelle disponible.
+- `icon_extract.py`/`icon_server.py` : pour un emplacement `bouton` avec
+  une action `launch`, l'ecran affiche automatiquement la vraie icone de
+  l'executable (`.exe`/`.lnk`, via `icoextract` + Pillow, Windows
+  uniquement) plutot qu'un glyphe generique. `icon_server.py` est un
+  **second serveur HTTP separe** (port 8081, toutes interfaces) qui sert
+  uniquement ces icones deja resolues - isole du dashboard principal
+  (127.0.0.1 uniquement) pour que l'ecran (reseau local) puisse les
+  telecharger sans exposer le reste de la configuration. Cote firmware,
+  une entite `online_image` par emplacement (`firmware/slot_icons.yaml`,
+  composant `http_request:`) est declenchee via `online_image.set_url`
+  quand `Slot N - icone` recoit `REAL:<version>` plutot qu'un glyphe.
 - `app_library.py`/`custom_apps.py`/`browse.py` : bibliotheque
   d'applications du picker "launch" - detection des raccourcis du menu
   Demarrer, applications personnalisees persistees dans
   `dashboard_config.yaml`, selecteur de fichier natif pour les ajouter.
-- `tray.py` orchestre le tout (connexion, dashboard, sondeur HA, sondeur de
-  profil) dans une icone de barre des taches, sans fenetre de terminal - le
-  menu affiche le profil actuellement actif.
+- `tray.py` orchestre le tout (connexion, dashboard, serveur d'icones,
+  sondeur HA, sondeur de profil) dans une icone de barre des taches, sans
+  fenetre de terminal - le menu affiche le profil actuellement actif.
 - Home Assistant continue de voir l'appareil nativement (integration
   ESPHome auto-decouverte) et peut faire ses propres automations en
   parallele, mais ce n'est **pas necessaire** pour que le Stream Deck

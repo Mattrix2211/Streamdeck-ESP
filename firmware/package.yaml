@@ -41,9 +41,7 @@ esp_ldo:
   - channel: 3
     voltage: 2.5V
 
-# ---------------------------------------------------------------------------
 # Tactile GT911 (bus I2C interne, pas sur le header)
-# ---------------------------------------------------------------------------
 i2c:
   - id: bus_a
     sda: GPIO7
@@ -61,9 +59,7 @@ touchscreen:
     reset_pin: GPIO22
     interrupt_pin: GPIO21
 
-# ---------------------------------------------------------------------------
 # Retroeclairage
-# ---------------------------------------------------------------------------
 output:
   - platform: ledc
     pin: GPIO23
@@ -77,10 +73,8 @@ light:
     restore_mode: ALWAYS_ON
     default_transition_length: 0s
 
-# ---------------------------------------------------------------------------
 # Dalle MIPI-DSI - le modele JC1060P470 est fourni nativement par ESPHome
 # (timings corrects deja integres, pas besoin de les redefinir)
-# ---------------------------------------------------------------------------
 display:
   - platform: mipi_dsi
     id: my_display
@@ -159,11 +153,9 @@ binary_sensor:
           border_color: 0x1A3A52
           bg_color: 0x0F2942
 
-# ---------------------------------------------------------------------------
 # Encodeurs rotatifs - 3 par defaut, ajustables selon ce que vous avez achete.
 # Pour en ajouter/retirer : dupliquer un bloc sensor+binary_sensor+event avec
 # des GPIO libres (il reste GPIO47 sur le header dans ce mapping).
-# ---------------------------------------------------------------------------
 sensor:
   - platform: rotary_encoder
     id: encoder1_value
@@ -271,6 +263,10 @@ event:
         "close_color_mode",
       ]
 
+# Client HTTP pour les vraies icones d'appli/jeu (voir slot_icons.yaml,
+# icon_extract.py cote PC) - reseau local uniquement.
+http_request: {id: http_client, verify_ssl: false, timeout: 3s}
+
 # Texte pousse par l'appli PC (titre en cours, volume, notification...) et
 # affiche sur l'ecran. Ecrit via l'API native (text_command), pas de HTTP.
 text:
@@ -285,6 +281,9 @@ text:
       - lvgl.label.update:
           id: lbl_pc_status
           text: !lambda "return x;"
+  # URL de base de l'appli PC (ex: "http://192.168.1.42:8080"), poussee une
+  # fois a la connexion - sert de prefixe aux URL d'icones (slot_icons.yaml).
+  - {platform: template, id: pc_base_url_text, name: "PC - URL locale", mode: text, optimistic: true, initial_value: "", max_length: 48}
 
 # Entites number optimistes pilotant les 3 barres du panneau de reglage
 # couleur (voir lvgl pages plus bas) - poussees par l'appli PC (number_command).
@@ -323,6 +322,7 @@ packages:
   slots_1_5: !include slots_1_5.yaml
   slots_6_11: !include slots_6_11.yaml
   slots_12_16: !include slots_12_16.yaml
+  slot_icons: !include slot_icons.yaml
 
 # ---------------------------------------------------------------------------
 # Forme des boutons - modifiable a chaud (carre ou rond) depuis Home

@@ -10,6 +10,8 @@ Trois choses tournent en fond :
     changements vers l'ecran.
   - profile_watcher.py : surveille l'application au premier plan et bascule
     automatiquement le profil actif (voir profiles.py).
+  - icon_server.py : petit serveur HTTP separe (0.0.0.0) qui sert les
+    vraies icones d'appli/jeu a l'ecran, isole du dashboard (127.0.0.1).
 
 Lancer :
     pythonw -m streamdeck_companion.tray      (pythonw = pas de console)
@@ -34,6 +36,7 @@ from PIL import Image, ImageDraw
 
 from . import dashboard
 from . import ha_poller
+from . import icon_server
 from . import profile_watcher
 from . import profiles as profile_utils
 from .device_client import DEFAULT_CONFIG_PATH, DeviceClient, load_config, save_config
@@ -136,6 +139,8 @@ def main() -> None:
         target=dashboard.run_server, args=(config_path, device_client), daemon=True
     )
     dashboard_thread.start()
+
+    icon_server.start_in_thread(device_client)
 
     ha_stop_event = threading.Event()
     ha_thread = threading.Thread(

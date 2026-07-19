@@ -37,6 +37,11 @@ SHAPE_ENTITY_NAME = "Forme des boutons"
 ACTION_EVENT_ENTITY = "Bouton d'action ecran"
 ENCODER_EVENT_ENTITIES = [f"Encodeur {i} - evenement" for i in range(1, 4)]
 STATUS_ENTITY_NAME = "Statut PC"
+# Prefixe (base URL de l'appli PC) pour les vraies icones d'appli/jeu -
+# voir icon_server.py (port dedie, separe du dashboard) et
+# firmware/slot_icons.yaml (entites online_image).
+PC_BASE_URL_ENTITY_NAME = "PC - URL locale"
+ICON_SERVER_PORT = 8081
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent.parent / "dashboard_config.yaml"
 
@@ -122,7 +127,7 @@ class DeviceClient:
         entities, _services = await self.client.list_entities_services()
         tracked_text_select = (
             *SLOT_LABEL_NAMES, *SLOT_VALUE_NAMES, *SLOT_ICON_NAMES, *SLOT_COLOR_NAMES, *SLOT_TYPE_NAMES,
-            SHAPE_ENTITY_NAME, STATUS_ENTITY_NAME,
+            SHAPE_ENTITY_NAME, STATUS_ENTITY_NAME, PC_BASE_URL_ENTITY_NAME,
         )
         for ent in entities:
             if isinstance(ent, EventInfo) and ent.name in (ACTION_EVENT_ENTITY, *ENCODER_EVENT_ENTITIES):
@@ -138,6 +143,35 @@ class DeviceClient:
         status_key = self.entity_keys.get(STATUS_ENTITY_NAME)
         if status_key is not None:
             self.client.text_command(status_key, "PC en ligne")
+        base_url_key = self.entity_keys.get(PC_BASE_URL_ENTITY_NAME)
+        if base_url_key is not None:
+            self.client.text_command(base_url_key, self._local_base_url(conn.get("host", "")))
+        # Repousse la config du profil actif a chaque (re)connexion - sinon
+        # un redemarrage de l'ecran perd tout (entites optimistes, pas de
+        # restore_value) tant que l'utilisateur ne resauvegarde pas a la main.
+        if self.profiles:
+            try:
+                self.push_config()
+            except Exception:
+                LOG.exception("Echec du push de config initial apres connexion")
+
+    def _local_base_url(self, esp_host: str) -> str:
+        """URL locale de cette appli (pour icon_server.py), telle que
+        joignable DEPUIS l'ecran - determine l'IP de sortie du PC vers
+        l'ecran plutot que de deviner parmi plusieurs cartes reseau."""
+        import socket
+
+        ip = "127.0.0.1"
+        if esp_host:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                sock.connect((esp_host, 1))
+                ip = sock.getsockname()[0]
+            except OSError:
+                pass
+            finally:
+                sock.close()
+        return f"http://{ip}:{ICON_SERVER_PORT}"
 
     def _resolve_action(self, entity_name: str, event_type: str) -> dict | None:
         """Resout l'action configuree dans le profil ACTIF (celui
