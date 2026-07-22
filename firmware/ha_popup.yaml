@@ -24,7 +24,7 @@ switch:
     id: ha_popup_power_switch
     name: "Popup HA - power"
     optimistic: true
-    on_state: [{lvgl.switch.update: {id: ha_popup_power_lvgl, value: !lambda "return x;"}}]
+    on_state: [{lvgl.switch.update: {id: ha_popup_power_lvgl, state: {checked: !lambda "return x;"}}}]
   - platform: template
     id: ha_popup_transport_switch
     name: "Popup HA - transport"
