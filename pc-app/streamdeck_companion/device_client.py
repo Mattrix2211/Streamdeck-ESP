@@ -16,11 +16,22 @@ import time
 from pathlib import Path
 
 import yaml
-from aioesphomeapi import APIClient, Event, EventInfo, NumberInfo, NumberState, SelectInfo, SwitchInfo, TextInfo
+from aioesphomeapi import (
+    APIClient,
+    Event,
+    EventInfo,
+    NumberInfo,
+    NumberState,
+    SelectInfo,
+    SwitchInfo,
+    SwitchState,
+    TextInfo,
+)
 
 from . import actions as action_runner
 from . import color_mode as color_mode_module
 from . import ha_client
+from . import ha_popup as ha_popup_module
 from . import profiles as profile_utils
 
 LOG = logging.getLogger("streamdeck_client")
@@ -82,6 +93,9 @@ class DeviceClient:
         # Mode reglage couleur/chaleur/intensite (appui long sur un
         # emplacement lie a une ampoule) - voir color_mode.py.
         self.color_mode = color_mode_module.ColorModeController(self)
+        # Popup tactile adaptee (tap sur un emplacement lie a une ampoule ou
+        # un lecteur multimedia) - voir ha_popup.py.
+        self.ha_popup = ha_popup_module.HaPopupController(self)
         # LVGL envoie un "click" (action_N) juste apres un "long press"
         # (hold_N) au relachement du doigt - sans ca, un appui long
         # declenche AUSSI l'action normale du bouton (ex: eteint la lumiere
@@ -127,16 +141,30 @@ class DeviceClient:
         entities, _services = await self.client.list_entities_services()
         tracked_text_select = (
             *SLOT_LABEL_NAMES, *SLOT_VALUE_NAMES, *SLOT_ICON_NAMES, *SLOT_COLOR_NAMES, *SLOT_TYPE_NAMES,
-            SHAPE_ENTITY_NAME, STATUS_ENTITY_NAME, PC_BASE_URL_ENTITY_NAME,
+            SHAPE_ENTITY_NAME, STATUS_ENTITY_NAME, PC_BASE_URL_ENTITY_NAME, ha_popup_module.TITLE_TEXT_NAME,
+        )
+        # Switches ecrits par le PC uniquement (visibilite d'un panneau/
+        # emplacement) - contrairement a POWER_SWITCH_NAME plus bas, jamais
+        # relus depuis l'ecran.
+        write_only_switches = (
+            *SLOT_VISIBLE_NAMES, color_mode_module.SWITCH_NAME,
+            ha_popup_module.ACTIVE_SWITCH_NAME, ha_popup_module.TRANSPORT_SWITCH_NAME,
         )
         for ent in entities:
             if isinstance(ent, EventInfo) and ent.name in (ACTION_EVENT_ENTITY, *ENCODER_EVENT_ENTITIES):
                 self.key_to_entity_name[ent.key] = ent.name
             if isinstance(ent, (TextInfo, SelectInfo)) and ent.name in tracked_text_select:
                 self.entity_keys[ent.name] = ent.key
-            if isinstance(ent, SwitchInfo) and ent.name in (*SLOT_VISIBLE_NAMES, color_mode_module.SWITCH_NAME):
+            if isinstance(ent, SwitchInfo) and ent.name in write_only_switches:
                 self.entity_keys[ent.name] = ent.key
-            if isinstance(ent, NumberInfo) and ent.name in color_mode_module.NUMBER_NAMES.values():
+            if isinstance(ent, SwitchInfo) and ent.name == ha_popup_module.POWER_SWITCH_NAME:
+                self.entity_keys[ent.name] = ent.key
+                # Sens PC -> ecran (etat initial a l'ouverture) ET ecran -> PC
+                # (bascule au tactile, voir on_state ci-dessous).
+                self.key_to_entity_name[ent.key] = ent.name
+            if isinstance(ent, NumberInfo) and ent.name in (
+                *color_mode_module.NUMBER_NAMES.values(), ha_popup_module.VALUE_NUMBER_NAME,
+            ):
                 self.entity_keys[ent.name] = ent.key
                 # Sens PC -> ecran (number_command) ET ecran -> PC (glissement
                 # tactile sur un slider, voir on_state ci-dessous).
@@ -205,6 +233,13 @@ class DeviceClient:
             axis = color_mode_module.NUMBER_NAME_TO_AXIS.get(entity_name)
             if axis is not None:
                 self.color_mode.handle_touch(axis, state.state)
+            elif entity_name == ha_popup_module.VALUE_NUMBER_NAME:
+                self.ha_popup.handle_value(state.state)
+            return
+
+        if isinstance(state, SwitchState):
+            if entity_name == ha_popup_module.POWER_SWITCH_NAME:
+                self.ha_popup.handle_power(state.state)
             return
 
         if not isinstance(state, Event):
@@ -214,6 +249,12 @@ class DeviceClient:
             event_type = state.event_type
             if event_type == "close_color_mode":
                 self.color_mode.exit()
+                return
+            if event_type == "close_ha_popup":
+                self.ha_popup.close()
+                return
+            if event_type in ("popup_next", "popup_prev"):
+                self.ha_popup.handle_track("next" if event_type == "popup_next" else "prev")
                 return
             if event_type.startswith("hold_"):
                 try:
@@ -245,7 +286,19 @@ class DeviceClient:
             return
         try:
             if action.get("type") == "home_assistant":
-                self._run_home_assistant_action(action)
+                target = action.get("target") or {}
+                # Un tap (pas un encodeur) sur un emplacement lie a une
+                # ampoule/un lecteur ouvre la popup adaptee au lieu d'appeler
+                # le service configure directement - voir ha_popup.py.
+                if (
+                    entity_name == ACTION_EVENT_ENTITY
+                    and state.event_type.startswith("action_")
+                    and target.get("domain") in ha_popup_module.SUPPORTED_DOMAINS
+                ):
+                    idx = int(state.event_type.rsplit("_", 1)[1]) - 1
+                    self.ha_popup.open(idx, action)
+                else:
+                    self._run_home_assistant_action(action)
             else:
                 action_runner.run(action)
         except Exception:
@@ -368,6 +421,7 @@ class DeviceClient:
         if name == self.active_profile_name:
             return
         self.color_mode.exit()
+        self.ha_popup.close()
         self.active_profile_name = name
         if self.connected:
             self.push_config()
@@ -406,6 +460,7 @@ class DeviceClient:
                 await asyncio.sleep(2)
                 self.reload_config_if_changed()
                 self.color_mode.check_timeout()
+                self.ha_popup.check_timeout()
                 tick += 1
                 if tick % 5 == 0:
                     # Sonde active toutes les ~10s : un reflash de l'ecran

@@ -74,6 +74,7 @@ class ColorModeController:
         entity_id = target.get("entity_id")
         if not entity_id:
             return
+        self.dc.ha_popup.close()  # les deux panneaux ne s'affichent jamais ensemble
 
         hue, kelvin, brightness = 0.0, 3000.0, 100.0
         ha_conf = self.dc.config.get("home_assistant") or {}

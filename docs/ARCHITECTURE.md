@@ -108,6 +108,18 @@ changements de la page courante (chaque page ne touche que sa portion de
   gauche/droite pour l'augmenter/diminuer directement
   (`ha_client.py::adjust_entity_percent()`, evenements
   `barre_inc_N`/`barre_dec_N`).
+- `ha_popup.py` : popup tactile adaptee au domaine de l'entite ciblee par
+  une action `home_assistant` de type `bouton` - pour `light`/
+  `media_player` uniquement, un simple tap (pas un appui long, qui reste
+  reserve au mode couleur ci-dessus) ouvre un panneau (`HaPopupController`,
+  meme esprit que `ColorModeController`) au lieu d'appeler directement le
+  service configure : interrupteur power/lecture + curseur luminosite/
+  volume, plus precedent/suivant pour un lecteur
+  (`firmware/ha_popup.yaml`/`ha_popup_panel.yaml`). Prerempli avec l'etat
+  lu via l'API REST a l'ouverture, ferme par timeout (15s) ou "X"
+  (`close_ha_popup`) ; s'exclut mutuellement avec le mode couleur (les
+  deux panneaux ne s'affichent jamais ensemble). Autres domaines : tap
+  inchange (appel direct du service).
 - `ha_mqtt.py` : complement facultatif a `ha_poller.py` - si un broker
   MQTT est renseigne dans **Reglages**, souscrit aux topics publies par
   l'integration Home Assistant `mqtt_statestream` (un topic par etat/

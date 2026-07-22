@@ -166,7 +166,7 @@ la recoit, via `ha_poller.py`).
 | `launch`          | chemin ou commande (arguments acceptes) | lance une application/un jeu - voir "Choisir une application" ci-dessous, pas besoin de taper le chemin a la main |
 | `url`             | URL ou URI (`steam://...`, `discord://...`) | ouverte via le gestionnaire par defaut du systeme |
 | `media`           | `play_pause`/`next`/`previous`/`vol_up`/`vol_down`/`mute` | touche multimedia |
-| `home_assistant`  | emplacement : entite + service choisis dans la popup (voir "Choisir une entite Home Assistant" ci-dessous) ; encodeurs : format compact `domaine.service:entite`, ex `light.toggle:light.bureau` | appelle un service Home Assistant (bascule une lumiere/prise/scene...) |
+| `home_assistant`  | emplacement : entite + service choisis dans la popup (voir "Choisir une entite Home Assistant" ci-dessous) ; encodeurs : format compact `domaine.service:entite`, ex `light.toggle:light.bureau` | appelle un service Home Assistant (bascule une lumiere/prise/scene...) - **sauf** pour un emplacement cible `light`/`media_player` : un tap ouvre une popup adaptee au lieu d'appeler le service directement, voir "Popup tactile adaptee" ci-dessous |
 | `audio_output`    | emplacement : peripheriques choisis dans la popup (liste recherchable, `streamdeck_companion/audio_devices.py`) - identifiant opaque, pas destine a etre tape a la main | bascule le peripherique de sortie audio par defaut (casque/enceintes...) - Windows uniquement |
 
 ## Bibliotheque d'applications (type d'action `launch`)
@@ -259,6 +259,29 @@ rester vide - l'appli fonctionne alors comme avant (sondage REST seul).
 l'appli (icone barre des taches) pour etre pris en compte - contrairement
 aux reglages de connexion a l'ecran, la connexion MQTT n'est pas
 re-etablie automatiquement en cours de route.
+
+## Popup tactile adaptee (lumieres et lecteurs multimedia)
+
+Pour un emplacement `bouton` dont l'action `home_assistant` cible une
+entite du domaine **`light`** ou **`media_player`**, un tap sur l'ecran
+n'appelle plus directement le service configure dans la popup - il ouvre
+a la place un **mini-panneau adapte** au type d'entite (inspire des popups
+de [GalusPeres/HomeTiles](https://github.com/GalusPeres/HomeTiles)) :
+
+- **Ampoule (`light`)** : interrupteur allumer/eteindre + curseur de
+  luminosite (glissable au doigt).
+- **Lecteur (`media_player`)** : interrupteur lecture/pause + boutons
+  precedent/suivant + curseur de volume (glissable au doigt).
+
+Le panneau se preremplit avec l'etat actuel de l'entite (lu via l'API
+REST HA a l'ouverture), se ferme tout seul apres 15s d'inactivite ou via
+le bouton "X", et ne s'affiche jamais en meme temps que le panneau du
+mode couleur (appui long) - voir `streamdeck_companion/ha_popup.py` pour
+la logique cote PC (`firmware/ha_popup.yaml`/`ha_popup_panel.yaml` cote
+firmware). Pour tout autre domaine (`switch`, `scene`, `script`...), le
+tap continue d'appeler directement le service configure, comme avant.
+**Necessite de reflasher le firmware** (nouvelles entites `ha_popup_*` et
+panneau LVGL).
 
 ## Couleur d'une ampoule sur le bouton
 
