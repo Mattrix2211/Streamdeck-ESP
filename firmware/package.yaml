@@ -489,6 +489,6 @@ lvgl:
 
         # Panneau mode couleur (color_mode_panel.yaml, limite de lignes) -
         # enveloppe pleine page car !include ne remplace qu'une cle.
-        - {obj: {width: "100%", height: "100%", bg_opa: transp, border_width: 0, widgets: !include color_mode_panel.yaml}}
+        - {obj: {width: "100%", height: "100%", bg_opa: transp, border_width: 0, clickable: false, widgets: !include color_mode_panel.yaml}}
         # Popup tactile adaptee (tap ampoule/lecteur) - voir ha_popup.yaml.
-        - {obj: {width: "100%", height: "100%", bg_opa: transp, border_width: 0, widgets: !include ha_popup_panel.yaml}}
+        - {obj: {width: "100%", height: "100%", bg_opa: transp, border_width: 0, clickable: false, widgets: !include ha_popup_panel.yaml}}
