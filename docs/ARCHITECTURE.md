@@ -90,11 +90,19 @@ changements de la page courante (chaque page ne touche que sa portion de
   temperature de couleur, ou blanc chaud generique) vers une 5e entite
   par emplacement (`Slot N - couleur`, voir `firmware/slots_*.yaml`). Un
   appui long sur ce meme bouton (evenement `hold_N`) ouvre un mode
-  reglage en direct via les 3 encodeurs (teinte/chaleur/intensite,
-  limite en frequence - `color_mode.py::ColorModeController`, extrait de
-  `device_client.py` pour rester sous la limite de lignes par fichier),
-  affichant un panneau a l'ecran avec une barre par axe (entites `number`
-  `Mode couleur - */valeur`, voir `firmware/package.yaml`), ferme par
+  reglage en direct via les 3 encodeurs OU le tactile (teinte/chaleur/
+  intensite, limite en frequence - `color_mode.py::ColorModeController`,
+  extrait de `device_client.py` pour rester sous la limite de lignes par
+  fichier), affichant un panneau a l'ecran avec un slider LVGL par axe -
+  meme rendu (piste arrondie, meme epaisseur) et directement glissable au
+  doigt, voir `firmware/color_mode_panel.yaml`. Les entites `number`
+  `Mode couleur - */valeur` (`firmware/package.yaml`) restent la source
+  de verite unique : les encodeurs les ecrivent via `number_command`
+  (sens PC -> ecran), un glissement tactile les ecrit via `number.set`
+  cote ecran (sens ecran -> PC, recu comme `NumberState` par
+  `device_client.py::on_state` puis route vers
+  `color_mode.py::handle_touch`, qui ignore les echos de ses propres
+  ecritures pour ne pas dupliquer les appels a Home Assistant). Ferme par
   timeout ou par le bouton "X" flottant (`close_color_mode`). Un
   emplacement `barre` avec une source HA accepte aussi le tactile
   gauche/droite pour l'augmenter/diminuer directement

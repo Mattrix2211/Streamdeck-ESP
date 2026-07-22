@@ -30,6 +30,9 @@ NUMBER_NAMES = {
     "kelvin": "Mode couleur - chaleur (valeur)",
     "brightness": "Mode couleur - intensite (valeur)",
 }
+# Sens inverse - pour retrouver l'axe depuis le nom d'entite recu dans un
+# NumberState (voir device_client.py::on_state et handle_touch ci-dessous).
+NUMBER_NAME_TO_AXIS = {name: axis for axis, name in NUMBER_NAMES.items()}
 
 TIMEOUT = 10.0
 MIN_INTERVAL = 0.12
@@ -123,6 +126,30 @@ class ColorModeController:
             key = self.dc.entity_keys.get(NUMBER_NAMES[axis])
             if key is not None:
                 self.dc.client.number_command(key, value)
+
+    def handle_touch(self, axis: str, value: float) -> None:
+        """Reagit a un glissement tactile direct sur un slider du panneau
+        (voir firmware/color_mode_panel.yaml) : l'ecran pousse sa propre
+        valeur via number.set, recue ici comme un NumberState (voir
+        device_client.py::on_state). Ignore les echos de nos propres
+        _push_bars() (encodeur ou entree en mode couleur) - seul un ecart
+        reel avec la valeur connue signale un vrai geste tactile, sinon
+        chaque cran d'encodeur enverrait un appel HA en double via
+        l'aller-retour de l'API."""
+        if self.slot is None or self.entity is None:
+            return
+        current = {"hue": self.hue, "kelvin": self.kelvin, "brightness": self.brightness}.get(axis)
+        if current is None or abs(value - current) < 0.5:
+            return
+        self.last_activity = time.monotonic()
+        if axis == "hue":
+            self.hue = value % 360
+        elif axis == "kelvin":
+            self.kelvin = max(KELVIN_MIN, min(KELVIN_MAX, value))
+        else:
+            self.brightness = max(0.0, min(100.0, value))
+        self._push_preview()
+        self._send_update(axis)
 
     def handle_encoder(self, enc_idx: int, direction: str) -> None:
         if direction not in ("clockwise", "anticlockwise"):

@@ -289,31 +289,33 @@ reflasher le firmware** pour beneficier de cette fonctionnalite, un
 Sur un emplacement `bouton` eligible (meme condition que ci-dessus :
 action `home_assistant` domaine `light` + case "Afficher la couleur..."
 cochee), un **appui long** sur l'ecran ouvre un mode reglage en direct via
-les 3 encodeurs :
+les 3 encodeurs **ou directement au doigt sur l'ecran** :
 
-- **Encodeur 1** : teinte (hue).
-- **Encodeur 2** : temperature de couleur (chaleur).
-- **Encodeur 3** : intensite (luminosite).
+- **Encodeur 1** / glissement sur la bande "Teinte" : teinte (hue).
+- **Encodeur 2** / glissement sur la bande "Chaleur" : temperature de couleur.
+- **Encodeur 3** / glissement sur la barre "Intensite" : intensite (luminosite).
 
 Un panneau apparait au centre de l'ecran pendant le reglage : une bande
 arc-en-ciel pour la teinte et une bande chaude/froide pour la temperature
-de couleur, chacune avec un curseur qui se deplace en direct sur la
-position exacte a chaque cran d'encodeur, plus une barre pleine classique
-pour l'intensite - pour voir ou on en est sans devoir regarder le bouton
-lui-meme. Chaque cran met aussi a jour l'apercu couleur sur le
-bouton immediatement et appelle Home Assistant en direct (limite a ~8
-appels/s max par axe pour ne pas le spammer si l'encodeur tourne vite -
-voir `color_mode.py::_send_update`). Le mode se ferme tout seul apres 10s
-d'inactivite, ou en touchant le bouton "X" qui apparait en haut a droite de
-l'ecran pendant le reglage - les 3 cartes encodeurs du bas d'ecran sont
-masquees pendant ce temps pour ne pas melanger leur % normal avec le
-panneau. LVGL envoie un "click" juste apres le "long press" au relachement
-du doigt : `device_client.py` l'ignore (`_pending_hold_slot`) pour eviter
-que l'appui long declenche AUSSI l'action normale du bouton (ex: eteindre/
-allumer l'ampoule en plus d'ouvrir le mode couleur). **Necessite de
-reflasher le firmware** (nouvel evenement `hold_N` par emplacement,
-panneau + barres + bouton "X" flottant et switch `Mode couleur actif`/
-entites `number` dans `firmware/package.yaml`).
+de couleur, plus une barre pour l'intensite - les 3 avec le **meme rendu**
+(piste pleine largeur arrondie, meme epaisseur) et un curseur qui se
+deplace en direct, que ce soit via un cran d'encodeur ou un **glissement
+tactile direct** sur la bande/barre correspondante (slider LVGL superpose
+a la bande, voir `firmware/color_mode_panel.yaml`). Chaque changement met
+aussi a jour l'apercu couleur sur le bouton immediatement et appelle Home
+Assistant en direct (limite a ~8 appels/s max par axe pour ne pas le
+spammer - voir `color_mode.py::_send_update`/`handle_touch`). Le mode se
+ferme tout seul apres 10s d'inactivite, ou en touchant le bouton "X" qui
+apparait en haut a droite de l'ecran pendant le reglage - les 3 cartes
+encodeurs du bas d'ecran sont masquees pendant ce temps pour ne pas
+melanger leur % normal avec le panneau. LVGL envoie un "click" juste apres
+le "long press" au relachement du doigt : `device_client.py` l'ignore
+(`_pending_hold_slot`) pour eviter que l'appui long declenche AUSSI
+l'action normale du bouton (ex: eteindre/allumer l'ampoule en plus
+d'ouvrir le mode couleur). **Necessite de reflasher le firmware** (nouvel
+evenement `hold_N` par emplacement, panneau + sliders + bouton "X"
+flottant et switch `Mode couleur actif`/entites `number` dans
+`firmware/package.yaml`/`firmware/color_mode_panel.yaml`).
 
 ## Ajustement tactile des widgets "barre"
 

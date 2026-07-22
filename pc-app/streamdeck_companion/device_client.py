@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 
 import yaml
-from aioesphomeapi import APIClient, Event, EventInfo, NumberInfo, SelectInfo, SwitchInfo, TextInfo
+from aioesphomeapi import APIClient, Event, EventInfo, NumberInfo, NumberState, SelectInfo, SwitchInfo, TextInfo
 
 from . import actions as action_runner
 from . import color_mode as color_mode_module
@@ -138,6 +138,9 @@ class DeviceClient:
                 self.entity_keys[ent.name] = ent.key
             if isinstance(ent, NumberInfo) and ent.name in color_mode_module.NUMBER_NAMES.values():
                 self.entity_keys[ent.name] = ent.key
+                # Sens PC -> ecran (number_command) ET ecran -> PC (glissement
+                # tactile sur un slider, voir on_state ci-dessous).
+                self.key_to_entity_name[ent.key] = ent.name
         self.connected = True
         LOG.info("Connecte a %s (%d bouton/encodeur mappes)", conn.get("host"), len(self.key_to_entity_name))
         status_key = self.entity_keys.get(STATUS_ENTITY_NAME)
@@ -194,10 +197,17 @@ class DeviceClient:
         return None
 
     def on_state(self, state) -> None:
-        if not isinstance(state, Event):
-            return
         entity_name = self.key_to_entity_name.get(state.key)
         if entity_name is None:
+            return
+
+        if isinstance(state, NumberState):
+            axis = color_mode_module.NUMBER_NAME_TO_AXIS.get(entity_name)
+            if axis is not None:
+                self.color_mode.handle_touch(axis, state.state)
+            return
+
+        if not isinstance(state, Event):
             return
 
         if entity_name == ACTION_EVENT_ENTITY:
