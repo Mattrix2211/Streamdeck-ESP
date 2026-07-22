@@ -27,6 +27,7 @@ from flask import Flask, Response, jsonify, redirect, render_template, request, 
 from . import actions as action_runner
 from . import audio_devices
 from . import ha_client
+from . import ha_mqtt
 from . import icon_extract
 from . import icons
 from . import profiles as profile_utils
@@ -353,6 +354,7 @@ def settings():
         connection=config.get("connection") or {},
         shape=config.get("shape", "carre"),
         home_assistant=config.get("home_assistant") or {},
+        mqtt=config.get("mqtt") or {},
         premiere_fois=request.args.get("premiere_fois") == "1",
         saved=request.args.get("saved") == "1",
         error=request.args.get("error"),
@@ -371,6 +373,13 @@ def save_settings():
     config["home_assistant"] = {
         "url": request.form.get("ha_url", "").strip(),
         "token": request.form.get("ha_token", "").strip(),
+    }
+    config["mqtt"] = {
+        "host": request.form.get("mqtt_host", "").strip(),
+        "port": int(request.form.get("mqtt_port") or ha_mqtt.DEFAULT_PORT),
+        "username": request.form.get("mqtt_username", "").strip(),
+        "password": request.form.get("mqtt_password", "").strip(),
+        "base_topic": request.form.get("mqtt_base_topic", "").strip() or ha_mqtt.DEFAULT_BASE_TOPIC,
     }
     config["profiles"] = profile_utils.migrate_profiles(config)
     save_config(_config_path, config)

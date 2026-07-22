@@ -27,8 +27,9 @@
                   |                                    + tray.py (icone barre
                   v                                    des taches)
      +------------+-------------+                                  |
-     |  ha_client.py / ha_poller.py (sondage ~15s) -----------------+
-     |  widgets barre/texte + action 'home_assistant'               |
+     |  ha_client.py / ha_poller.py (sondage REST ~15s) -------------+
+     |  + ha_mqtt.py (facultatif, instantane via mqtt_statestream)   |
+     |  widgets barre/texte + action 'home_assistant'                |
      +--------------------------------------------------------------+
                                                                     |
                                                        actions locales :
@@ -99,6 +100,16 @@ changements de la page courante (chaque page ne touche que sa portion de
   gauche/droite pour l'augmenter/diminuer directement
   (`ha_client.py::adjust_entity_percent()`, evenements
   `barre_inc_N`/`barre_dec_N`).
+- `ha_mqtt.py` : complement facultatif a `ha_poller.py` - si un broker
+  MQTT est renseigne dans **Reglages**, souscrit aux topics publies par
+  l'integration Home Assistant `mqtt_statestream` (un topic par etat/
+  attribut, ex `<base_topic>/light/salon/attributes/rgb_color`) et
+  reconstruit l'etat de chaque entite au fil des messages pour reutiliser
+  telles quelles `ha_client.format_widget_value()`/`light_color_hex()`,
+  poussant la valeur des la reception (latence quasi nulle) au lieu
+  d'attendre le prochain sondage REST. `ha_poller.py` continue de tourner
+  en parallele comme filet de securite (aucune regression si MQTT n'est
+  pas configure ou si un message est manque).
 - `icons.py` : catalogue d'icones (glyphes Material Icons, memes
   points de code que la police `font_icons` du firmware) - repli pour les
   emplacements sans icone reelle disponible.
@@ -118,8 +129,9 @@ changements de la page courante (chaque page ne touche que sa portion de
   Demarrer, applications personnalisees persistees dans
   `dashboard_config.yaml`, selecteur de fichier natif pour les ajouter.
 - `tray.py` orchestre le tout (connexion, dashboard, serveur d'icones,
-  sondeur HA, sondeur de profil) dans une icone de barre des taches, sans
-  fenetre de terminal - le menu affiche le profil actuellement actif.
+  sondeur HA REST, pont MQTT facultatif, sondeur de profil) dans une icone
+  de barre des taches, sans fenetre de terminal - le menu affiche le
+  profil actuellement actif.
 - Home Assistant continue de voir l'appareil nativement (integration
   ESPHome auto-decouverte) et peut faire ses propres automations en
   parallele, mais ce n'est **pas necessaire** pour que le Stream Deck
@@ -196,6 +208,9 @@ un systeme de profils :
   Assistant toutes les ~15s et appelle
   `device_client.schedule_push_values()` pour ne rafraichir que les
   entites `text.slot_N_valeur` concernees (sans re-pousser tout le reste).
+  Si un broker MQTT est configure, `ha_mqtt.py` appelle la meme methode
+  des la reception d'un message `mqtt_statestream` (voir plus haut) - les
+  deux mecanismes coexistent, MQTT n'etant qu'un raccourci plus rapide.
 - **Statut / info generique depuis Home Assistant** : HA peut aussi
   appeler directement le service `text.set_value` sur
   `text.streamdeck_statut_pc` (voir `home-assistant/example_automations.yaml`).

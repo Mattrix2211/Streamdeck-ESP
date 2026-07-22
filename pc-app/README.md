@@ -146,7 +146,9 @@ qu'on utilise au quotidien.
 Les widgets (`barre`/`texte`) sont rafraichis toutes les ~15 secondes par
 `streamdeck_companion/ha_poller.py`, qui interroge l'API REST de Home
 Assistant en arriere-plan (pas de websocket, suffisant pour quelques
-entites).
+entites). Si un broker MQTT est renseigne dans **Reglages**, les mises a
+jour deviennent quasi instantanees - voir "Synchronisation instantanee via
+MQTT" plus bas.
 
 Dans la maquette de l'accueil, une tuile `barre` affiche une petite jauge
 sous le libelle et une tuile `texte` affiche un espace reserve pour la
@@ -229,6 +231,34 @@ longue duree). Si la connexion echoue, un message clair s'affiche
 Les 3 encodeurs utilisent encore le champ texte compact
 `domaine.service:entite` a taper a la main (pas encore de picker dedie -
 possible dans un prochain chantier si besoin).
+
+## Synchronisation instantanee via MQTT (facultatif)
+
+Par defaut, les widgets `barre`/`texte` et la couleur d'ampoule sont
+rafraichis par sondage REST (`ha_poller.py`, ~15s). Pour une mise a jour
+quasi instantanee, renseignez un broker MQTT dans **Reglages** : l'appli
+demarre alors aussi `streamdeck_companion/ha_mqtt.py`, qui pousse la
+valeur des qu'un message arrive (le sondage REST continue de tourner en
+parallele comme filet de securite - rien a desactiver).
+
+Cote **Home Assistant**, il faut publier les changements d'etat sur MQTT
+via l'integration native `mqtt_statestream` (`configuration.yaml`) :
+
+```yaml
+mqtt_statestream:
+  base_topic: homeassistant/state
+  publish_attributes: true
+```
+
+Le `base_topic` doit correspondre exactement au champ **"Sujet de base"**
+de la page Reglages (meme valeur par defaut : `homeassistant/state`).
+Sans `mqtt_statestream` configure cote HA, le champ "Hote du broker" peut
+rester vide - l'appli fonctionne alors comme avant (sondage REST seul).
+
+**Note** : un changement des reglages MQTT necessite de redemarrer
+l'appli (icone barre des taches) pour etre pris en compte - contrairement
+aux reglages de connexion a l'ecran, la connexion MQTT n'est pas
+re-etablie automatiquement en cours de route.
 
 ## Couleur d'une ampoule sur le bouton
 
@@ -408,9 +438,11 @@ necessaire pour que les emplacements/encodeurs du Stream Deck fonctionnent
   `glyphs:` de `font_icons` dans `firmware/package.yaml`, sinon il
   s'affiche comme une case vide sur l'ecran.
 - Les widgets Home Assistant (`barre`/`texte`) sont sondes par polling
-  REST toutes les ~15s (`ha_poller.py`), pas en temps reel instantane -
-  meme cadence pour la couleur d'une ampoule liee a un bouton (pas de
-  changement instantane au moment du clic, jusqu'a ~15s de decalage).
+  REST toutes les ~15s (`ha_poller.py`), pas en temps reel instantane par
+  defaut - meme cadence pour la couleur d'une ampoule liee a un bouton
+  (jusqu'a ~15s de decalage). Voir "Synchronisation instantanee via MQTT"
+  plus haut pour une mise a jour quasi instantanee (necessite de
+  configurer `mqtt_statestream` cote Home Assistant).
 - L'approximation de couleur pour les ampoules "blanc variable" (sans
   RGB propre, juste une temperature de couleur) est une conversion
   standard temperature -> RGB (Tanner Helland), pas une calibration

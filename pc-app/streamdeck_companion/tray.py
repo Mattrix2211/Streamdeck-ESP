@@ -35,6 +35,7 @@ import pystray
 from PIL import Image, ImageDraw
 
 from . import dashboard
+from . import ha_mqtt
 from . import ha_poller
 from . import icon_server
 from . import profile_watcher
@@ -121,6 +122,7 @@ def ensure_config_exists(config_path: Path) -> None:
         "connection": {"host": "", "port": 6053, "api_key": ""},
         "shape": "carre",
         "home_assistant": {"url": "", "token": ""},
+        "mqtt": {"host": "", "port": ha_mqtt.DEFAULT_PORT, "username": "", "password": "", "base_topic": ha_mqtt.DEFAULT_BASE_TOPIC},
         "profiles": [profile_utils.default_profile()],
     })
     LOG.info("Fichier de config cree: %s", config_path)
@@ -130,6 +132,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     config_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_CONFIG_PATH
     ensure_config_exists(config_path)
+    config = load_config(config_path)
 
     device_client = DeviceClient(config_path)
     client_thread = threading.Thread(target=run_device_client, args=(device_client,), daemon=True)
@@ -141,6 +144,11 @@ def main() -> None:
     dashboard_thread.start()
 
     icon_server.start_in_thread(device_client)
+
+    # ha_mqtt complete ha_poller (filet de securite REST, toujours actif)
+    # par des mises a jour instantanees si un broker MQTT est renseigne
+    # dans Reglages - voir ha_mqtt.py pour le detail du fonctionnement.
+    ha_mqtt.start_in_thread(device_client, config.get("mqtt") or {})
 
     ha_stop_event = threading.Event()
     ha_thread = threading.Thread(
@@ -154,7 +162,6 @@ def main() -> None:
     )
     profile_thread.start()
 
-    config = load_config(config_path)
     icon = pystray.Icon("streamdeck", make_icon_image(), "Stream Deck", menu=build_menu(config, device_client))
     icon.run()
 

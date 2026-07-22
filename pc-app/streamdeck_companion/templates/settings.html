@@ -54,6 +54,37 @@
       </p>
     </div>
 
+    <div class="card">
+      <h2>MQTT (facultatif)</h2>
+      <div class="grid2">
+        <div>
+          <label>Hote du broker</label>
+          <input type="text" name="mqtt_host" value="{{ mqtt.host or '' }}" placeholder="192.168.1.10">
+        </div>
+        <div>
+          <label>Port</label>
+          <input type="text" name="mqtt_port" value="{{ mqtt.port or 1883 }}">
+        </div>
+        <div>
+          <label>Utilisateur (facultatif)</label>
+          <input type="text" name="mqtt_username" value="{{ mqtt.username or '' }}">
+        </div>
+        <div>
+          <label>Mot de passe (facultatif)</label>
+          <input type="password" name="mqtt_password" value="{{ mqtt.password or '' }}">
+        </div>
+      </div>
+      <label>Sujet de base</label>
+      <input type="text" name="mqtt_base_topic" value="{{ mqtt.base_topic or 'homeassistant/state' }}">
+      <p class="hint">
+        Rend la mise a jour des emplacements barre/texte/couleur quasi instantanee au lieu d'attendre le sondage
+        toutes les 15s. Necessite l'integration <code>mqtt_statestream</code> cote Home Assistant, avec le meme
+        "Sujet de base" (<code>base_topic</code>) - voir le README de l'appli PC. Laisser l'hote vide desactive
+        MQTT (le sondage REST classique continue de fonctionner). Un redemarrage de l'appli est necessaire apres
+        modification de ces reglages.
+      </p>
+    </div>
+
     <button type="submit">{{ "Continuer vers l'accueil" if premiere_fois else "Enregistrer" }}</button>
   </form>
 {% endblock %}
