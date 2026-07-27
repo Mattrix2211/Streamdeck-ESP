@@ -32,6 +32,13 @@ LOG = logging.getLogger("streamdeck_ha_mqtt")
 
 DEFAULT_BASE_TOPIC = "homeassistant/state"
 DEFAULT_PORT = 1883
+# mqtt_statestream publie l'etat et CHAQUE attribut d'une entite comme des
+# messages MQTT separes (voir _parse_topic) - un seul changement genere donc
+# une rafale de plusieurs messages coup sur coup. Sans temporisation, on
+# pousserait une couleur/valeur intermediaire (souvent juste "on" sans les
+# attributs de couleur encore arrives) avant la bonne, d'ou un flash blanc
+# visible avant que la teinte reelle ne s'affiche.
+DEBOUNCE_SECONDS = 0.2
 
 
 def _parse_topic(base_topic: str, topic: str) -> tuple[str, str] | None:
@@ -60,6 +67,7 @@ class MqttBridge:
         # pour reutiliser telles quelles ha_client.format_widget_value /
         # ha_client.light_color_hex.
         self._states: dict[str, dict] = {}
+        self._pending_timers: dict[str, threading.Timer] = {}
         self._client = None
 
     @property
@@ -115,12 +123,26 @@ class MqttBridge:
                 state["attributes"][attr_name] = payload
         else:
             return
-        self._push_entity(entity_id, state)
+        self._schedule_push(entity_id, state)
+
+    def _schedule_push(self, entity_id: str, state: dict) -> None:
+        """Regroupe les messages d'une meme rafale (etat + attributs d'un
+        seul changement d'entite) avant de pousser - annule tout push deja
+        programme pour cette entite et en reprogramme un, pour ne pousser
+        qu'une fois que la rafale semble terminee."""
+        existing = self._pending_timers.get(entity_id)
+        if existing is not None:
+            existing.cancel()
+        timer = threading.Timer(DEBOUNCE_SECONDS, self._push_entity, args=(entity_id, state))
+        timer.daemon = True
+        self._pending_timers[entity_id] = timer
+        timer.start()
 
     def _push_entity(self, entity_id: str, state: dict) -> None:
         """Meme logique de correspondance emplacement<->entite que
-        ha_poller.py::poll_once, mais pour une seule entite (celle dont on
-        vient de recevoir un message) et poussee immediatement."""
+        ha_poller.py::poll_once, mais pour une seule entite et poussee une
+        fois la rafale de messages (voir _schedule_push) retombee."""
+        self._pending_timers.pop(entity_id, None)
         if not self.device_client.connected:
             return
         slots = self.device_client.active_profile().get("slots") or []
