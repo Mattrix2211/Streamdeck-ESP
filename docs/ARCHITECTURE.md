@@ -108,18 +108,17 @@ changements de la page courante (chaque page ne touche que sa portion de
   gauche/droite pour l'augmenter/diminuer directement
   (`ha_client.py::adjust_entity_percent()`, evenements
   `barre_inc_N`/`barre_dec_N`).
-- `ha_popup.py` : popup tactile adaptee au domaine de l'entite ciblee par
-  une action `home_assistant` de type `bouton` - pour `light`/
-  `media_player` uniquement, un simple tap (pas un appui long, qui reste
-  reserve au mode couleur ci-dessus) ouvre un panneau (`HaPopupController`,
-  meme esprit que `ColorModeController`) au lieu d'appeler directement le
-  service configure : interrupteur power/lecture + curseur luminosite/
-  volume, plus precedent/suivant pour un lecteur
-  (`firmware/ha_popup.yaml`/`ha_popup_panel.yaml`). Prerempli avec l'etat
-  lu via l'API REST a l'ouverture, ferme par timeout (15s) ou "X"
+- `ha_popup.py` : popup tactile pour une action `home_assistant` de type
+  `bouton` ciblant un `media_player` - un simple tap (pas un appui long)
+  ouvre un panneau (`HaPopupController`, meme esprit que
+  `ColorModeController`) au lieu d'appeler directement le service
+  configure : interrupteur lecture/pause + precedent/suivant + curseur de
+  volume (`firmware/ha_popup.yaml`/`ha_popup_panel.yaml`). Prerempli avec
+  l'etat lu via l'API REST a l'ouverture, ferme par timeout (15s) ou "X"
   (`close_ha_popup`) ; s'exclut mutuellement avec le mode couleur (les
-  deux panneaux ne s'affichent jamais ensemble). Autres domaines : tap
-  inchange (appel direct du service).
+  deux panneaux ne s'affichent jamais ensemble). Les ampoules (`light`) et
+  tout autre domaine gardent le tap = appel direct du service - seul
+  l'appui long ouvre un panneau pour une ampoule (mode couleur ci-dessus).
 - `ha_mqtt.py` : complement facultatif a `ha_poller.py` - si un broker
   MQTT est renseigne dans **Reglages**, souscrit aux topics publies par
   l'integration Home Assistant `mqtt_statestream` (un topic par etat/
@@ -151,7 +150,10 @@ changements de la page courante (chaque page ne touche que sa portion de
 - `tray.py` orchestre le tout (connexion, dashboard, serveur d'icones,
   sondeur HA REST, pont MQTT facultatif, sondeur de profil) dans une icone
   de barre des taches, sans fenetre de terminal - le menu affiche le
-  profil actuellement actif.
+  profil actuellement actif. Un verrou mono-instance (`_acquire_single_
+  instance_lock`, simple bind TCP local sur un port fixe) empeche de
+  lancer deux instances en meme temps - sinon chacune ouvre sa propre
+  connexion a l'ecran et execute chaque action en double/triple.
 - Home Assistant continue de voir l'appareil nativement (integration
   ESPHome auto-decouverte) et peut faire ses propres automations en
   parallele, mais ce n'est **pas necessaire** pour que le Stream Deck

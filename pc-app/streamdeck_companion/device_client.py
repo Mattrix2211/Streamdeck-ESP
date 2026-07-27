@@ -147,8 +147,7 @@ class DeviceClient:
         # emplacement) - contrairement a POWER_SWITCH_NAME plus bas, jamais
         # relus depuis l'ecran.
         write_only_switches = (
-            *SLOT_VISIBLE_NAMES, color_mode_module.SWITCH_NAME,
-            ha_popup_module.ACTIVE_SWITCH_NAME, ha_popup_module.TRANSPORT_SWITCH_NAME,
+            *SLOT_VISIBLE_NAMES, color_mode_module.SWITCH_NAME, ha_popup_module.ACTIVE_SWITCH_NAME,
         )
         for ent in entities:
             if isinstance(ent, EventInfo) and ent.name in (ACTION_EVENT_ENTITY, *ENCODER_EVENT_ENTITIES):
@@ -287,9 +286,11 @@ class DeviceClient:
         try:
             if action.get("type") == "home_assistant":
                 target = action.get("target") or {}
-                # Un tap (pas un encodeur) sur un emplacement lie a une
-                # ampoule/un lecteur ouvre la popup adaptee au lieu d'appeler
-                # le service configure directement - voir ha_popup.py.
+                # Un tap (pas un encodeur) sur un emplacement lie a un
+                # lecteur multimedia ouvre la popup adaptee au lieu d'appeler
+                # le service configure directement - voir ha_popup.py. Les
+                # ampoules restent en tap = bascule directe (reglage fin sur
+                # l'appui long, voir color_mode.py).
                 if (
                     entity_name == ACTION_EVENT_ENTITY
                     and state.event_type.startswith("action_")

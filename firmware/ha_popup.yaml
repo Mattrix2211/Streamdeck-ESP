@@ -1,9 +1,10 @@
-# Entites de la popup tactile adaptee (tap sur un emplacement lie a une
-# ampoule ou un lecteur multimedia, voir ha_popup_panel.yaml et
+# Entites de la popup tactile adaptee (tap sur un emplacement lie a un
+# lecteur multimedia, voir ha_popup_panel.yaml et
 # pc-app/streamdeck_companion/ha_popup.py) - meme esprit que le mode
 # couleur (color_mode_*_number/switch dans package.yaml) : entites
 # optimistes, source de verite partagee entre le PC (etat pousse a
-# l'ouverture) et l'ecran (bascule/glissement tactile).
+# l'ouverture) et l'ecran (bascule/glissement tactile). Les ampoules
+# restent en tap = bascule directe (voir device_client.py), pas de popup.
 switch:
   - platform: template
     id: ha_popup_active_switch
@@ -25,14 +26,6 @@ switch:
     name: "Popup HA - power"
     optimistic: true
     on_state: [{lvgl.switch.update: {id: ha_popup_power_lvgl, state: {checked: !lambda "return x;"}}}]
-  - platform: template
-    id: ha_popup_transport_switch
-    name: "Popup HA - transport"
-    optimistic: true
-    on_state:
-      - lambda: |-
-          if (x) { lv_obj_clear_flag(id(ha_popup_transport_row), LV_OBJ_FLAG_HIDDEN); }
-          else { lv_obj_add_flag(id(ha_popup_transport_row), LV_OBJ_FLAG_HIDDEN); }
 
 number:
   - platform: template

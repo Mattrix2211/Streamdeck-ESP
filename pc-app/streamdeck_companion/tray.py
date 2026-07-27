@@ -25,6 +25,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import socket
 import sys
 import threading
 import time
@@ -47,6 +48,42 @@ LOG = logging.getLogger("streamdeck_tray")
 # Couleurs du design system (navy / signal)
 NAVY = (11, 25, 41, 255)
 SIGNAL = (0, 180, 216, 255)
+
+# Port arbitraire, jamais ecoute - sert uniquement de verrou local (voir
+# _acquire_single_instance_lock) pour empecher deux instances de tourner en
+# meme temps : chacune ouvrirait sa propre connexion a l'ecran, qui recevrait
+# alors chaque appui en double/triple (chaque instance execute l'action
+# independamment - vecu en pratique lors de sessions de debug avec plusieurs
+# terminaux ouverts en parallele).
+SINGLE_INSTANCE_PORT = 47823
+
+
+def _acquire_single_instance_lock() -> socket.socket:
+    lock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        lock_socket.bind(("127.0.0.1", SINGLE_INSTANCE_PORT))
+    except OSError:
+        lock_socket.close()
+        raise RuntimeError(
+            "Une autre instance de l'appli Stream Deck tourne deja - "
+            "ferme-la (icone barre des taches, ou Gestionnaire des taches) avant de relancer."
+        ) from None
+    return lock_socket
+
+
+def _show_error_dialog(message: str) -> None:
+    """Boite de dialogue de secours - lance via pythonw, aucune console
+    n'est visible pour lire le message d'erreur du logger."""
+    try:
+        import tkinter
+        from tkinter import messagebox
+
+        root = tkinter.Tk()
+        root.withdraw()
+        messagebox.showerror("Stream Deck", message)
+        root.destroy()
+    except Exception:
+        pass
 
 
 def make_icon_image() -> Image.Image:
@@ -130,6 +167,12 @@ def ensure_config_exists(config_path: Path) -> None:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    try:
+        _lock_socket = _acquire_single_instance_lock()  # noqa: F841 - garde une reference, voir la fonction
+    except RuntimeError as exc:
+        LOG.error(str(exc))
+        _show_error_dialog(str(exc))  # pythonw n'a pas de console visible
+        sys.exit(1)
     config_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_CONFIG_PATH
     ensure_config_exists(config_path)
     config = load_config(config_path)
