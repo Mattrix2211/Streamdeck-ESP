@@ -159,9 +159,16 @@ changements de la page courante (chaque page ne touche que sa portion de
   widgets depuis le compteur brut de rotation (`on_clockwise`/
   `on_anticlockwise`, eux, restent inchanges et continuent de declencher
   les actions configurees).
-- `icons.py` : catalogue d'icones (glyphes Material Icons, memes
-  points de code que la police `font_icons` du firmware) - repli pour les
-  emplacements sans icone reelle disponible.
+- `icons.py` : catalogue de 172 icones (glyphes Material Icons, memes
+  points de code que la police `font_icons` de `firmware/icon_font.yaml`,
+  extraite de `package.yaml` - limite de lignes par fichier - une fois le
+  catalogue etendu depuis un jeu initial de 22 pour couvrir des categories
+  comparables au picker d'icones de Home Assistant) - repli pour les
+  emplacements sans icone reelle disponible. Toute icone ajoutee dans
+  `icons.py` doit aussi l'etre au `glyphs:` de `icon_font.yaml`, sinon elle
+  s'affiche comme une case vide sur l'ecran. Le selecteur d'icone de la
+  popup d'emplacement (`dashboard.js::renderIconPicker`) filtre ce
+  catalogue par une barre de recherche (nom/libelle).
 - `icon_extract.py`/`icon_server.py` : pour un emplacement `bouton` avec
   une action `launch`, l'ecran affiche automatiquement la vraie icone de
   l'executable (`.exe`/`.lnk`, via `icoextract` + Pillow, Windows

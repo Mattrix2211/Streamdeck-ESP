@@ -134,7 +134,10 @@ button.danger:hover { background: rgba(230,57,70,.12); }
   background: var(--ocean); border: 1px solid var(--slate); border-radius: 12px;
   padding: 24px; width: 90%; max-width: 460px; max-height: 85vh; overflow-y: auto;
 }
-.icon-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 6px; }
+.icon-picker {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 6px;
+  max-height: 220px; overflow-y: auto; padding-right: 2px;
+}
 .icon-choice {
   font-family: 'Material Icons'; font-size: 22px; text-align: center; padding: 8px 0;
   border: 1px solid var(--slate); border-radius: 8px; cursor: pointer; color: var(--mist);

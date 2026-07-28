@@ -35,7 +35,7 @@ const encoderModal = document.getElementById("encoder-modal");
 const profileModal = document.getElementById("profile-modal");
 const iconPicker = document.getElementById("icon-picker");
 
-function renderIconPicker(selectedIcon) {
+function renderIconPicker(selectedIcon, query) {
   iconPicker.innerHTML = "";
   const noneChoice = document.createElement("div");
   noneChoice.className = "icon-choice none-choice" + (selectedIcon ? "" : " selected");
@@ -44,7 +44,12 @@ function renderIconPicker(selectedIcon) {
   noneChoice.addEventListener("click", () => selectIcon(""));
   iconPicker.appendChild(noneChoice);
 
-  ICON_CHOICES.forEach((choice) => {
+  const q = (query || "").trim().toLowerCase();
+  const choices = q
+    ? ICON_CHOICES.filter((c) => c.label.toLowerCase().includes(q) || c.key.toLowerCase().includes(q))
+    : ICON_CHOICES;
+
+  choices.forEach((choice) => {
     const el = document.createElement("div");
     el.className = "icon-choice" + (choice.key === selectedIcon ? " selected" : "");
     el.textContent = choice.char;
@@ -53,6 +58,13 @@ function renderIconPicker(selectedIcon) {
     el.addEventListener("click", () => selectIcon(choice.key));
     iconPicker.appendChild(el);
   });
+
+  if (q && choices.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "hint";
+    empty.textContent = "Aucune icone trouvee.";
+    iconPicker.appendChild(empty);
+  }
 }
 
 function selectIcon(key) {
@@ -210,6 +222,8 @@ function openModal(index) {
   document.getElementById("modal-ha-entity").value = slot.ha_entity || "";
   document.getElementById("modal-show-light-color").checked = !!slot.show_light_color;
   selectedAppTarget = slot.action_field || null;
+  modal.dataset.selectedIcon = slot.icon || "";
+  document.getElementById("icon-search").value = "";
   renderIconPicker(slot.icon || "");
   updateModalFieldsVisibility();
   modal.classList.remove("hidden");
@@ -223,6 +237,9 @@ function closeModal() {
 document.getElementById("modal-type").addEventListener("change", updateModalFieldsVisibility);
 document.getElementById("modal-action-type").addEventListener("change", updateLaunchPickerVisibility);
 document.getElementById("modal-cancel").addEventListener("click", closeModal);
+document.getElementById("icon-search").addEventListener("input", (e) => {
+  renderIconPicker(modal.dataset.selectedIcon || "", e.target.value);
+});
 
 document.getElementById("modal-apply").addEventListener("click", () => {
   if (currentIndex === null) return;

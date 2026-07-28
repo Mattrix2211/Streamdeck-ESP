@@ -389,10 +389,23 @@ charge : `light` (luminosite), `media_player` (volume), `fan` (vitesse),
 ## Icones
 
 Le selecteur d'icone (popup d'un emplacement) propose un catalogue curate
-de glyphes Material Icons (`streamdeck_companion/icons.py`) - meme police
-chargee dans le navigateur et sur l'ecran (`gfonts://Material Icons` dans
-`firmware/package.yaml`), donc l'apercu correspond a ce qui s'affiche
-reellement. Pas d'upload d'image personnalisee arbitraire (voir Limitations).
+de 172 glyphes Material Icons (`streamdeck_companion/icons.py`) - meme
+police chargee dans le navigateur et sur l'ecran (`gfonts://Material
+Icons`, embarquee dans `firmware/icon_font.yaml`), donc l'apercu
+correspond a ce qui s'affiche reellement. Une barre de recherche filtre le
+catalogue par nom (ex "volet", "batterie", "wifi"), meme principe que le
+picker d'icones de Home Assistant. Pas d'upload d'image personnalisee
+arbitraire (voir Limitations).
+
+Le catalogue couvre l'eclairage/le confort (volets, rideaux, garage,
+capteurs de porte/fenetre, cheminee, jacuzzi...), le climat et la meteo
+(orage, nuageux, humidite...), l'informatique et les peripheriques
+(ordinateur, clavier, souris, casque, niveaux de batterie, USB, carte SD,
+Bluetooth...), la securite, le multimedia et les taches courantes -
+n'importe quel glyphe Material Icons peut etre ajoute en plus (il faut
+l'ajouter a la fois a `icons.py` et au `glyphs:` de
+`firmware/icon_font.yaml`, sinon il s'affiche comme une case vide sur
+l'ecran).
 
 ### Vraies icones d'appli/jeu
 
@@ -492,9 +505,9 @@ necessaire pour que les emplacements/encodeurs du Stream Deck fonctionnent
   decalage des autres) - comportement simple et previsible plutot qu'un
   reordonnancement complet.
 - Pas d'upload d'icone personnalisee : le catalogue est un jeu curate de
-  glyphes Material Icons (`streamdeck_companion/icons.py`). Pour en
-  ajouter, il faut aussi ajouter le point de code correspondant au
-  `glyphs:` de `font_icons` dans `firmware/package.yaml`, sinon il
+  glyphes Material Icons (`streamdeck_companion/icons.py`, 172 icones).
+  Pour en ajouter, il faut aussi ajouter le point de code correspondant au
+  `glyphs:` de `font_icons` dans `firmware/icon_font.yaml`, sinon il
   s'affiche comme une case vide sur l'ecran.
 - Les widgets Home Assistant (`barre`/`texte`) sont sondes par polling
   REST toutes les ~15s (`ha_poller.py`), pas en temps reel instantane par

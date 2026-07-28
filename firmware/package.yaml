@@ -310,6 +310,7 @@ packages:
   slot_icons: !include slot_icons.yaml
   ha_popup: !include ha_popup.yaml
   encoder_sync: !include encoder_sync.yaml
+  icon_font: !include icon_font.yaml
 
 # ---------------------------------------------------------------------------
 # Forme des boutons - modifiable a chaud (carre ou rond) depuis Home
@@ -363,21 +364,6 @@ font:
   - file: "gfonts://JetBrains Mono@500"
     id: font_mono
     size: 15
-  # Icones des emplacements - police d'icones dediee (glyphes Material Icons,
-  # codepoints verifies aupres du fichier officiel MaterialIcons-Regular.
-  # codepoints). L'appli PC envoie directement le glyphe (voir pc-app/
-  # streamdeck_companion/icons.py), le firmware ne fait qu'afficher le texte
-  # recu - glyphs: limite la police embarquee a ce jeu d'icones uniquement.
-  - file: "gfonts://Material Icons"
-    id: font_icons
-    size: 28
-    glyphs:
-      [
-        "", "", "", "", "", "", "",
-        "", "", "", "", "", "", "",
-        "", "", "", "", "", "", "",
-        "", "",
-      ]
   - file: "gfonts://JetBrains Mono@700"
     id: font_mono_bold
     size: 22
