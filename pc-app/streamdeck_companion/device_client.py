@@ -47,6 +47,11 @@ SLOT_VISIBLE_NAMES = [f"Slot {i} - visible" for i in range(1, SLOT_COUNT + 1)]
 SHAPE_ENTITY_NAME = "Forme des boutons"
 ACTION_EVENT_ENTITY = "Bouton d'action ecran"
 ENCODER_EVENT_ENTITIES = [f"Encodeur {i} - evenement" for i in range(1, 4)]
+# Vraie valeur (pourcentage + etiquette humaine) affichee sur la barre d'un
+# encodeur - voir encoder_sync.py, qui determine automatiquement la source
+# (volume Windows/appli/entite HA) a partir des actions deja configurees.
+ENCODER_VALUE_NAMES = [f"Encodeur {i} - valeur reelle" for i in range(1, 4)]
+ENCODER_LABEL_NAMES = [f"Encodeur {i} - affichage" for i in range(1, 4)]
 STATUS_ENTITY_NAME = "Statut PC"
 # Prefixe (base URL de l'appli PC) pour les vraies icones d'appli/jeu -
 # voir icon_server.py (port dedie, separe du dashboard) et
@@ -141,6 +146,7 @@ class DeviceClient:
         entities, _services = await self.client.list_entities_services()
         tracked_text_select = (
             *SLOT_LABEL_NAMES, *SLOT_VALUE_NAMES, *SLOT_ICON_NAMES, *SLOT_COLOR_NAMES, *SLOT_TYPE_NAMES,
+            *ENCODER_LABEL_NAMES,
             SHAPE_ENTITY_NAME, STATUS_ENTITY_NAME, PC_BASE_URL_ENTITY_NAME, ha_popup_module.TITLE_TEXT_NAME,
         )
         # Switches ecrits par le PC uniquement (visibilite d'un panneau/
@@ -161,6 +167,10 @@ class DeviceClient:
                 # Sens PC -> ecran (etat initial a l'ouverture) ET ecran -> PC
                 # (bascule au tactile, voir on_state ci-dessous).
                 self.key_to_entity_name[ent.key] = ent.name
+            if isinstance(ent, NumberInfo) and ent.name in ENCODER_VALUE_NAMES:
+                # Ecrit par le PC uniquement (gabarit passif, pas un slider
+                # tactile) - contrairement aux nombres ci-dessous.
+                self.entity_keys[ent.name] = ent.key
             if isinstance(ent, NumberInfo) and ent.name in (
                 *color_mode_module.NUMBER_NAMES.values(), ha_popup_module.VALUE_NUMBER_NAME,
             ):
@@ -400,6 +410,22 @@ class DeviceClient:
             key = self.entity_keys.get(SLOT_COLOR_NAMES[idx])
             if key is not None:
                 self.client.text_command(key, color)
+
+    def push_encoder_display(self, idx: int, pct: float, label: str) -> None:
+        """Pousse la vraie valeur (pourcentage + etiquette) d'un encodeur
+        (0-2) - voir encoder_sync.py, qui determine la source (volume
+        Windows/appli/entite HA) a partir des actions deja configurees."""
+        if self.client is None or not self.connected or not (0 <= idx < 3):
+            return
+        value_key = self.entity_keys.get(ENCODER_VALUE_NAMES[idx])
+        if value_key is not None:
+            self.client.number_command(value_key, max(0.0, min(100.0, pct)))
+        label_key = self.entity_keys.get(ENCODER_LABEL_NAMES[idx])
+        if label_key is not None:
+            self.client.text_command(label_key, label[:16])
+
+    def schedule_push_encoder_display(self, idx: int, pct: float, label: str, timeout: float = 5.0) -> None:
+        self._run_threadsafe(lambda: self.push_encoder_display(idx, pct, label), timeout)
 
     def schedule_push(self, timeout: float = 5.0) -> None:
         """Appelable depuis N'IMPORTE QUEL thread (ex: la page de config

@@ -247,6 +247,7 @@ function openEncoderModal(index) {
     const d = enc[direction] || { type: "none", target: "" };
     document.getElementById(`encoder-modal-${direction}-type`).value = d.type || "none";
     document.getElementById(`encoder-modal-${direction}-target`).value = d.target || "";
+    updateEncoderAppPickerVisibility(direction);
   });
   encoderModal.classList.remove("hidden");
 }
@@ -268,6 +269,73 @@ document.getElementById("encoder-modal-apply").addEventListener("click", () => {
   });
   encoders[currentEncoderIndex] = enc;
   closeEncoderModal();
+});
+
+/* Picker "app_volume" (encodeurs) : liste des applications ayant une
+ * session audio active (voir app_volume.py::list_audio_sessions et la
+ * route /audio-sessions), chargee une seule fois par session comme
+ * audioDevices dans audio-devices.js. Le champ cible reste un input texte
+ * libre ("up:chrome.exe" / "down:chrome.exe") - ce picker se contente d'y
+ * ecrire une valeur, sans empecher de la modifier a la main ensuite. */
+let audioSessions = null;
+
+function loadAudioSessionsIfNeeded(callback) {
+  if (audioSessions !== null) { callback(null); return; }
+  fetch("/audio-sessions")
+    .then((r) => r.json())
+    .then((data) => {
+      audioSessions = data.sessions || [];
+      callback(data.error || null);
+    })
+    .catch(() => {
+      audioSessions = [];
+      callback("Impossible de contacter l'appli.");
+    });
+}
+
+function populateEncoderAppPicker(direction) {
+  const select = document.getElementById(`encoder-modal-${direction}-app`);
+  const current = select.value;
+  select.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Choisir une application...";
+  select.appendChild(placeholder);
+  (audioSessions || []).forEach((session) => {
+    const opt = document.createElement("option");
+    opt.value = session.key;
+    opt.textContent = session.name;
+    select.appendChild(opt);
+  });
+  select.value = current;
+}
+
+function updateEncoderAppPickerVisibility(direction) {
+  const type = document.getElementById(`encoder-modal-${direction}-type`).value;
+  const select = document.getElementById(`encoder-modal-${direction}-app`);
+  const isAppVolume = type === "app_volume";
+  select.style.display = isAppVolume ? "block" : "none";
+  if (!isAppVolume) return;
+  loadAudioSessionsIfNeeded(() => {
+    populateEncoderAppPicker(direction);
+    const target = document.getElementById(`encoder-modal-${direction}-target`).value;
+    const app = target.includes(":") ? target.split(":")[1] : "";
+    if (app) select.value = app;
+  });
+}
+
+function applyEncoderAppSelection(direction) {
+  const app = document.getElementById(`encoder-modal-${direction}-app`).value;
+  if (!app) return;
+  const prefix = direction === "anticlockwise" ? "down" : "up";
+  document.getElementById(`encoder-modal-${direction}-target`).value = `${prefix}:${app}`;
+}
+
+DIRECTIONS.forEach((direction) => {
+  document.getElementById(`encoder-modal-${direction}-type`)
+    .addEventListener("change", () => updateEncoderAppPickerVisibility(direction));
+  document.getElementById(`encoder-modal-${direction}-app`)
+    .addEventListener("change", () => applyEncoderAppSelection(direction));
 });
 
 document.getElementById("config-form").addEventListener("submit", () => {

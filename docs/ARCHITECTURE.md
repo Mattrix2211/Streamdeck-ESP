@@ -129,6 +129,27 @@ changements de la page courante (chaque page ne touche que sa portion de
   d'attendre le prochain sondage REST. `ha_poller.py` continue de tourner
   en parallele comme filet de securite (aucune regression si MQTT n'est
   pas configure ou si un message est manque).
+- `app_volume.py` : volume par application et volume general Windows
+  (pycaw) - `AudioUtilities.GetAllSessions()` reparcourue a chaque appel
+  (pas de nom de session par executable directement, et les sessions
+  vont/viennent avec les fenetres ouvertes). Alimente l'action d'encodeur
+  `app_volume` (`actions.py::_app_volume`, cible `up:<processus>`/
+  `down:<processus>`) et le picker correspondant de la popup encodeur
+  (route `/audio-sessions` de `dashboard.py`).
+- `encoder_sync.py` : fait correspondre la barre/etiquette d'un encodeur a
+  la vraie valeur qu'il pilote, au lieu du compteur brut local de rotation
+  (`encoder_source()` deduit ce que l'encodeur represente a partir de ses
+  actions horaire/antihoraire deja configurees - si elles sont symetriques
+  - meme cible, sens opposes - volume general Windows, volume d'une
+  application, ou une entite Home Assistant `light`/`media_player`/`fan`/
+  `cover`/`climate`, cf `ha_client.py::_ENCODER_DISPLAY`/
+  `read_entity_level()`). Relit la source toutes les ~2s et pousse
+  pourcentage + etiquette vers deux nouvelles entites par encodeur
+  (`Encodeur N - valeur reelle`/`- affichage`, `firmware/encoder_sync.yaml`)
+  qui pilotent `bar_encoderN`/`lbl_encoderN` - le firmware n'ecrit plus ces
+  widgets depuis le compteur brut de rotation (`on_clockwise`/
+  `on_anticlockwise`, eux, restent inchanges et continuent de declencher
+  les actions configurees).
 - `icons.py` : catalogue d'icones (glyphes Material Icons, memes
   points de code que la police `font_icons` du firmware) - repli pour les
   emplacements sans icone reelle disponible.
@@ -148,12 +169,13 @@ changements de la page courante (chaque page ne touche que sa portion de
   Demarrer, applications personnalisees persistees dans
   `dashboard_config.yaml`, selecteur de fichier natif pour les ajouter.
 - `tray.py` orchestre le tout (connexion, dashboard, serveur d'icones,
-  sondeur HA REST, pont MQTT facultatif, sondeur de profil) dans une icone
-  de barre des taches, sans fenetre de terminal - le menu affiche le
-  profil actuellement actif. Un verrou mono-instance (`_acquire_single_
-  instance_lock`, simple bind TCP local sur un port fixe) empeche de
-  lancer deux instances en meme temps - sinon chacune ouvre sa propre
-  connexion a l'ecran et execute chaque action en double/triple.
+  sondeur HA REST, pont MQTT facultatif, sondeur de profil, sondeur de
+  synchronisation des encodeurs) dans une icone de barre des taches, sans
+  fenetre de terminal - le menu affiche le profil actuellement actif. Un
+  verrou mono-instance (`_acquire_single_instance_lock`, simple bind TCP
+  local sur un port fixe) empeche de lancer deux instances en meme temps -
+  sinon chacune ouvre sa propre connexion a l'ecran et execute chaque
+  action en double/triple.
 - Home Assistant continue de voir l'appareil nativement (integration
   ESPHome auto-decouverte) et peut faire ses propres automations en
   parallele, mais ce n'est **pas necessaire** pour que le Stream Deck

@@ -154,7 +154,12 @@ binary_sensor:
 
 # Encodeurs rotatifs - 3 par defaut, ajustables selon ce que vous avez achete.
 # Pour en ajouter/retirer : dupliquer un bloc sensor+binary_sensor+event avec
-# des GPIO libres (il reste GPIO47 sur le header dans ce mapping).
+# des GPIO libres (il reste GPIO47 sur le header dans ce mapping). La barre/
+# etiquette (lbl_encoderN/bar_encoderN) n'est plus mise a jour ici : elle est
+# pilotee par l'appli PC (voir encoder_sync.yaml), qui affiche la vraie
+# valeur pilotee (volume Windows/appli/entite HA) plutot que ce compteur
+# brut local - on_clockwise/on_anticlockwise restent inchanges (declenchent
+# toujours les actions configurees).
 sensor:
   - platform: rotary_encoder
     id: encoder1_value
@@ -172,13 +177,6 @@ sensor:
       - event.trigger: { id: encoder1_event, event_type: "clockwise" }
     on_anticlockwise:
       - event.trigger: { id: encoder1_event, event_type: "anticlockwise" }
-    on_value:
-      - lvgl.label.update:
-          id: lbl_encoder1
-          text: !lambda "return to_string((int) x) + \"%\";"
-      - lvgl.bar.update:
-          id: bar_encoder1
-          value: !lambda "return (int) x;"
   - platform: rotary_encoder
     id: encoder2_value
     name: "Encodeur 2"
@@ -195,13 +193,6 @@ sensor:
       - event.trigger: { id: encoder2_event, event_type: "clockwise" }
     on_anticlockwise:
       - event.trigger: { id: encoder2_event, event_type: "anticlockwise" }
-    on_value:
-      - lvgl.label.update:
-          id: lbl_encoder2
-          text: !lambda "return to_string((int) x) + \"%\";"
-      - lvgl.bar.update:
-          id: bar_encoder2
-          value: !lambda "return (int) x;"
   - platform: rotary_encoder
     id: encoder3_value
     name: "Encodeur 3"
@@ -218,13 +209,6 @@ sensor:
       - event.trigger: { id: encoder3_event, event_type: "clockwise" }
     on_anticlockwise:
       - event.trigger: { id: encoder3_event, event_type: "anticlockwise" }
-    on_value:
-      - lvgl.label.update:
-          id: lbl_encoder3
-          text: !lambda "return to_string((int) x) + \"%\";"
-      - lvgl.bar.update:
-          id: bar_encoder3
-          value: !lambda "return (int) x;"
 
 # ---------------------------------------------------------------------------
 # Entites "event" - consommees a la fois par Home Assistant (declencheurs
@@ -325,6 +309,7 @@ packages:
   slots_12_16: !include slots_12_16.yaml
   slot_icons: !include slot_icons.yaml
   ha_popup: !include ha_popup.yaml
+  encoder_sync: !include encoder_sync.yaml
 
 # ---------------------------------------------------------------------------
 # Forme des boutons - modifiable a chaud (carre ou rond) depuis Home

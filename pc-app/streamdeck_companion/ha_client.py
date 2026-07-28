@@ -172,6 +172,21 @@ _PERCENT_ADJUSTABLE: dict[str, dict] = {
     "cover": {"attr": "current_position", "scale": 100, "service": "set_cover_position", "param": "position"},
 }
 
+# Domaines dont la barre d'un encodeur peut afficher la vraie valeur (voir
+# encoder_sync.py) - reutilise les memes domaines que _PERCENT_ADJUSTABLE
+# (echelle fixe 0-scale) plus 'climate', dont la temperature cible n'est
+# pas un pourcentage : "range" indique de calculer le pourcentage a partir
+# de min_attr/max_attr (attributs de l'entite, ou une plage par defaut si
+# absents) plutot que d'une echelle fixe, et "unit" formate l'etiquette
+# affichee en valeur reelle (ex "21.5°C") plutot qu'en "%".
+_ENCODER_DISPLAY: dict[str, dict] = {
+    **_PERCENT_ADJUSTABLE,
+    "climate": {
+        "attr": "temperature", "range": True,
+        "min_attr": "min_temp", "max_attr": "max_temp", "default_min": 7.0, "default_max": 35.0, "unit": "°C",
+    },
+}
+
 
 def adjust_entity_percent(client: "HomeAssistantClient", entity_id: str, direction: int, step: int = 5) -> None:
     """Augmente/diminue (direction +1/-1) la valeur d'une entite HA d'un
@@ -193,6 +208,43 @@ def adjust_entity_percent(client: "HomeAssistantClient", entity_id: str, directi
     new_pct = max(0, min(100, current_pct + direction * step))
     value = new_pct / 100 if spec.get("as_fraction") else new_pct
     client.call_service(domain, spec["service"], entity_id=entity_id, data={spec["param"]: value})
+
+
+def encoder_display_domain(domain: str) -> bool:
+    """True si `domain` fait partie des domaines dont un encodeur peut
+    afficher la vraie valeur (voir encoder_sync.py::encoder_source)."""
+    return domain in _ENCODER_DISPLAY
+
+
+def read_entity_level(client: "HomeAssistantClient", entity_id: str) -> tuple[float, str] | None:
+    """(pourcentage 0-100 pour la barre, etiquette humaine pour le texte)
+    de `entity_id`, ou None si le domaine n'est pas pris en charge ou que
+    l'attribut est absent (entite eteinte/indisponible) - voir
+    encoder_sync.py, qui pousse ces deux valeurs vers l'ecran."""
+    domain = entity_id.split(".", 1)[0] if "." in entity_id else ""
+    spec = _ENCODER_DISPLAY.get(domain)
+    if not spec:
+        return None
+    state = client.get_state(entity_id)
+    if state is None:
+        return None
+    raw = (state.get("attributes") or {}).get(spec["attr"])
+    if raw is None:
+        return None
+    try:
+        raw = float(raw)
+    except (TypeError, ValueError):
+        return None
+    if spec.get("range"):
+        attrs = state.get("attributes") or {}
+        lo = float(attrs.get(spec["min_attr"]) or spec["default_min"])
+        hi = float(attrs.get(spec["max_attr"]) or spec["default_max"])
+        pct = 0.0 if hi <= lo else max(0.0, min(100.0, (raw - lo) / (hi - lo) * 100))
+        label = f"{raw:g}{spec['unit']}"
+    else:
+        pct = max(0.0, min(100.0, raw / spec["scale"] * 100))
+        label = f"{round(pct)}%"
+    return pct, label
 
 
 def format_widget_value(state: dict, slot_type: str) -> str:

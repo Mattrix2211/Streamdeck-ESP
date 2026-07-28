@@ -110,14 +110,21 @@
             {% for t in action_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
           </select>
           <input type="text" id="encoder-modal-{{ direction }}-target"
-                 placeholder="vol_up / ctrl+z / light.toggle:light.bureau">
+                 placeholder="vol_up / ctrl+z / light.toggle:light.bureau / up:chrome.exe">
         </div>
+        <select id="encoder-modal-{{ direction }}-app" class="encoder-app-picker" style="display:none">
+          <option value="">Choisir une application...</option>
+        </select>
       </div>
       {% endfor %}
       <p class="hint">
         <b>keys</b> (ex "ctrl+shift+s") &middot; <b>launch</b> (chemin/commande) &middot;
         <b>url</b> (site web/URI) &middot; <b>media</b> (play_pause/next/previous/vol_up/vol_down/mute) &middot;
-        <b>home_assistant</b> (format "domaine.service:entite") &middot; <b>none</b>.
+        <b>home_assistant</b> (format "domaine.service:entite") &middot;
+        <b>app_volume</b> (format "up:app.exe" / "down:app.exe", sens horaire = up, antihoraire = down) &middot;
+        <b>none</b>. Pour un encodeur "volume" (general ou par appli) ou lie a une entite HA
+        (luminosite/volume/vitesse/position/temperature), la barre affiche automatiquement la vraie valeur
+        des que sens horaire et antihoraire ciblent la meme chose en sens opposes.
       </p>
       <div class="modal-buttons">
         <button type="button" id="encoder-modal-cancel" class="secondary">Annuler</button>

@@ -89,10 +89,27 @@ immediatement la grille (emplacements + encodeurs) vers l'ecran.
 
 Les 3 encodeurs de la maquette sont cliquables comme les emplacements :
 leur popup regle l'action de chacun des 3 sens (horaire, antihoraire,
-appui). Chaque encodeur affiche sur l'ecran une barre 0-100% (type "barre
-de son") au lieu d'un simple compteur qui s'incremente sans limite -
-pratique pour un encodeur de volume par exemple. La valeur repart de 0
-a chaque redemarrage de l'ecran (pas de memorisation du dernier niveau).
+appui).
+
+### La barre de l'encodeur affiche la vraie valeur
+
+Si le sens horaire et le sens antihoraire d'un encodeur sont symetriques
+(meme cible, sens opposes), sa barre/etiquette affiche automatiquement la
+**vraie valeur pilotee** au lieu d'un simple compteur brut -
+`streamdeck_companion/encoder_sync.py` deduit ce que l'encodeur represente
+a partir de ses deux actions deja configurees, sans champ de config
+supplementaire :
+
+| configuration de l'encodeur (horaire / antihoraire)                          | ce que la barre affiche                  |
+|--------------------------------------------------------------------------------|-------------------------------------------|
+| `media` `vol_up` / `vol_down`                                                  | volume general Windows                    |
+| `app_volume` `up:<processus>` / `down:<processus>` (meme processus)           | volume de cette application                |
+| `home_assistant` sur la meme entite `light`/`media_player`/`fan`/`cover`/`climate` | luminosite/volume/vitesse/position/temperature de l'entite |
+
+Sans configuration symetrique reconnue, la barre reste neutre (aucune
+valeur brute affichee). La synchronisation est relue toutes les ~2s
+(`encoder_sync.run_forever`) - Windows uniquement pour `media`/`app_volume`
+(pycaw), toutes plateformes pour `home_assistant`.
 
 ## Profils par application
 
@@ -168,6 +185,7 @@ la recoit, via `ha_poller.py`).
 | `media`           | `play_pause`/`next`/`previous`/`vol_up`/`vol_down`/`mute` | touche multimedia |
 | `home_assistant`  | emplacement : entite + service choisis dans la popup (voir "Choisir une entite Home Assistant" ci-dessous) ; encodeurs : format compact `domaine.service:entite`, ex `light.toggle:light.bureau` | appelle un service Home Assistant (bascule une lumiere/prise/scene...) - **sauf** pour un emplacement cible `media_player` : un tap ouvre une popup adaptee au lieu d'appeler le service directement, voir "Popup tactile adaptee" ci-dessous. Les ampoules restent en tap = bascule directe (reglage fin sur l'appui long, voir "Reglage couleur...") |
 | `audio_output`    | emplacement : peripheriques choisis dans la popup (liste recherchable, `streamdeck_companion/audio_devices.py`) - identifiant opaque, pas destine a etre tape a la main | bascule le peripherique de sortie audio par defaut (casque/enceintes...) - Windows uniquement |
+| `app_volume`      | encodeurs : `up:<processus>`/`down:<processus>` (ex `up:chrome.exe`), choisi dans une liste deroulante des applications ayant une session audio active (`streamdeck_companion/app_volume.py`) | regle le volume d'une application precise (et non le volume general) en tournant l'encodeur - Windows uniquement (pycaw) |
 
 ## Bibliotheque d'applications (type d'action `launch`)
 

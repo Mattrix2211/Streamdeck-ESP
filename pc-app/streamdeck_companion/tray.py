@@ -36,6 +36,7 @@ import pystray
 from PIL import Image, ImageDraw
 
 from . import dashboard
+from . import encoder_sync
 from . import ha_mqtt
 from . import ha_poller
 from . import icon_server
@@ -204,6 +205,12 @@ def main() -> None:
         target=profile_watcher.run_forever, args=(device_client, profile_stop_event), daemon=True
     )
     profile_thread.start()
+
+    encoder_stop_event = threading.Event()
+    encoder_thread = threading.Thread(
+        target=encoder_sync.run_forever, args=(device_client, encoder_stop_event), daemon=True
+    )
+    encoder_thread.start()
 
     icon = pystray.Icon("streamdeck", make_icon_image(), "Stream Deck", menu=build_menu(config, device_client))
     icon.run()

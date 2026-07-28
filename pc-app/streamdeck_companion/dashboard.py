@@ -25,6 +25,7 @@ import requests
 from flask import Flask, Response, jsonify, redirect, render_template, request, url_for
 
 from . import actions as action_runner
+from . import app_volume
 from . import audio_devices
 from . import ha_client
 from . import ha_mqtt
@@ -45,7 +46,7 @@ app = Flask(__name__)
 _config_path: Path = DEFAULT_CONFIG_PATH
 _device_client: DeviceClient | None = None
 
-ACTION_TYPES = ["none", "keys", "launch", "url", "media", "home_assistant", "audio_output"]
+ACTION_TYPES = ["none", "keys", "launch", "url", "media", "home_assistant", "audio_output", "app_volume"]
 SLOT_TYPES = ["bouton", "barre", "texte"]
 DIRECTIONS = ["clockwise", "anticlockwise", "press"]
 
@@ -343,6 +344,19 @@ def audio_devices_route():
         LOG.exception("Echec de la lecture des peripheriques audio")
         return jsonify({"devices": [], "error": str(exc)}), 500
     return jsonify({"devices": devices})
+
+
+@app.route("/audio-sessions", methods=["GET"])
+def audio_sessions_route():
+    """Picker de l'action 'app_volume' (encodeurs) : liste des applications
+    ayant actuellement une session audio active, pour regler leur volume
+    sans taper le nom de l'executable a la main."""
+    try:
+        sessions = app_volume.list_audio_sessions()
+    except Exception as exc:
+        LOG.exception("Echec de la lecture des sessions audio")
+        return jsonify({"sessions": [], "error": str(exc)}), 500
+    return jsonify({"sessions": sessions})
 
 
 @app.route("/reglages", methods=["GET"])

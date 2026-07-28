@@ -38,6 +38,8 @@ def run(action: dict) -> None:
     elif kind == "audio_output":
         from . import audio_devices
         audio_devices.set_default_playback_device(target)
+    elif kind == "app_volume":
+        _app_volume(target)
     else:
         raise ValueError(f"Type d'action inconnu: {kind!r}")
 
@@ -74,6 +76,17 @@ def _media(name: str) -> None:
             "Le module 'keyboard' n'est pas disponible sur cette plateforme"
         )
     keyboard.send(_MEDIA_KEYS[name])
+
+
+def _app_volume(target: str) -> None:
+    """target: 'up:<app_key>' / 'down:<app_key>' (voir app_volume.py) -
+    meme convention que 'media' vol_up/vol_down, mais pour une appli
+    precise plutot que le volume general Windows."""
+    direction_str, _, app_key = target.partition(":")
+    if not app_key or direction_str not in ("up", "down"):
+        raise ValueError(f"Cible de volume par application invalide: {target!r}")
+    from . import app_volume
+    app_volume.adjust_app_volume(app_key, 1 if direction_str == "up" else -1)
 
 
 def _media_macos(name: str) -> None:
