@@ -310,6 +310,8 @@ class DeviceClient:
                     self.ha_popup.open(idx, action)
                 else:
                     self._run_home_assistant_action(action)
+            elif action.get("type") == "ha_adjust":
+                self._run_ha_adjust(action)
             else:
                 action_runner.run(action)
         except Exception:
@@ -353,6 +355,21 @@ class DeviceClient:
         if not domain or not service:
             raise ValueError("Action Home Assistant incomplete (domain/service manquant)")
         client.call_service(domain, service, entity_id=target.get("entity_id"), data=target.get("data") or {})
+
+    def _run_ha_adjust(self, action: dict) -> None:
+        """Action d'encodeur 'ha_adjust' (cible 'up:<entity_id>'/
+        'down:<entity_id>') - ajuste reellement l'entite HA visee
+        (luminosite/volume/vitesse/position/temperature) par pas, au lieu
+        d'appeler un service fixe : utile pour fan/cover/climate, qui n'ont
+        pas de service +/- generique equivalent a 'media' vol_up/vol_down -
+        voir ha_client.py::adjust_encoder_entity."""
+        target = action.get("target") or ""
+        direction_str, _, entity_id = target.partition(":")
+        if not entity_id or direction_str not in ("up", "down"):
+            raise ValueError(f"Cible d'ajustement HA invalide: {target!r}")
+        ha_conf = self.config.get("home_assistant") or {}
+        client = ha_client.HomeAssistantClient(ha_conf.get("url", ""), ha_conf.get("token", ""))
+        ha_client.adjust_encoder_entity(client, entity_id, 1 if direction_str == "up" else -1)
 
     def push_config(self) -> None:
         """Pousse la config des 16 emplacements (libelle/icone/type/

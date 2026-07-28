@@ -100,16 +100,27 @@ Si le sens horaire et le sens antihoraire d'un encodeur sont symetriques
 a partir de ses deux actions deja configurees, sans champ de config
 supplementaire :
 
-| configuration de l'encodeur (horaire / antihoraire)                          | ce que la barre affiche                  |
-|--------------------------------------------------------------------------------|-------------------------------------------|
-| `media` `vol_up` / `vol_down`                                                  | volume general Windows                    |
-| `app_volume` `up:<processus>` / `down:<processus>` (meme processus)           | volume de cette application                |
-| `home_assistant` sur la meme entite `light`/`media_player`/`fan`/`cover`/`climate` | luminosite/volume/vitesse/position/temperature de l'entite |
+| configuration de l'encodeur (horaire / antihoraire)                          | ce que la barre affiche                  | tourner l'encodeur regle vraiment la valeur ? |
+|--------------------------------------------------------------------------------|-------------------------------------------|-------------------------------------------|
+| `media` `vol_up` / `vol_down`                                                  | volume general Windows                    | oui (touche multimedia)                    |
+| `app_volume` `up:<processus>` / `down:<processus>` (meme processus)           | volume de cette application                | oui                                         |
+| `ha_adjust` `up:<entite>` / `down:<entite>` (meme entite `light`/`media_player`/`fan`/`cover`/`climate`) | valeur reelle de l'entite | oui - ajustement par pas via `ha_client.py::adjust_encoder_entity()`, recommande pour ces domaines |
+| `home_assistant` sur la meme entite (meme domaines)                            | valeur reelle de l'entite                  | seulement si le service configure ajuste bien la valeur (ex `light.toggle` ne fait qu'allumer/eteindre) |
 
 Sans configuration symetrique reconnue, la barre reste neutre (aucune
 valeur brute affichee). La synchronisation est relue toutes les ~2s
 (`encoder_sync.run_forever`) - Windows uniquement pour `media`/`app_volume`
-(pycaw), toutes plateformes pour `home_assistant`.
+(pycaw), toutes plateformes pour `ha_adjust`/`home_assistant`.
+
+**Pourquoi `ha_adjust` plutot que `home_assistant` pour fan/cover/climate ?**
+Contrairement au volume (`media_player.volume_up`/`volume_down`, sans
+parametre), la plupart des domaines HA n'ont pas de service "+/-" tout
+fait - regler un volet ou un thermostat necessite d'envoyer une valeur
+(ex `climate.set_temperature` avec un parametre `temperature`), ce que le
+format compact `domaine.service:entite` de `home_assistant` ne permet pas
+(aucune place pour une donnee). `ha_adjust` contourne ca : il lit la valeur
+actuelle de l'entite et calcule lui-meme le nouveau palier (5% pour
+light/media_player/fan/cover, 0.5°C pour climate) a chaque cran.
 
 ## Profils par application
 
@@ -186,6 +197,8 @@ la recoit, via `ha_poller.py`).
 | `home_assistant`  | emplacement : entite + service choisis dans la popup (voir "Choisir une entite Home Assistant" ci-dessous) ; encodeurs : format compact `domaine.service:entite`, ex `light.toggle:light.bureau` | appelle un service Home Assistant (bascule une lumiere/prise/scene...) - **sauf** pour un emplacement cible `media_player` : un tap ouvre une popup adaptee au lieu d'appeler le service directement, voir "Popup tactile adaptee" ci-dessous. Les ampoules restent en tap = bascule directe (reglage fin sur l'appui long, voir "Reglage couleur...") |
 | `audio_output`    | emplacement : peripheriques choisis dans la popup (liste recherchable, `streamdeck_companion/audio_devices.py`) - identifiant opaque, pas destine a etre tape a la main | bascule le peripherique de sortie audio par defaut (casque/enceintes...) - Windows uniquement |
 | `app_volume`      | encodeurs : `up:<processus>`/`down:<processus>` (ex `up:chrome.exe`), choisi dans une liste deroulante des applications ayant une session audio active (`streamdeck_companion/app_volume.py`) | regle le volume d'une application precise (et non le volume general) en tournant l'encodeur - Windows uniquement (pycaw) |
+| `app_mute`        | encodeurs : nom du processus (ex `chrome.exe`), meme liste deroulante que `app_volume` | bascule le son de cette application - pratique sur l'appui d'un encodeur dont la rotation est deja en `app_volume` - Windows uniquement (pycaw) |
+| `ha_adjust`       | encodeurs : `up:<entite>`/`down:<entite>` (ex `up:climate.salon`) | ajuste vraiment par pas (5% ou 0.5°C selon le domaine) la luminosite/volume/vitesse/position/temperature d'une entite `light`/`media_player`/`fan`/`cover`/`climate` - utile quand le domaine n'a pas de service HA sans parametre equivalent a `vol_up`/`vol_down` (ex un volet ou un thermostat), voir "La barre de l'encodeur affiche la vraie valeur" plus bas |
 
 ## Bibliotheque d'applications (type d'action `launch`)
 

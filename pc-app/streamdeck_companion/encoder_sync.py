@@ -57,6 +57,15 @@ def encoder_source(enc: dict) -> dict | None:
                 return {"kind": "home_assistant", "entity_id": entity_id}
         return None
 
+    if cw_type == "ha_adjust" and ccw_type == "ha_adjust":
+        cw_dir, _, cw_entity = (cw.get("target") or "").partition(":")
+        ccw_dir, _, ccw_entity = (ccw.get("target") or "").partition(":")
+        if cw_dir == "up" and ccw_dir == "down" and cw_entity and cw_entity == ccw_entity:
+            domain = cw_entity.split(".", 1)[0] if "." in cw_entity else ""
+            if ha.encoder_display_domain(domain):
+                return {"kind": "home_assistant", "entity_id": cw_entity}
+        return None
+
     return None
 
 

@@ -40,6 +40,8 @@ def run(action: dict) -> None:
         audio_devices.set_default_playback_device(target)
     elif kind == "app_volume":
         _app_volume(target)
+    elif kind == "app_mute":
+        _app_mute(target)
     else:
         raise ValueError(f"Type d'action inconnu: {kind!r}")
 
@@ -87,6 +89,16 @@ def _app_volume(target: str) -> None:
         raise ValueError(f"Cible de volume par application invalide: {target!r}")
     from . import app_volume
     app_volume.adjust_app_volume(app_key, 1 if direction_str == "up" else -1)
+
+
+def _app_mute(app_key: str) -> None:
+    """target: nom du processus (ex 'chrome.exe') - bascule le mute de
+    cette session audio, typiquement configure sur l'appui d'un encodeur
+    dont la rotation regle deja le volume via 'app_volume'."""
+    if not app_key:
+        raise ValueError("Cible de coupure du son par application invalide")
+    from . import app_volume
+    app_volume.toggle_app_mute(app_key)
 
 
 def _media_macos(name: str) -> None:

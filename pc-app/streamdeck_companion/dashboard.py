@@ -46,7 +46,10 @@ app = Flask(__name__)
 _config_path: Path = DEFAULT_CONFIG_PATH
 _device_client: DeviceClient | None = None
 
-ACTION_TYPES = ["none", "keys", "launch", "url", "media", "home_assistant", "audio_output", "app_volume"]
+ACTION_TYPES = [
+    "none", "keys", "launch", "url", "media", "home_assistant", "audio_output",
+    "app_volume", "app_mute", "ha_adjust",
+]
 SLOT_TYPES = ["bouton", "barre", "texte"]
 DIRECTIONS = ["clockwise", "anticlockwise", "press"]
 

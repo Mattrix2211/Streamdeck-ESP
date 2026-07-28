@@ -107,7 +107,13 @@ changements de la page courante (chaque page ne touche que sa portion de
   emplacement `barre` avec une source HA accepte aussi le tactile
   gauche/droite pour l'augmenter/diminuer directement
   (`ha_client.py::adjust_entity_percent()`, evenements
-  `barre_inc_N`/`barre_dec_N`).
+  `barre_inc_N`/`barre_dec_N`). Meme principe pour un encodeur configure en
+  action `ha_adjust` (cible `up:<entite>`/`down:<entite>`,
+  `device_client.py::_run_ha_adjust` -> `ha_client.py::adjust_encoder_entity()`)
+  - etend l'ajustement par pas aux domaines sans service HA "+/-" tout fait
+  (climate : pas de 0.5°C plutot que de pourcentage), pour que fan/cover/
+  climate soient reellement reglables par un encodeur et pas seulement
+  affiches (voir `encoder_sync.py` plus bas).
 - `ha_popup.py` : popup tactile pour une action `home_assistant` de type
   `bouton` ciblant un `media_player` - un simple tap (pas un appui long)
   ouvre un panneau (`HaPopupController`, meme esprit que
@@ -132,21 +138,24 @@ changements de la page courante (chaque page ne touche que sa portion de
 - `app_volume.py` : volume par application et volume general Windows
   (pycaw) - `AudioUtilities.GetAllSessions()` reparcourue a chaque appel
   (pas de nom de session par executable directement, et les sessions
-  vont/viennent avec les fenetres ouvertes). Alimente l'action d'encodeur
+  vont/viennent avec les fenetres ouvertes). Alimente les actions d'encodeur
   `app_volume` (`actions.py::_app_volume`, cible `up:<processus>`/
-  `down:<processus>`) et le picker correspondant de la popup encodeur
-  (route `/audio-sessions` de `dashboard.py`).
+  `down:<processus>`) et `app_mute` (`actions.py::_app_mute`, bascule le son
+  de l'appli - typiquement sur l'appui en complement de `app_volume` sur la
+  rotation) et le picker correspondant de la popup encodeur (route
+  `/audio-sessions` de `dashboard.py`, partage entre les deux types).
 - `encoder_sync.py` : fait correspondre la barre/etiquette d'un encodeur a
   la vraie valeur qu'il pilote, au lieu du compteur brut local de rotation
   (`encoder_source()` deduit ce que l'encodeur represente a partir de ses
   actions horaire/antihoraire deja configurees - si elles sont symetriques
   - meme cible, sens opposes - volume general Windows, volume d'une
   application, ou une entite Home Assistant `light`/`media_player`/`fan`/
-  `cover`/`climate`, cf `ha_client.py::_ENCODER_DISPLAY`/
-  `read_entity_level()`). Relit la source toutes les ~2s et pousse
-  pourcentage + etiquette vers deux nouvelles entites par encodeur
-  (`Encodeur N - valeur reelle`/`- affichage`, `firmware/encoder_sync.yaml`)
-  qui pilotent `bar_encoderN`/`lbl_encoderN` - le firmware n'ecrit plus ces
+  `cover`/`climate` (via `home_assistant` OU `ha_adjust`), cf
+  `ha_client.py::_ENCODER_DISPLAY`/`read_entity_level()`). Relit la source
+  toutes les ~2s et pousse pourcentage + etiquette vers deux nouvelles
+  entites par encodeur (`Encodeur N - valeur reelle`/`- affichage`,
+  `firmware/encoder_sync.yaml`) qui pilotent `bar_encoderN`/`lbl_encoderN` -
+  le firmware n'ecrit plus ces
   widgets depuis le compteur brut de rotation (`on_clockwise`/
   `on_anticlockwise`, eux, restent inchanges et continuent de declencher
   les actions configurees).

@@ -184,19 +184,12 @@ _ENCODER_DISPLAY: dict[str, dict] = {
     "climate": {
         "attr": "temperature", "range": True,
         "min_attr": "min_temp", "max_attr": "max_temp", "default_min": 7.0, "default_max": 35.0, "unit": "°C",
+        "service": "set_temperature", "param": "temperature", "step": 0.5,
     },
 }
 
 
-def adjust_entity_percent(client: "HomeAssistantClient", entity_id: str, direction: int, step: int = 5) -> None:
-    """Augmente/diminue (direction +1/-1) la valeur d'une entite HA d'un
-    widget "barre" par pas de `step` %, pour l'ajustement tactile gauche/
-    droite sur l'ecran - lit l'etat courant pour partir de la bonne valeur
-    plutot que d'ecraser avec une valeur absolue arbitraire."""
-    domain = entity_id.split(".", 1)[0] if "." in entity_id else ""
-    spec = _PERCENT_ADJUSTABLE.get(domain)
-    if not spec:
-        raise ValueError(f"Ajustement tactile non pris en charge pour le domaine {domain!r}")
+def _adjust_scale(client: "HomeAssistantClient", domain: str, spec: dict, entity_id: str, direction: int, step: int) -> None:
     state = client.get_state(entity_id)
     if state is None:
         raise RuntimeError(f"Entite introuvable : {entity_id}")
@@ -208,6 +201,50 @@ def adjust_entity_percent(client: "HomeAssistantClient", entity_id: str, directi
     new_pct = max(0, min(100, current_pct + direction * step))
     value = new_pct / 100 if spec.get("as_fraction") else new_pct
     client.call_service(domain, spec["service"], entity_id=entity_id, data={spec["param"]: value})
+
+
+def adjust_entity_percent(client: "HomeAssistantClient", entity_id: str, direction: int, step: int = 5) -> None:
+    """Augmente/diminue (direction +1/-1) la valeur d'une entite HA d'un
+    widget "barre" par pas de `step` %, pour l'ajustement tactile gauche/
+    droite sur l'ecran - lit l'etat courant pour partir de la bonne valeur
+    plutot que d'ecraser avec une valeur absolue arbitraire."""
+    domain = entity_id.split(".", 1)[0] if "." in entity_id else ""
+    spec = _PERCENT_ADJUSTABLE.get(domain)
+    if not spec:
+        raise ValueError(f"Ajustement tactile non pris en charge pour le domaine {domain!r}")
+    _adjust_scale(client, domain, spec, entity_id, direction, step)
+
+
+def adjust_encoder_entity(client: "HomeAssistantClient", entity_id: str, direction: int) -> None:
+    """Augmente/diminue (direction +1/-1) la valeur reellement pilotee par
+    un encodeur configure en action 'ha_adjust' (voir
+    device_client.py::_run_ha_adjust) - meme principe que
+    adjust_entity_percent (ajustement tactile des barres) mais etendu aux
+    domaines a plage reelle plutot qu'a echelle 0-100 (climate : la
+    temperature cible se regle par pas de `step` degres, pas par pourcentage),
+    et destine a la rotation d'un encodeur plutot qu'un tap tactile - permet
+    de vraiment regler fan/cover/climate au lieu de se limiter a l'affichage
+    de encoder_sync.py quand aucun service HA sans parametre n'existe
+    (ex: pas de 'climate.increase_temperature')."""
+    domain = entity_id.split(".", 1)[0] if "." in entity_id else ""
+    spec = _ENCODER_DISPLAY.get(domain)
+    if not spec:
+        raise ValueError(f"Ajustement par encodeur non pris en charge pour le domaine {domain!r}")
+    if not spec.get("range"):
+        _adjust_scale(client, domain, spec, entity_id, direction, step=5)
+        return
+    state = client.get_state(entity_id)
+    if state is None:
+        raise RuntimeError(f"Entite introuvable : {entity_id}")
+    attrs = state.get("attributes") or {}
+    try:
+        current = float(attrs.get(spec["attr"]))
+    except (TypeError, ValueError):
+        current = spec["default_min"]
+    lo = float(attrs.get(spec["min_attr"]) or spec["default_min"])
+    hi = float(attrs.get(spec["max_attr"]) or spec["default_max"])
+    new_value = max(lo, min(hi, current + direction * spec["step"]))
+    client.call_service(domain, spec["service"], entity_id=entity_id, data={spec["param"]: new_value})
 
 
 def encoder_display_domain(domain: str) -> bool:

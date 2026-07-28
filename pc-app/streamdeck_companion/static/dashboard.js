@@ -271,12 +271,13 @@ document.getElementById("encoder-modal-apply").addEventListener("click", () => {
   closeEncoderModal();
 });
 
-/* Picker "app_volume" (encodeurs) : liste des applications ayant une
- * session audio active (voir app_volume.py::list_audio_sessions et la
- * route /audio-sessions), chargee une seule fois par session comme
+/* Picker "app_volume"/"app_mute" (encodeurs) : liste des applications
+ * ayant une session audio active (voir app_volume.py::list_audio_sessions
+ * et la route /audio-sessions), chargee une seule fois par session comme
  * audioDevices dans audio-devices.js. Le champ cible reste un input texte
- * libre ("up:chrome.exe" / "down:chrome.exe") - ce picker se contente d'y
- * ecrire une valeur, sans empecher de la modifier a la main ensuite. */
+ * libre ("up:chrome.exe" / "down:chrome.exe" pour app_volume, "chrome.exe"
+ * tout court pour app_mute) - ce picker se contente d'y ecrire une valeur,
+ * sans empecher de la modifier a la main ensuite. */
 let audioSessions = null;
 
 function loadAudioSessionsIfNeeded(callback) {
@@ -313,13 +314,13 @@ function populateEncoderAppPicker(direction) {
 function updateEncoderAppPickerVisibility(direction) {
   const type = document.getElementById(`encoder-modal-${direction}-type`).value;
   const select = document.getElementById(`encoder-modal-${direction}-app`);
-  const isAppVolume = type === "app_volume";
-  select.style.display = isAppVolume ? "block" : "none";
-  if (!isAppVolume) return;
+  const needsPicker = type === "app_volume" || type === "app_mute";
+  select.style.display = needsPicker ? "block" : "none";
+  if (!needsPicker) return;
   loadAudioSessionsIfNeeded(() => {
     populateEncoderAppPicker(direction);
     const target = document.getElementById(`encoder-modal-${direction}-target`).value;
-    const app = target.includes(":") ? target.split(":")[1] : "";
+    const app = type === "app_mute" ? target : (target.includes(":") ? target.split(":")[1] : "");
     if (app) select.value = app;
   });
 }
@@ -327,8 +328,9 @@ function updateEncoderAppPickerVisibility(direction) {
 function applyEncoderAppSelection(direction) {
   const app = document.getElementById(`encoder-modal-${direction}-app`).value;
   if (!app) return;
-  const prefix = direction === "anticlockwise" ? "down" : "up";
-  document.getElementById(`encoder-modal-${direction}-target`).value = `${prefix}:${app}`;
+  const type = document.getElementById(`encoder-modal-${direction}-type`).value;
+  const value = type === "app_mute" ? app : `${direction === "anticlockwise" ? "down" : "up"}:${app}`;
+  document.getElementById(`encoder-modal-${direction}-target`).value = value;
 }
 
 DIRECTIONS.forEach((direction) => {

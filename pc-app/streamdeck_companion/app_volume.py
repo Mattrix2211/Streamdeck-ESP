@@ -1,6 +1,8 @@
 """Volume par application et volume general Windows (pycaw), pour :
 - l'action 'app_volume' des encodeurs (regler le volume d'une appli
   precise en tournant, voir actions.py) ;
+- l'action 'app_mute' (bascule du son d'une appli precise, typiquement
+  sur l'appui de l'encodeur en complement de 'app_volume' sur la rotation) ;
 - l'affichage de la vraie valeur sur la barre d'un encodeur (voir
   encoder_sync.py), que ce soit le volume general (encodeur configure en
   'media' vol_up/vol_down) ou celui d'une appli (encodeur configure en
@@ -85,6 +87,24 @@ def adjust_app_volume(app_key: str, direction: int, step: int = 5) -> None:
         current_pct = round(volume.GetMasterVolume() * 100)
         new_pct = max(0, min(100, current_pct + direction * step))
         volume.SetMasterVolume(new_pct / 100, None)
+    finally:
+        pythoncom.CoUninitialize()
+
+
+def toggle_app_mute(app_key: str) -> None:
+    """Bascule le mute de `app_key` - pense pour l'appui d'un encodeur
+    configure en 'app_volume' (voir actions.py::_app_mute), en complement
+    du reglage par rotation. Ne fait rien si l'appli n'a pas de session
+    active."""
+    _require_windows()
+    import pythoncom
+
+    pythoncom.CoInitialize()
+    try:
+        volume = _session_volume(app_key)
+        if volume is None:
+            return
+        volume.SetMute(not volume.GetMute(), None)
     finally:
         pythoncom.CoUninitialize()
 
