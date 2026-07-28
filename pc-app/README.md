@@ -76,16 +76,35 @@ ce qui s'affichera sur l'ecran physique, avant meme d'envoyer.
   la.
 - Cliquez une tuile (dans la maquette ou dans les masques) pour ouvrir sa
   popup de reglages (visibilite, libelle, icone, type, action).
-- Glissez-deposez une tuile sur une autre - dans la maquette, dans les
-  masques, ou de l'un vers l'autre - pour les echanger (utile pour faire
-  passer un emplacement masque a l'ecran, ou reordonner ceux deja
-  visibles).
 
 12 emplacements sont visibles par defaut (comme l'ancien systeme a 12
 boutons), les 4 derniers sont masques - faites-les glisser sur l'ecran (ou
 cochez "Visible sur l'ecran" dans leur popup) des que vous en avez besoin,
 sans reflasher. "Enregistrer et envoyer a l'ecran" sauvegarde et pousse
 immediatement la grille (emplacements + encodeurs) vers l'ecran.
+
+### Grille redimensionnable (facon "sections" Home Assistant)
+
+L'ecran est decoupe en une grille **invisible** de cases carrees (9
+colonnes x 4 lignes) : un emplacement peut occuper 1 ou plusieurs cases,
+au lieu d'etre fige a une seule taille comme avant.
+
+- **Deplacer** : glissez-deposez un emplacement n'importe ou sur la
+  grille - il se repositionne a la case visee (aimante a la grille).
+  Glissez-le sur la section "Emplacements masques" pour le retirer de
+  l'ecran (sa position/taille est conservee pour la prochaine fois).
+  Glissez un emplacement masque sur la grille pour l'y afficher.
+- **Redimensionner** : tirez sur le petit repere en bas a droite d'un
+  emplacement pour l'agrandir/reduire (en cases entieres), comme les
+  widgets petit/moyen/grand d'un iPhone.
+- **Pas de chevauchement** : deux emplacements ne peuvent pas occuper la
+  meme case - un depot ou redimensionnement qui provoquerait un
+  chevauchement est simplement refuse (l'emplacement reste ou il etait).
+
+Cote firmware, chaque emplacement est repositionne/redimensionne en direct
+(`firmware/slot_grid.yaml`, un lambda LVGL par emplacement) des que l'appli
+PC pousse sa nouvelle disposition - aucun reflashage necessaire pour
+changer l'agencement de l'ecran.
 
 Les 3 encodeurs de la maquette sont cliquables comme les emplacements :
 leur popup regle l'action de chacun des 3 sens (horaire, antihoraire,
@@ -501,9 +520,12 @@ necessaire pour que les emplacements/encodeurs du Stream Deck fonctionnent
   bien plus lourde). Pour un vrai indicateur en direct, utilisez un
   emplacement type `texte`/`barre` avec une source Home Assistant (ex un
   media_player HA) a la place.
-- Le glisser-deposer **echange** deux emplacements (pas d'insertion avec
-  decalage des autres) - comportement simple et previsible plutot qu'un
-  reordonnancement complet.
+- La grille (9x4 cases) est une limite fixe : impossible d'avoir plus de
+  4 lignes de cases ou un emplacement plus large que 9 cases - largement
+  au-dela de ce qu'un ecran de cette taille peut afficher lisiblement, mais
+  a garder en tete si vous changez CELL/GAP/PITCH/COLS dans
+  `scripts/gen_slot_grid.py` (a resynchroniser avec
+  `package.yaml::action_grid` et `profiles.py::GRID_COLS/GRID_ROWS`).
 - Pas d'upload d'icone personnalisee : le catalogue est un jeu curate de
   glyphes Material Icons (`streamdeck_companion/icons.py`, 172 icones).
   Pour en ajouter, il faut aussi ajouter le point de code correspondant au

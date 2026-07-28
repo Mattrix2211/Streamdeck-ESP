@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-  <p class="sub">Aperçu fidele de l'ecran (memes proportions et disposition). Cliquez un emplacement ou un encodeur pour le configurer, glissez-deposez les emplacements pour reordonner.</p>
+  <p class="sub">Aperçu fidele de l'ecran (memes proportions et disposition). Cliquez un emplacement ou un encodeur pour le configurer. Glissez-deposez un emplacement pour le repositionner sur la grille invisible, ou tirez sur son coin bas-droit pour le redimensionner (facon "sections" Home Assistant) - deux emplacements ne peuvent pas se chevaucher.</p>
 
   <div class="profile-bar">
     <div id="profile-tabs" class="profile-tabs"></div>
@@ -26,7 +26,7 @@
 
     <div class="hidden-tray-section">
       <h2>Emplacements masques</h2>
-      <p class="hint">N'apparaissent pas sur l'ecran. Cliquez pour configurer/activer, ou glissez-les sur un emplacement de l'ecran ci-dessus pour les echanger.</p>
+      <p class="hint">N'apparaissent pas sur l'ecran. Cliquez pour configurer/activer, ou glissez-les sur la grille de l'ecran ci-dessus pour les y afficher (glissez un emplacement de l'ecran ici pour le masquer).</p>
       <div id="hidden-tray" class="hidden-tray"></div>
     </div>
 

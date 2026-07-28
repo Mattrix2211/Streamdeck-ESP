@@ -77,21 +77,33 @@ button.danger:hover { background: rgba(230,57,70,.12); }
 .screen-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(11px, 2.2vw, 18px); color: #fff; }
 .screen-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green-tech); }
 .screen-grid-wrap { flex: 0 0 70%; min-height: 0; display: flex; justify-content: center; overflow: hidden; }
-.screen-grid { width: 94.1%; height: 100%; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 1.7%; }
+/* Grille invisible de 9 colonnes x 4 lignes de cases carrees (voir
+ * firmware/slot_grid.yaml) - chaque tuile se positionne via grid-column/
+ * grid-row (span N), poses en JS depuis dashboard.js::makeTile(). */
+.screen-grid {
+  width: 94.1%; height: 100%;
+  display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(4, 1fr);
+  gap: 1.7%; position: relative; border-radius: 8px; transition: background-color .1s;
+}
+.screen-grid.drag-over, .hidden-tray.drag-over { background: var(--horizon); }
 .screen-encoders { flex: 0 0 13.3%; min-height: 0; display: flex; align-items: center; justify-content: space-evenly; gap: 2%; margin-top: 0.7%; overflow: hidden; }
 .screen-status { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: clamp(8px, 1.4vw, 11px); color: var(--fog); overflow: hidden; }
 
 /* --- Emplacements de la grille (dans la maquette d'ecran) --- */
 .slot-tile {
-  width: 23.7%; aspect-ratio: 232 / 96;
   background: var(--ocean); border: 1px solid var(--slate); border-radius: 8px;
-  padding: 4% 6%; cursor: pointer; user-select: none;
+  padding: 4% 6%; cursor: pointer; user-select: none; position: relative; min-width: 0; min-height: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   transition: border-color .15s;
 }
 .slot-tile.shape-rond { border-radius: 999px; }
 .slot-tile:hover { border-color: var(--signal); }
-.slot-tile.drag-over { border-color: var(--signal); background: var(--horizon); }
+.tile-resize-handle {
+  position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px;
+  cursor: nwse-resize; opacity: 0.35; border-right: 2px solid var(--signal); border-bottom: 2px solid var(--signal);
+  border-radius: 0 0 4px 0;
+}
+.tile-resize-handle:hover { opacity: 1; }
 .slot-tile .icon { font-family: 'Material Icons'; font-size: clamp(10px, 2.4vw, 20px); color: var(--signal); line-height: 1; }
 .slot-tile .icon img { width: clamp(14px, 3.2vw, 26px); height: clamp(14px, 3.2vw, 26px); border-radius: 5px; display: block; }
 .slot-tile .label {

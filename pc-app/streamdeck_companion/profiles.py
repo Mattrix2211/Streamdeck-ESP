@@ -16,6 +16,20 @@ from __future__ import annotations
 SLOT_COUNT = 16
 DEFAULT_PROFILE_NAME = "Defaut"
 
+# Grille invisible de cases carrees (voir firmware/slot_grid.yaml et
+# scripts/gen_slot_grid.py - CES 3 endroits doivent rester coherents si la
+# geometrie change un jour) : un emplacement occupe 1 ou plusieurs cases
+# ("colspan"/"rowspan"), facon "sections" de Home Assistant, au lieu d'une
+# grille fixe 4x4 a une seule taille de tuile.
+GRID_COLS = 9
+GRID_ROWS = 4
+
+
+def default_grid(i: int) -> dict:
+    """Disposition par defaut (avant toute personnalisation au glisser-
+    depose/redimensionnement) : range dans l'ordre de lecture, 1x1 case."""
+    return {"col": i % GRID_COLS, "row": i // GRID_COLS, "colspan": 1, "rowspan": 1}
+
 
 def default_slot(i: int) -> dict:
     return {
@@ -26,6 +40,7 @@ def default_slot(i: int) -> dict:
         "action": {"type": "none", "target": ""},
         "ha_entity": "",
         "show_light_color": False,
+        "grid": default_grid(i),
     }
 
 

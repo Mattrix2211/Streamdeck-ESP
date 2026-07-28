@@ -47,8 +47,10 @@ telephone") :
   maquette fidele de l'ecran (memes proportions et disposition que le
   firmware) avec ses propres 16 emplacements (bouton/barre/texte, icone,
   action) et 3 encodeurs, configurables via popup - les emplacements
-  masques sont a part sous la maquette, glisser-deposer pour
-  reordonner/echanger dans les deux sections - la seule page du quotidien.
+  masques sont a part sous la maquette. Les emplacements affiches se
+  deplacent/redimensionnent par glisser-depose sur une grille invisible de
+  cases carrees (voir "Grille invisible redimensionnable" plus bas) - la
+  seule page du quotidien.
   L'ecran bascule automatiquement sur le profil dont le declencheur
   correspond a l'application au premier plan sur le PC (voir "Profils par
   application" plus bas). Le type d'action `launch` propose une
@@ -203,15 +205,48 @@ LVGL/ESPHome fige la disposition a la compilation - impossible de changer
 le nombre de widgets sans reflasher. Le compromis retenu : 16 emplacements
 sont toujours presents dans le firmware (`firmware/slots_*.yaml` +
 `slot_widgets.yaml`), chacun montrable/masquable et reconfigurable a chaud
-(sans reflasher) via 5 entites :
+(sans reflasher) via 6 entites :
 
 - `text` libelle, `text` valeur (widgets), `text` icone (glyphe brut)
 - `select` type (`bouton`/`barre`/`texte`)
 - `switch` visible
+- `text` grille (position/taille - voir ci-dessous)
 
 12 sont visibles par defaut (comportement identique a l'ancien systeme a
 12 boutons), 4 desactives - a activer depuis la popup d'un emplacement
 ("Visible sur l'ecran") quand besoin.
+
+### Grille invisible redimensionnable (facon "sections" Home Assistant)
+
+Plutot qu'une grille figee a une seule taille de tuile (l'ancien systeme,
+4 colonnes x 4 lignes de tuiles identiques), l'ecran est decoupe en une
+grille invisible de **9 colonnes x 4 lignes de cases carrees** (96px,
+espacement 12px - `firmware/package.yaml::action_grid`, 960x420, centree
+sur l'ecran de 1024x600). Un emplacement peut occuper 1 ou plusieurs cases
+(`colspan`/`rowspan`), deplace/redimensionne par glisser-depose dans
+`dashboard.js` (grille CSS native `grid-column`/`grid-row: span N`, plus
+un repere de redimensionnement par tuile - collision detectee cote JS
+avant tout depot/redimensionnement, voir `hasCollision()`).
+
+- **Modele de donnees** : chaque `slot` a un champ `grid` = `{col, row,
+  colspan, rowspan}` (`profiles.py::default_grid()` - disposition par
+  defaut : range dans l'ordre de lecture, 1x1 case ; `GRID_COLS`/
+  `GRID_ROWS` doivent rester coherents avec le firmware et
+  `dashboard.js`).
+- **Poussee vers l'ecran** : `device_client.py::push_config()` envoie une
+  seule entite texte compacte par emplacement (`Slot N - grille`, format
+  "colonne,ligne,largeur_cases,hauteur_cases", ex "2,1,3,2").
+- **Cote firmware** (`firmware/slot_grid.yaml`, genere par
+  `scripts/gen_slot_grid.py`) : le lambda `on_value` de chaque entite
+  parse ce CSV, calcule la position/taille en pixels (case=96px,
+  espacement=12px) et repositionne/redimensionne le bouton de
+  l'emplacement (`lv_obj_set_pos`/`lv_obj_set_size`) ainsi que ses
+  sous-widgets (titre, barre, zones tactiles gauche/droite) en proportion
+  - tout ceci en direct, sans reflasher. `firmware/slot_widgets.yaml`
+  (genere par `scripts/gen_slot_widgets.py`) ne fixe plus qu'une position/
+  taille par defaut (1x1, avant le premier push du PC) ; `action_grid` n'a
+  plus de `layout: flex` (chaque bouton est positionne individuellement
+  via `align: top_left` + x/y/width/height explicites).
 
 ## Profils par application
 

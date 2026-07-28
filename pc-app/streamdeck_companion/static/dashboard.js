@@ -79,12 +79,117 @@ function iconChar(key) {
   return found ? found.char : "";
 }
 
-function makeTile(slot, index) {
+/* Grille invisible de cases carrees (9 colonnes x 4 lignes - voir
+ * firmware/slot_grid.yaml, package.yaml::action_grid et
+ * profiles.py::GRID_COLS/GRID_ROWS, ces 3 endroits doivent rester
+ * coherents) : un emplacement occupe 1 ou plusieurs cases ("colspan"/
+ * "rowspan"), facon "sections" de Home Assistant, au lieu d'une grille
+ * fixe a une seule taille de tuile. */
+const GRID_COLS = 9;
+const GRID_ROWS = 4;
+
+function slotGrid(slot) {
+  const g = slot.grid || {};
+  return {
+    col: Math.max(0, Math.min(GRID_COLS - 1, g.col ?? 0)),
+    row: Math.max(0, Math.min(GRID_ROWS - 1, g.row ?? 0)),
+    colspan: Math.max(1, Math.min(GRID_COLS, g.colspan ?? 1)),
+    rowspan: Math.max(1, Math.min(GRID_ROWS, g.rowspan ?? 1)),
+  };
+}
+
+function rectsOverlap(a, b) {
+  return a.col < b.col + b.colspan && a.col + a.colspan > b.col &&
+         a.row < b.row + b.rowspan && a.row + a.rowspan > b.row;
+}
+
+/* True si `rect` (candidat de position/taille) chevauche un AUTRE
+ * emplacement visible que celui d'index `excludeIndex` - empeche de
+ * deposer/redimensionner une carte par-dessus une autre. */
+function hasCollision(excludeIndex, rect) {
+  return slots.some((slot, i) => {
+    if (i === excludeIndex || !slot.visible) return false;
+    return rectsOverlap(rect, slotGrid(slot));
+  });
+}
+
+/* Premiere case libre (ordre de lecture) pour un emplacement colspan x
+ * rowspan - utilise quand on rend un emplacement visible autrement que par
+ * glisser-depose (ex: case a cocher "Visible" de la popup), pour eviter
+ * qu'il chevauche silencieusement un autre emplacement deja affiche a la
+ * meme position enregistree. */
+function findFreeCell(excludeIndex, colspan, rowspan) {
+  for (let row = 0; row <= GRID_ROWS - rowspan; row++) {
+    for (let col = 0; col <= GRID_COLS - colspan; col++) {
+      if (!hasCollision(excludeIndex, { col, row, colspan, rowspan })) return { col, row };
+    }
+  }
+  return { col: 0, row: 0 };
+}
+
+function pointToCell(clientX, clientY) {
+  const rect = screenGrid.getBoundingClientRect();
+  const col = Math.floor(((clientX - rect.left) / rect.width) * GRID_COLS);
+  const row = Math.floor(((clientY - rect.top) / rect.height) * GRID_ROWS);
+  return {
+    col: Math.max(0, Math.min(GRID_COLS - 1, col)),
+    row: Math.max(0, Math.min(GRID_ROWS - 1, row)),
+  };
+}
+
+function attachResizeHandle(tile, index) {
+  const handle = document.createElement("div");
+  handle.className = "tile-resize-handle";
+  handle.draggable = false;
+  handle.title = "Glisser pour redimensionner";
+  handle.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const gridRect = screenGrid.getBoundingClientRect();
+    const cellW = gridRect.width / GRID_COLS;
+    const cellH = gridRect.height / GRID_ROWS;
+    const g0 = slotGrid(slots[index]);
+    let finalColspan = g0.colspan;
+    let finalRowspan = g0.rowspan;
+
+    function onMove(ev) {
+      const dCols = Math.round((ev.clientX - startX) / cellW);
+      const dRows = Math.round((ev.clientY - startY) / cellH);
+      let colspan = Math.max(1, Math.min(GRID_COLS - g0.col, g0.colspan + dCols));
+      let rowspan = Math.max(1, Math.min(GRID_ROWS - g0.row, g0.rowspan + dRows));
+      while (colspan > 1 && hasCollision(index, { col: g0.col, row: g0.row, colspan, rowspan })) colspan--;
+      while (rowspan > 1 && hasCollision(index, { col: g0.col, row: g0.row, colspan, rowspan })) rowspan--;
+      finalColspan = colspan;
+      finalRowspan = rowspan;
+      tile.style.gridColumn = `${g0.col + 1} / span ${colspan}`;
+      tile.style.gridRow = `${g0.row + 1} / span ${rowspan}`;
+    }
+    function onUp() {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      slots[index].grid = { col: g0.col, row: g0.row, colspan: finalColspan, rowspan: finalRowspan };
+      renderGrid();
+    }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  });
+  tile.appendChild(handle);
+}
+
+function makeTile(slot, index, isGrid) {
   const tile = document.createElement("div");
   tile.className = "slot-tile shape-" + (SHAPE === "rond" ? "rond" : "carre");
   if (slot.type && slot.type !== "bouton") tile.classList.add("has-widget");
   tile.draggable = true;
   tile.dataset.index = String(index);
+
+  if (isGrid) {
+    const g = slotGrid(slot);
+    tile.style.gridColumn = `${g.col + 1} / span ${g.colspan}`;
+    tile.style.gridRow = `${g.row + 1} / span ${g.rowspan}`;
+  }
 
   const icon = document.createElement("div");
   icon.className = "icon";
@@ -125,21 +230,51 @@ function makeTile(slot, index) {
 
   tile.addEventListener("click", () => openModal(index));
   tile.addEventListener("dragstart", () => { dragSrcIndex = index; });
-  tile.addEventListener("dragover", (e) => { e.preventDefault(); tile.classList.add("drag-over"); });
-  tile.addEventListener("dragleave", () => tile.classList.remove("drag-over"));
-  tile.addEventListener("drop", (e) => {
-    e.preventDefault();
-    tile.classList.remove("drag-over");
-    if (dragSrcIndex === null || dragSrcIndex === index) return;
-    const tmp = slots[index];
-    slots[index] = slots[dragSrcIndex];
-    slots[dragSrcIndex] = tmp;
-    dragSrcIndex = null;
-    renderGrid();
-  });
+  tile.addEventListener("dragend", () => { dragSrcIndex = null; });
+
+  if (isGrid) attachResizeHandle(tile, index);
 
   return tile;
 }
+
+/* Deplacer/redimensionner se fait au niveau du CONTENEUR (grille ou tray)
+ * plutot que par tuile - une tuile deposee "swap" son contenu entier dans
+ * l'ancien systeme a taille fixe, incompatible avec une position/taille
+ * libre : ici, deposer met a jour la position de la tuile SOURCE (et sa
+ * visibilite), sans toucher aux autres. */
+screenGrid.addEventListener("dragover", (e) => { e.preventDefault(); screenGrid.classList.add("drag-over"); });
+screenGrid.addEventListener("dragleave", (e) => { if (e.target === screenGrid) screenGrid.classList.remove("drag-over"); });
+screenGrid.addEventListener("drop", (e) => {
+  e.preventDefault();
+  screenGrid.classList.remove("drag-over");
+  if (dragSrcIndex === null) return;
+  const slot = slots[dragSrcIndex];
+  const g = slotGrid(slot);
+  const target = pointToCell(e.clientX, e.clientY);
+  const candidate = {
+    col: Math.min(target.col, GRID_COLS - g.colspan),
+    row: Math.min(target.row, GRID_ROWS - g.rowspan),
+    colspan: g.colspan,
+    rowspan: g.rowspan,
+  };
+  const srcIndex = dragSrcIndex;
+  dragSrcIndex = null;
+  if (hasCollision(srcIndex, candidate)) return;
+  slot.visible = true;
+  slot.grid = candidate;
+  renderGrid();
+});
+
+hiddenTray.addEventListener("dragover", (e) => { e.preventDefault(); hiddenTray.classList.add("drag-over"); });
+hiddenTray.addEventListener("dragleave", (e) => { if (e.target === hiddenTray) hiddenTray.classList.remove("drag-over"); });
+hiddenTray.addEventListener("drop", (e) => {
+  e.preventDefault();
+  hiddenTray.classList.remove("drag-over");
+  if (dragSrcIndex === null) return;
+  slots[dragSrcIndex].visible = false;
+  dragSrcIndex = null;
+  renderGrid();
+});
 
 function renderGrid() {
   screenGrid.innerHTML = "";
@@ -147,11 +282,10 @@ function renderGrid() {
   let hiddenCount = 0;
 
   slots.forEach((slot, index) => {
-    const tile = makeTile(slot, index);
     if (slot.visible) {
-      screenGrid.appendChild(tile);
+      screenGrid.appendChild(makeTile(slot, index, true));
     } else {
-      hiddenTray.appendChild(tile);
+      hiddenTray.appendChild(makeTile(slot, index, false));
       hiddenCount += 1;
     }
   });
@@ -159,7 +293,7 @@ function renderGrid() {
   if (hiddenCount === 0) {
     const empty = document.createElement("p");
     empty.className = "hidden-tray-empty";
-    empty.textContent = "Aucun - les 16 emplacements sont visibles sur l'ecran.";
+    empty.textContent = "Aucun - tous les emplacements visibles sont sur l'ecran.";
     hiddenTray.appendChild(empty);
   }
 }
@@ -244,7 +378,18 @@ document.getElementById("icon-search").addEventListener("input", (e) => {
 document.getElementById("modal-apply").addEventListener("click", () => {
   if (currentIndex === null) return;
   const slot = slots[currentIndex];
+  const wasVisible = !!slot.visible;
   slot.visible = document.getElementById("modal-visible").checked;
+  if (slot.visible && !wasVisible) {
+    /* Rendu visible autrement que par glisser-depose (case a cocher) - la
+     * position enregistree peut chevaucher un emplacement deja affiche,
+     * on cherche alors la premiere case libre plutot que de superposer. */
+    const g = slotGrid(slot);
+    if (hasCollision(currentIndex, g)) {
+      const free = findFreeCell(currentIndex, g.colspan, g.rowspan);
+      slot.grid = { col: free.col, row: free.row, colspan: g.colspan, rowspan: g.rowspan };
+    }
+  }
   slot.label = document.getElementById("modal-label").value.trim() || `Slot ${currentIndex + 1}`;
   slot.type = document.getElementById("modal-type").value;
   slot.icon = modal.dataset.selectedIcon || "";

@@ -311,6 +311,7 @@ packages:
   ha_popup: !include ha_popup.yaml
   encoder_sync: !include encoder_sync.yaml
   icon_font: !include icon_font.yaml
+  slot_grid: !include slot_grid.yaml
 
 # ---------------------------------------------------------------------------
 # Forme des boutons - modifiable a chaud (carre ou rond) depuis Home
@@ -418,29 +419,28 @@ lvgl:
                   bg_color: 0xE63946
                   border_width: 0
 
-        # Grille de 16 emplacements configurables (boutons/widgets). Forme
-        # (carre/rond) pilotee par "button_shape", contenu/visibilite par
-        # les entites generees dans slots_*.yaml (voir docs/ARCHITECTURE.md).
-        # width: 964 (4 tuiles de 232px + 3 espacements de 12px) plutot que
-        # 700 - une largeur fixe trop etroite pour l'ecran (1024px) laissait
-        # une bande vide de chaque cote (align: top_mid centre 964 avec
-        # ~30px de marge symetrique, contre ~162px avant).
+        # Grille invisible de 16 emplacements configurables (boutons/widgets),
+        # facon "sections" de Home Assistant : 9 colonnes x 4 lignes de cases
+        # carrees de 96px (espacement 12px) -> 960x420, centree (align:
+        # top_mid) avec ~32px de marge symetrique sur l'ecran de 1024px.
+        # Chaque emplacement peut occuper 1 ou plusieurs cases - PAS de
+        # layout flex ici (contrairement a avant) : chaque bouton est
+        # positionne/dimensionne individuellement (align: top_left + x/y/
+        # width/height explicites dans slot_widgets.yaml), mis a jour en
+        # direct par le lambda de son entite "Slot N - grille" (voir
+        # slot_grid.yaml) des que l'appli PC pousse une nouvelle disposition
+        # (glisser-deposer/redimensionner, sans reflasher). Forme (carre/
+        # rond) pilotee par "button_shape", contenu/visibilite par les
+        # entites generees dans slots_*.yaml (voir docs/ARCHITECTURE.md).
         - obj:
             id: action_grid
             height: 420
-            width: 964
+            width: 960
             y: 64
             align: top_mid
             bg_opa: transp
             border_width: 0
             pad_all: 0
-            layout:
-              type: flex
-              flex_flow: row_wrap
-              flex_align_cross: start
-              flex_align_main: start
-              pad_row: 12
-              pad_column: 12
             widgets: !include slot_widgets.yaml
 
         # Bas d'ecran : 3 cartes encodeurs + statut PC - masque pendant le

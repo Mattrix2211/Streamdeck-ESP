@@ -43,6 +43,10 @@ SLOT_ICON_NAMES = [f"Slot {i} - icone" for i in range(1, SLOT_COUNT + 1)]
 SLOT_COLOR_NAMES = [f"Slot {i} - couleur" for i in range(1, SLOT_COUNT + 1)]
 SLOT_TYPE_NAMES = [f"Slot {i} - type" for i in range(1, SLOT_COUNT + 1)]
 SLOT_VISIBLE_NAMES = [f"Slot {i} - visible" for i in range(1, SLOT_COUNT + 1)]
+# Position/taille sur la grille invisible de cases carrees (voir
+# firmware/slot_grid.yaml) - format compact "colonne,ligne,largeur,hauteur"
+# en cases, ex "2,1,3,2" (voir profile_utils.default_grid).
+SLOT_GRID_NAMES = [f"Slot {i} - grille" for i in range(1, SLOT_COUNT + 1)]
 
 SHAPE_ENTITY_NAME = "Forme des boutons"
 ACTION_EVENT_ENTITY = "Bouton d'action ecran"
@@ -146,7 +150,7 @@ class DeviceClient:
         entities, _services = await self.client.list_entities_services()
         tracked_text_select = (
             *SLOT_LABEL_NAMES, *SLOT_VALUE_NAMES, *SLOT_ICON_NAMES, *SLOT_COLOR_NAMES, *SLOT_TYPE_NAMES,
-            *ENCODER_LABEL_NAMES,
+            *SLOT_GRID_NAMES, *ENCODER_LABEL_NAMES,
             SHAPE_ENTITY_NAME, STATUS_ENTITY_NAME, PC_BASE_URL_ENTITY_NAME, ha_popup_module.TITLE_TEXT_NAME,
         )
         # Switches ecrits par le PC uniquement (visibilite d'un panneau/
@@ -380,8 +384,8 @@ class DeviceClient:
         if self.client is None or not self.connected:
             raise RuntimeError("Pas encore connecte a l'ecran")
         slots = self._active_profile().get("slots", [])
-        names = zip(SLOT_LABEL_NAMES, SLOT_ICON_NAMES, SLOT_TYPE_NAMES, SLOT_VISIBLE_NAMES)
-        for i, (label_name, icon_name, type_name, visible_name) in enumerate(names):
+        names = zip(SLOT_LABEL_NAMES, SLOT_ICON_NAMES, SLOT_TYPE_NAMES, SLOT_VISIBLE_NAMES, SLOT_GRID_NAMES)
+        for i, (label_name, icon_name, type_name, visible_name, grid_name) in enumerate(names):
             slot = slots[i] if i < len(slots) else None
             label_key = self.entity_keys.get(label_name)
             if label_key is not None:
@@ -395,6 +399,13 @@ class DeviceClient:
             visible_key = self.entity_keys.get(visible_name)
             if visible_key is not None:
                 self.client.switch_command(visible_key, bool((slot or {}).get("visible", i < 12)))
+            grid_key = self.entity_keys.get(grid_name)
+            if grid_key is not None:
+                grid = (slot or {}).get("grid") or profile_utils.default_grid(i)
+                self.client.text_command(
+                    grid_key,
+                    f'{grid.get("col", 0)},{grid.get("row", 0)},{grid.get("colspan", 1)},{grid.get("rowspan", 1)}',
+                )
         shape = self.config.get("shape")
         shape_key = self.entity_keys.get(SHAPE_ENTITY_NAME)
         if shape and shape_key is not None:
