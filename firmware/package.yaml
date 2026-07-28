@@ -421,10 +421,14 @@ lvgl:
         # Grille de 16 emplacements configurables (boutons/widgets). Forme
         # (carre/rond) pilotee par "button_shape", contenu/visibilite par
         # les entites generees dans slots_*.yaml (voir docs/ARCHITECTURE.md).
+        # width: 964 (4 tuiles de 232px + 3 espacements de 12px) plutot que
+        # 700 - une largeur fixe trop etroite pour l'ecran (1024px) laissait
+        # une bande vide de chaque cote (align: top_mid centre 964 avec
+        # ~30px de marge symetrique, contre ~162px avant).
         - obj:
             id: action_grid
             height: 420
-            width: 700
+            width: 964
             y: 64
             align: top_mid
             bg_opa: transp

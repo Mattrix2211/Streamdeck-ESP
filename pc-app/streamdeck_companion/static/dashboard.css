@@ -77,13 +77,13 @@ button.danger:hover { background: rgba(230,57,70,.12); }
 .screen-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(11px, 2.2vw, 18px); color: #fff; }
 .screen-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green-tech); }
 .screen-grid-wrap { flex: 0 0 70%; min-height: 0; display: flex; justify-content: center; overflow: hidden; }
-.screen-grid { width: 68.4%; height: 100%; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 1.7%; }
+.screen-grid { width: 94.1%; height: 100%; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 1.7%; }
 .screen-encoders { flex: 0 0 13.3%; min-height: 0; display: flex; align-items: center; justify-content: space-evenly; gap: 2%; margin-top: 0.7%; overflow: hidden; }
 .screen-status { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: clamp(8px, 1.4vw, 11px); color: var(--fog); overflow: hidden; }
 
 /* --- Emplacements de la grille (dans la maquette d'ecran) --- */
 .slot-tile {
-  width: 22.5%; aspect-ratio: 160 / 96;
+  width: 23.7%; aspect-ratio: 232 / 96;
   background: var(--ocean); border: 1px solid var(--slate); border-radius: 8px;
   padding: 4% 6%; cursor: pointer; user-select: none;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
@@ -120,7 +120,7 @@ button.danger:hover { background: rgba(230,57,70,.12); }
 /* --- Emplacements masques (hors ecran, App Library-like) --- */
 .hidden-tray-section { margin-top: 20px; }
 .hidden-tray { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
-.hidden-tray .slot-tile { width: 90px; aspect-ratio: 160/96; opacity: 0.55; }
+.hidden-tray .slot-tile { width: 110px; aspect-ratio: 232/96; opacity: 0.55; }
 .hidden-tray .slot-tile:hover { opacity: 1; }
 .hidden-tray-empty { color: var(--fog); font-size: 13px; font-style: italic; }
 
