@@ -119,7 +119,7 @@ fait - regler un volet ou un thermostat necessite d'envoyer une valeur
 (ex `climate.set_temperature` avec un parametre `temperature`), ce que le
 format compact `domaine.service:entite` de `home_assistant` ne permet pas
 (aucune place pour une donnee). `ha_adjust` contourne ca : il lit la valeur
-actuelle de l'entite et calcule lui-meme le nouveau palier (5% pour
+actuelle de l'entite et calcule lui-meme le nouveau palier (1% pour
 light/media_player/fan/cover, 0.5°C pour climate) a chaque cran.
 
 ## Profils par application
@@ -198,7 +198,7 @@ la recoit, via `ha_poller.py`).
 | `audio_output`    | emplacement : peripheriques choisis dans la popup (liste recherchable, `streamdeck_companion/audio_devices.py`) - identifiant opaque, pas destine a etre tape a la main | bascule le peripherique de sortie audio par defaut (casque/enceintes...) - Windows uniquement |
 | `app_volume`      | encodeurs : `up:<processus>`/`down:<processus>` (ex `up:chrome.exe`), choisi dans une liste deroulante des applications ayant une session audio active (`streamdeck_companion/app_volume.py`) | regle le volume d'une application precise (et non le volume general) en tournant l'encodeur - Windows uniquement (pycaw) |
 | `app_mute`        | encodeurs : nom du processus (ex `chrome.exe`), meme liste deroulante que `app_volume` | bascule le son de cette application - pratique sur l'appui d'un encodeur dont la rotation est deja en `app_volume` - Windows uniquement (pycaw) |
-| `ha_adjust`       | encodeurs : `up:<entite>`/`down:<entite>` (ex `up:climate.salon`) | ajuste vraiment par pas (5% ou 0.5°C selon le domaine) la luminosite/volume/vitesse/position/temperature d'une entite `light`/`media_player`/`fan`/`cover`/`climate` - utile quand le domaine n'a pas de service HA sans parametre equivalent a `vol_up`/`vol_down` (ex un volet ou un thermostat), voir "La barre de l'encodeur affiche la vraie valeur" plus bas |
+| `ha_adjust`       | encodeurs : `up:<entite>`/`down:<entite>` (ex `up:climate.salon`) | ajuste vraiment par pas (1% ou 0.5°C selon le domaine) la luminosite/volume/vitesse/position/temperature d'une entite `light`/`media_player`/`fan`/`cover`/`climate` - utile quand le domaine n'a pas de service HA sans parametre equivalent a `vol_up`/`vol_down` (ex un volet ou un thermostat), voir "La barre de l'encodeur affiche la vraie valeur" plus bas |
 
 ## Bibliotheque d'applications (type d'action `launch`)
 

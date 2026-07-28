@@ -231,7 +231,7 @@ def adjust_encoder_entity(client: "HomeAssistantClient", entity_id: str, directi
     if not spec:
         raise ValueError(f"Ajustement par encodeur non pris en charge pour le domaine {domain!r}")
     if not spec.get("range"):
-        _adjust_scale(client, domain, spec, entity_id, direction, step=5)
+        _adjust_scale(client, domain, spec, entity_id, direction, step=1)
         return
     state = client.get_state(entity_id)
     if state is None:
