@@ -248,6 +248,46 @@ avant tout depot/redimensionnement, voir `hasCollision()`).
   plus de `layout: flex` (chaque bouton est positionne individuellement
   via `align: top_left` + x/y/width/height explicites).
 
+### Carte meteo (widget dedie, anime)
+
+Widget independant des 16 emplacements generiques (au plus un par
+profil, cle `weather` du profil - voir `profiles.py::default_weather()`),
+partageant la meme grille invisible (meme mecanisme de position/taille
+compact que les emplacements) mais avec son propre contenu/sa propre
+popup de configuration (entite HA `weather.*`).
+
+- **PC** (`streamdeck_companion/weather.py`) : traduit la condition d'une
+  entite `weather.*` (`sunny`/`rainy`/`snowy`/... - vocabulaire standard
+  Home Assistant) en `(icone, style d'animation)` via `_CONDITION_MAP`,
+  et l'attribut `temperature` (PAS l'etat lui-meme, qui est la condition
+  textuelle) en texte forme. `ha_poller.py` sonde l'entite configuree
+  (si la carte est visible) a la meme cadence que les widgets `barre`/
+  `texte` et pousse icone/style/temperature via
+  `device_client.py::push_weather_display()` - separe de `push_config()`
+  (position/visibilite) pour ne pas re-pousser la geometrie a chaque
+  rafraichissement.
+- **Firmware** (`firmware/weather_card.yaml`, genere par
+  `scripts/gen_weather_card.py` ; le bouton de la carte lui-meme vit dans
+  `slot_widgets.yaml` en tant que 17e widget de `action_grid` - voir le
+  commentaire de `gen_weather_card.py` pour le pourquoi, `!include` ne
+  remplacant qu'une seule cle) : ne connait pas Home Assistant, se
+  contente d'afficher/animer selon le style recu (`Meteo - animation`).
+  Un pool d'objets LVGL pre-declares (gouttes de pluie, flocons, rayons de
+  soleil, etoiles, nuages) est deplace/montre/cache par une unique boucle
+  `interval:` (90ms, `globals: weather_tick/weather_style/weather_w/
+  weather_h`) plutot que par l'API d'animation LVGL (`lv_anim_t`),
+  volontairement evitee : sa disponibilite/signature exacte depend trop
+  precisement de la version LVGL packagee par ESPHome pour etre fiable
+  sans pouvoir compiler/tester directement sur le materiel - seules des
+  primitives deja eprouvees ailleurs dans ce firmware sont utilisees
+  (`lv_obj_set_pos`/`lv_obj_set_size`, `lv_obj_set_style_bg_opa`,
+  `lv_obj_add_flag`/`clear_flag(LV_OBJ_FLAG_HIDDEN)`).
+- **Batterie des peripheriques** (demande dans la meme discussion) :
+  etudiee, non implementee - voir "Limitations connues" du README pc-app
+  (le SDK Corsair iCUE n'expose pas la batterie officiellement, et le
+  contournement par lecture memoire necessite un acces a la machine
+  cible pour trouver l'adresse exacte).
+
 ## Profils par application
 
 Un Stream Deck du commerce change de grille selon l'application active -

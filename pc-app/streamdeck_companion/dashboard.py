@@ -100,6 +100,12 @@ def normalize_slots(raw_slots: list[dict] | None) -> list[dict]:
     return normalized
 
 
+def normalize_weather(raw_weather: dict | None) -> dict:
+    """Complete la carte meteo avec les valeurs par defaut - profils
+    enregistres avant l'introduction de ce widget (pas de cle 'weather')."""
+    return {**profile_utils.default_weather(), **(raw_weather or {})}
+
+
 def push_to_screen() -> str | None:
     """Tente de pousser la config vers l'ecran. Retourne un message d'erreur
     (ou None si tout va bien) - a chaque endpoint de decider quoi en faire."""
@@ -155,6 +161,7 @@ def profile_to_fields(profile: dict) -> dict:
         "trigger": profile.get("trigger"),
         "slots": slots,
         "encoders": encoders_to_fields(profile.get("encoders")),
+        "weather": normalize_weather(profile.get("weather")),
     }
 
 
@@ -192,6 +199,7 @@ def fields_to_profile(raw_profile: dict) -> dict:
         "trigger": trigger,
         "slots": slots,
         "encoders": fields_to_encoders(raw_profile.get("encoders") or []),
+        "weather": normalize_weather(raw_profile.get("weather")),
     }
 
 

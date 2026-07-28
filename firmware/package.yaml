@@ -312,6 +312,7 @@ packages:
   encoder_sync: !include encoder_sync.yaml
   icon_font: !include icon_font.yaml
   slot_grid: !include slot_grid.yaml
+  weather_card: !include weather_card.yaml
 
 # ---------------------------------------------------------------------------
 # Forme des boutons - modifiable a chaud (carre ou rond) depuis Home

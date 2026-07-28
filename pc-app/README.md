@@ -106,6 +106,38 @@ Cote firmware, chaque emplacement est repositionne/redimensionne en direct
 PC pousse sa nouvelle disposition - aucun reflashage necessaire pour
 changer l'agencement de l'ecran.
 
+### Carte meteo (widget dedie, anime)
+
+Au plus une par profil, elle partage la meme grille invisible que les 16
+emplacements (glisser-deposer/redimensionner pareil) mais se configure a
+part - cliquez la tuile "Meteo" (dans la maquette ou les emplacements
+masques) pour choisir une entite `weather.*` Home Assistant.
+
+Affiche une icone + la temperature, **animee selon la condition** :
+
+| condition Home Assistant | animation |
+|---|---|
+| `sunny` | soleil qui scintille (rayons) |
+| `clear-night` | etoiles qui clignotent |
+| `cloudy`/`partlycloudy`/`fog` | nuages qui derivent |
+| `rainy`/`pouring`/`hail`/`lightning`/`lightning-rainy` | pluie qui tombe |
+| `snowy`/`snowy-rainy` | neige qui tombe (avec une legere derive) |
+| `windy`/`windy-variant`/`exceptional` | icone statique (pas d'animation dediee) |
+
+La correspondance condition -> icone/animation est faite cote PC
+(`streamdeck_companion/weather.py`, facile a etendre/corriger sans
+reflasher), le firmware se contente d'afficher/animer selon le style
+recu (`firmware/weather_card.yaml`) - une seule boucle `interval:` (90ms)
+anime les elements (gouttes/flocons/rayons/etoiles/nuages) deja presents
+sur l'ecran, en les deplacant/montrant/cachant selon la condition, sans
+recourir a l'API d'animation LVGL (`lv_anim_t`) dont le comportement exact
+est trop incertain sans pouvoir compiler/tester directement sur le
+materiel.
+
+Necessite une integration meteo configuree dans Home Assistant (ex
+"Meteo-France", "OpenWeatherMap", "Pirate Weather"...) exposant une
+entite `weather.*`.
+
 Les 3 encodeurs de la maquette sont cliquables comme les emplacements :
 leur popup regle l'action de chacun des 3 sens (horaire, antihoraire,
 appui).
@@ -483,6 +515,17 @@ necessaire pour que les emplacements/encodeurs du Stream Deck fonctionnent
 
 ## Limitations connues
 
+- **Batterie des peripheriques (Corsair iCUE)** : etudiee, pas implementee.
+  Le SDK officiel iCUE (`cuesdk` sur PyPI) n'expose PAS le niveau de
+  batterie - limitation confirmee, demandee de longue date par la
+  communaute Corsair sans reponse officielle. Seul contournement connu :
+  lire la valeur directement dans la memoire du processus iCUE en cours
+  d'execution (comme un projet communautaire trouve en recherche), ce qui
+  necessite de scanner cette memoire SUR LA MACHINE CIBLE (ex. via Cheat
+  Engine) pour trouver l'adresse exacte - specifique a la version d'iCUE
+  et aux peripheriques branches, et casse a chaque mise a jour d'iCUE. Pas
+  d'implementation fiable possible sans acces a une machine reelle pour
+  determiner cette adresse au prealable.
 - Les combinaisons clavier et touches multimedia passent par le module
   `keyboard`, qui necessite les droits administrateur/root sur certaines
   plateformes (et ne fonctionne pas sous Wayland).

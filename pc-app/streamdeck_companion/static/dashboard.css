@@ -104,6 +104,7 @@ button.danger:hover { background: rgba(230,57,70,.12); }
   border-radius: 0 0 4px 0;
 }
 .tile-resize-handle:hover { opacity: 1; }
+.weather-tile { background: linear-gradient(160deg, var(--ocean), var(--horizon)); border-color: #2A5A7A; }
 .slot-tile .icon { font-family: 'Material Icons'; font-size: clamp(10px, 2.4vw, 20px); color: var(--signal); line-height: 1; }
 .slot-tile .icon img { width: clamp(14px, 3.2vw, 26px); height: clamp(14px, 3.2vw, 26px); border-radius: 5px; display: block; }
 .slot-tile .label {

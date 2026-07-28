@@ -13,6 +13,7 @@ import logging
 import threading
 
 from . import ha_client as ha
+from . import weather as weather_module
 from .device_client import DeviceClient
 
 LOG = logging.getLogger("streamdeck_ha_poller")
@@ -61,6 +62,18 @@ def poll_once(device_client: DeviceClient) -> dict[int, str]:
                     state = None
                 if state is not None:
                     colors[idx] = ha.light_color_hex(state)
+
+    weather = device_client.active_profile().get("weather") or {}
+    if weather.get("visible") and weather.get("entity"):
+        try:
+            info = weather_module.read_weather(client, weather["entity"])
+        except Exception:
+            LOG.exception("Echec de lecture de la carte meteo pour %s", weather.get("entity"))
+            info = None
+        if info is not None and device_client.connected:
+            device_client.schedule_push_weather_display(
+                info["icon_char"], info["animation_style"], info["temperature"]
+            )
 
     if device_client.connected:
         if values:

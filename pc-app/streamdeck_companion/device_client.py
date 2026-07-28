@@ -48,6 +48,16 @@ SLOT_VISIBLE_NAMES = [f"Slot {i} - visible" for i in range(1, SLOT_COUNT + 1)]
 # en cases, ex "2,1,3,2" (voir profile_utils.default_grid).
 SLOT_GRID_NAMES = [f"Slot {i} - grille" for i in range(1, SLOT_COUNT + 1)]
 
+# Carte meteo (widget dedie, au plus un par profil - voir weather.py et
+# firmware/weather_card.yaml). Meme mecanisme de grille que les
+# emplacements (WEATHER_GRID_NAME), plus 3 entites de contenu poussees
+# periodiquement par ha_poller.py.
+WEATHER_GRID_NAME = "Meteo - grille"
+WEATHER_VISIBLE_NAME = "Meteo - visible"
+WEATHER_ICON_NAME = "Meteo - icone"
+WEATHER_ANIMATION_NAME = "Meteo - animation"
+WEATHER_TEMPERATURE_NAME = "Meteo - temperature"
+
 SHAPE_ENTITY_NAME = "Forme des boutons"
 ACTION_EVENT_ENTITY = "Bouton d'action ecran"
 ENCODER_EVENT_ENTITIES = [f"Encodeur {i} - evenement" for i in range(1, 4)]
@@ -151,13 +161,14 @@ class DeviceClient:
         tracked_text_select = (
             *SLOT_LABEL_NAMES, *SLOT_VALUE_NAMES, *SLOT_ICON_NAMES, *SLOT_COLOR_NAMES, *SLOT_TYPE_NAMES,
             *SLOT_GRID_NAMES, *ENCODER_LABEL_NAMES,
+            WEATHER_GRID_NAME, WEATHER_ICON_NAME, WEATHER_ANIMATION_NAME, WEATHER_TEMPERATURE_NAME,
             SHAPE_ENTITY_NAME, STATUS_ENTITY_NAME, PC_BASE_URL_ENTITY_NAME, ha_popup_module.TITLE_TEXT_NAME,
         )
         # Switches ecrits par le PC uniquement (visibilite d'un panneau/
         # emplacement) - contrairement a POWER_SWITCH_NAME plus bas, jamais
         # relus depuis l'ecran.
         write_only_switches = (
-            *SLOT_VISIBLE_NAMES, color_mode_module.SWITCH_NAME, ha_popup_module.ACTIVE_SWITCH_NAME,
+            *SLOT_VISIBLE_NAMES, WEATHER_VISIBLE_NAME, color_mode_module.SWITCH_NAME, ha_popup_module.ACTIVE_SWITCH_NAME,
         )
         for ent in entities:
             if isinstance(ent, EventInfo) and ent.name in (ACTION_EVENT_ENTITY, *ENCODER_EVENT_ENTITIES):
@@ -406,10 +417,40 @@ class DeviceClient:
                     grid_key,
                     f'{grid.get("col", 0)},{grid.get("row", 0)},{grid.get("colspan", 1)},{grid.get("rowspan", 1)}',
                 )
+        weather = self._active_profile().get("weather") or profile_utils.default_weather()
+        weather_visible_key = self.entity_keys.get(WEATHER_VISIBLE_NAME)
+        if weather_visible_key is not None:
+            self.client.switch_command(weather_visible_key, bool(weather.get("visible")))
+        weather_grid_key = self.entity_keys.get(WEATHER_GRID_NAME)
+        if weather_grid_key is not None:
+            g = weather.get("grid") or profile_utils.default_weather()["grid"]
+            self.client.text_command(
+                weather_grid_key, f'{g.get("col", 0)},{g.get("row", 0)},{g.get("colspan", 2)},{g.get("rowspan", 2)}'
+            )
+
         shape = self.config.get("shape")
         shape_key = self.entity_keys.get(SHAPE_ENTITY_NAME)
         if shape and shape_key is not None:
             self.client.select_command(shape_key, shape)
+
+    def push_weather_display(self, icon_char: str, animation_style: str, temperature: str) -> None:
+        """Pousse le contenu de la carte meteo (voir weather.py) - separe
+        de push_config() (position/visibilite) pour ne pas re-pousser la
+        geometrie a chaque rafraichissement periodique (ha_poller.py)."""
+        if self.client is None or not self.connected:
+            return
+        icon_key = self.entity_keys.get(WEATHER_ICON_NAME)
+        if icon_key is not None:
+            self.client.text_command(icon_key, icon_char)
+        animation_key = self.entity_keys.get(WEATHER_ANIMATION_NAME)
+        if animation_key is not None:
+            self.client.text_command(animation_key, animation_style)
+        temperature_key = self.entity_keys.get(WEATHER_TEMPERATURE_NAME)
+        if temperature_key is not None:
+            self.client.text_command(temperature_key, temperature[:16])
+
+    def schedule_push_weather_display(self, icon_char: str, animation_style: str, temperature: str, timeout: float = 5.0) -> None:
+        self._run_threadsafe(lambda: self.push_weather_display(icon_char, animation_style, temperature), timeout)
 
     def push_slot_values(self, values: dict[int, str]) -> None:
         """Pousse uniquement les valeurs (widgets barre/texte) pour les

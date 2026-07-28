@@ -22,6 +22,9 @@ let manualOverride = MANUAL_OVERRIDE;
  * switchProfileTab() les re-pointe vers le profil choisi. */
 let slots = profiles[activeEditIndex].slots;
 let encoders = profiles[activeEditIndex].encoders;
+let weather = profiles[activeEditIndex].weather;
+/* Index du glisser-depose en cours - un index de emplacement (0-15) ou -1
+ * pour la carte meteo (voir gridItem()), null si aucun glisser en cours. */
 let dragSrcIndex = null;
 let currentIndex = null;
 let currentEncoderIndex = null;
@@ -103,13 +106,24 @@ function rectsOverlap(a, b) {
          a.row < b.row + b.rowspan && a.row + a.rowspan > b.row;
 }
 
+/* La carte meteo (widget dedie, au plus un par profil - voir weather.py)
+ * participe a la meme grille que les 16 emplacements : on la traite comme
+ * un emplacement "virtuel" d'index -1 partout ou la logique de grille
+ * (collision, glisser-depose, redimensionnement) doit la prendre en
+ * compte, pour eviter de dupliquer cette logique en deux versions. */
+function gridItem(index) {
+  return index === -1 ? weather : slots[index];
+}
+
 /* True si `rect` (candidat de position/taille) chevauche un AUTRE
- * emplacement visible que celui d'index `excludeIndex` - empeche de
- * deposer/redimensionner une carte par-dessus une autre. */
+ * emplacement/la carte meteo visible que celui d'index `excludeIndex` -
+ * empeche de deposer/redimensionner une carte par-dessus une autre. */
 function hasCollision(excludeIndex, rect) {
-  return slots.some((slot, i) => {
-    if (i === excludeIndex || !slot.visible) return false;
-    return rectsOverlap(rect, slotGrid(slot));
+  const indices = [-1, ...slots.map((_, i) => i)];
+  return indices.some((i) => {
+    if (i === excludeIndex) return false;
+    const item = gridItem(i);
+    return item.visible && rectsOverlap(rect, slotGrid(item));
   });
 }
 
@@ -150,7 +164,7 @@ function attachResizeHandle(tile, index) {
     const gridRect = screenGrid.getBoundingClientRect();
     const cellW = gridRect.width / GRID_COLS;
     const cellH = gridRect.height / GRID_ROWS;
-    const g0 = slotGrid(slots[index]);
+    const g0 = slotGrid(gridItem(index));
     let finalColspan = g0.colspan;
     let finalRowspan = g0.rowspan;
 
@@ -169,7 +183,7 @@ function attachResizeHandle(tile, index) {
     function onUp() {
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
-      slots[index].grid = { col: g0.col, row: g0.row, colspan: finalColspan, rowspan: finalRowspan };
+      gridItem(index).grid = { col: g0.col, row: g0.row, colspan: finalColspan, rowspan: finalRowspan };
       renderGrid();
     }
     document.addEventListener("mousemove", onMove);
@@ -248,8 +262,8 @@ screenGrid.addEventListener("drop", (e) => {
   e.preventDefault();
   screenGrid.classList.remove("drag-over");
   if (dragSrcIndex === null) return;
-  const slot = slots[dragSrcIndex];
-  const g = slotGrid(slot);
+  const item = gridItem(dragSrcIndex);
+  const g = slotGrid(item);
   const target = pointToCell(e.clientX, e.clientY);
   const candidate = {
     col: Math.min(target.col, GRID_COLS - g.colspan),
@@ -260,8 +274,8 @@ screenGrid.addEventListener("drop", (e) => {
   const srcIndex = dragSrcIndex;
   dragSrcIndex = null;
   if (hasCollision(srcIndex, candidate)) return;
-  slot.visible = true;
-  slot.grid = candidate;
+  item.visible = true;
+  item.grid = candidate;
   renderGrid();
 });
 
@@ -271,10 +285,50 @@ hiddenTray.addEventListener("drop", (e) => {
   e.preventDefault();
   hiddenTray.classList.remove("drag-over");
   if (dragSrcIndex === null) return;
-  slots[dragSrcIndex].visible = false;
+  gridItem(dragSrcIndex).visible = false;
   dragSrcIndex = null;
   renderGrid();
 });
+
+/* Carte meteo (widget dedie, voir weather.py/firmware/weather_card.yaml) -
+ * meme grille/collision que les emplacements (voir gridItem(-1)), mais
+ * contenu et popup de configuration distincts (pas d'action/type/icone a
+ * choisir, juste une entite HA weather.* et une visibilite). */
+function makeWeatherTile(isGrid) {
+  const tile = document.createElement("div");
+  tile.className = "slot-tile weather-tile shape-" + (SHAPE === "rond" ? "rond" : "carre");
+  tile.draggable = true;
+  tile.dataset.index = "-1";
+
+  if (isGrid) {
+    const g = slotGrid(weather);
+    tile.style.gridColumn = `${g.col + 1} / span ${g.colspan}`;
+    tile.style.gridRow = `${g.row + 1} / span ${g.rowspan}`;
+  }
+
+  const icon = document.createElement("div");
+  icon.className = "icon";
+  icon.textContent = iconChar("wb_sunny");
+  tile.appendChild(icon);
+
+  const label = document.createElement("div");
+  label.className = "label";
+  label.textContent = weather.entity ? "Meteo" : "Meteo (non configuree)";
+  tile.appendChild(label);
+
+  const value = document.createElement("div");
+  value.className = "widget-value";
+  value.textContent = weather.entity ? "--°" : "";
+  tile.appendChild(value);
+
+  tile.addEventListener("click", openWeatherModal);
+  tile.addEventListener("dragstart", () => { dragSrcIndex = -1; });
+  tile.addEventListener("dragend", () => { dragSrcIndex = null; });
+
+  if (isGrid) attachResizeHandle(tile, -1);
+
+  return tile;
+}
 
 function renderGrid() {
   screenGrid.innerHTML = "";
@@ -289,6 +343,13 @@ function renderGrid() {
       hiddenCount += 1;
     }
   });
+
+  if (weather.visible) {
+    screenGrid.appendChild(makeWeatherTile(true));
+  } else {
+    hiddenTray.appendChild(makeWeatherTile(false));
+    hiddenCount += 1;
+  }
 
   if (hiddenCount === 0) {
     const empty = document.createElement("p");
@@ -500,6 +561,53 @@ DIRECTIONS.forEach((direction) => {
     .addEventListener("change", () => updateEncoderAppPickerVisibility(direction));
   document.getElementById(`encoder-modal-${direction}-app`)
     .addEventListener("change", () => applyEncoderAppSelection(direction));
+});
+
+/* Popup de la carte meteo (widget dedie, voir makeWeatherTile()) - juste
+ * une entite HA (domaine "weather" uniquement) et une visibilite, pas de
+ * type/icone/action a choisir contrairement a un emplacement. */
+const weatherModal = document.getElementById("weather-modal");
+
+function openWeatherModal() {
+  document.getElementById("weather-modal-visible").checked = !!weather.visible;
+  document.getElementById("weather-modal-entity").value = weather.entity || "";
+  document.getElementById("weather-modal-search").value = "";
+  document.getElementById("weather-modal-status").textContent = "";
+  loadHaEntitiesIfNeeded((err) => {
+    document.getElementById("weather-modal-status").textContent = err || "";
+    renderEntityList("weather-modal-list", "", (entity) => {
+      document.getElementById("weather-modal-search").value = entity.name;
+      document.getElementById("weather-modal-entity").value = entity.entity_id;
+    }, "weather");
+  });
+  weatherModal.classList.remove("hidden");
+}
+
+function closeWeatherModal() {
+  weatherModal.classList.add("hidden");
+}
+
+document.getElementById("weather-modal-search").addEventListener("input", (e) => {
+  renderEntityList("weather-modal-list", e.target.value, (entity) => {
+    document.getElementById("weather-modal-search").value = entity.name;
+    document.getElementById("weather-modal-entity").value = entity.entity_id;
+  }, "weather");
+});
+
+document.getElementById("weather-modal-cancel").addEventListener("click", closeWeatherModal);
+document.getElementById("weather-modal-apply").addEventListener("click", () => {
+  const wasVisible = !!weather.visible;
+  weather.entity = document.getElementById("weather-modal-entity").value.trim();
+  weather.visible = document.getElementById("weather-modal-visible").checked;
+  if (weather.visible && !wasVisible) {
+    const g = slotGrid(weather);
+    if (hasCollision(-1, g)) {
+      const free = findFreeCell(-1, g.colspan, g.rowspan);
+      weather.grid = { col: free.col, row: free.row, colspan: g.colspan, rowspan: g.rowspan };
+    }
+  }
+  renderGrid();
+  closeWeatherModal();
 });
 
 document.getElementById("config-form").addEventListener("submit", () => {

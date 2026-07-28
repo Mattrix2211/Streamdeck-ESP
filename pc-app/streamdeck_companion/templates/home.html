@@ -140,6 +140,30 @@
     </div>
   </div>
 
+  <div id="weather-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <h2>Carte meteo</h2>
+      <label>Visible sur l'ecran</label>
+      <input type="checkbox" id="weather-modal-visible">
+
+      <label>Entite meteo Home Assistant</label>
+      <input type="text" id="weather-modal-search" placeholder="Rechercher une entite meteo...">
+      <div id="weather-modal-list" class="entity-list"></div>
+      <p id="weather-modal-status" class="hint"></p>
+      <input type="text" id="weather-modal-entity" placeholder="weather.maison" readonly>
+      <p class="hint">
+        Affiche une icone selon la condition (soleil/pluie/neige/nuage/nuit...),
+        animee sur l'ecran, plus la temperature. Necessite une integration
+        meteo configuree dans Home Assistant (ex "Meteo-France", "OpenWeatherMap").
+      </p>
+
+      <div class="modal-buttons">
+        <button type="button" id="weather-modal-cancel" class="secondary">Annuler</button>
+        <button type="button" id="weather-modal-apply">Appliquer</button>
+      </div>
+    </div>
+  </div>
+
   <div id="profile-modal" class="modal-backdrop hidden">
     <div class="modal">
       <h2 id="profile-modal-title">Nouveau profil</h2>

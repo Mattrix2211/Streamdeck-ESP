@@ -21,15 +21,16 @@ function loadHaEntitiesIfNeeded(callback) {
     });
 }
 
-function renderEntityList(listId, query, onSelect) {
+function renderEntityList(listId, query, onSelect, domainFilter) {
   const list = document.getElementById(listId);
   list.innerHTML = "";
   if (!haEntities) return;
 
+  const pool = domainFilter ? haEntities.filter((e) => e.domain === domainFilter) : haEntities;
   const q = query.trim().toLowerCase();
   const filtered = q
-    ? haEntities.filter((e) => e.name.toLowerCase().includes(q) || e.entity_id.toLowerCase().includes(q)).slice(0, 50)
-    : haEntities.slice(0, 50);
+    ? pool.filter((e) => e.name.toLowerCase().includes(q) || e.entity_id.toLowerCase().includes(q)).slice(0, 50)
+    : pool.slice(0, 50);
 
   if (!filtered.length) {
     const empty = document.createElement("p");

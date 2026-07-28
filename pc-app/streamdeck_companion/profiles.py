@@ -53,8 +53,18 @@ def default_encoders() -> list[dict]:
     return [{"clockwise": dict(empty), "anticlockwise": dict(empty), "press": dict(empty)} for _ in range(3)]
 
 
+def default_weather() -> dict:
+    """Carte meteo : widget dedie (pas un des 16 emplacements generiques),
+    au plus une par profil - voir weather.py et firmware/weather_card.yaml.
+    2x2 cases par defaut (assez pour icone + temperature + condition)."""
+    return {"visible": False, "entity": "", "grid": {"col": 0, "row": 0, "colspan": 2, "rowspan": 2}}
+
+
 def default_profile(name: str = DEFAULT_PROFILE_NAME, trigger: dict | None = None) -> dict:
-    return {"name": name, "trigger": trigger, "slots": default_slots(), "encoders": default_encoders()}
+    return {
+        "name": name, "trigger": trigger, "slots": default_slots(), "encoders": default_encoders(),
+        "weather": default_weather(),
+    }
 
 
 def migrate_profiles(config: dict) -> list[dict]:
