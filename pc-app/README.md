@@ -3,7 +3,7 @@
 Deux pages, comme gerer les pages d'applications sur un telephone :
 
 - **Accueil** : un ou plusieurs **profils** (onglets), chacun avec sa
-  propre grille de 16 emplacements ET ses 3 encodeurs - chaque
+  propre grille de 36 emplacements ET ses 3 encodeurs - chaque
   emplacement/encodeur se configure via sa propre popup (glisser-deposer
   pour reordonner les emplacements). L'ecran **bascule automatiquement**
   sur le bon profil selon l'application au premier plan sur le PC (ex : la
@@ -71,11 +71,12 @@ ce qui s'affichera sur l'ecran physique, avant meme d'envoyer.
 - Les boutons **affiches** apparaissent dans la maquette d'ecran, a la
   meme place qu'ils occuperont reellement.
 - Sous la maquette, la **bibliotheque** liste tous les boutons enregistres
-  qui ne sont pas actuellement affiches - PAS limitee a 16, contrairement
+  qui ne sont pas actuellement affiches - PAS limitee, contrairement
   a l'ecran physique. Enregistrez-en autant que vous voulez (raccourcis,
   scenes HA, jeux...) pour les reutiliser plus tard, sans jamais etre
-  bloque - seuls 16 au maximum peuvent etre affiches simultanement (limite
-  materielle de l'ecran, 16 boutons physiques dans le firmware).
+  bloque - seuls 36 au maximum peuvent etre affiches simultanement (limite
+  materielle de l'ecran : 36 boutons physiques dans le firmware, un par
+  case de la grille invisible 9x4).
 - Cliquez une tuile (affichee ou dans la bibliotheque) pour ouvrir sa
   popup de reglages (libelle, icone, type, action) - un bouton "+" dans la
   bibliotheque pour en creer un nouveau.
@@ -181,7 +182,7 @@ light/media_player/fan/cover, 0.5°C pour climate) a chaque cran.
 ## Profils par application
 
 Au-dessus de la maquette, une barre d'onglets liste vos **profils** - chacun
-une grille de 16 emplacements + 3 encodeurs independante. Un point vert sur
+une grille de 36 emplacements + 3 encodeurs independante. Un point vert sur
 un onglet indique le profil **reellement affiche sur l'ecran en ce moment**.
 
 - **Creer un profil** : "+ Nouveau profil" - donnez-lui un nom et un
@@ -213,7 +214,7 @@ autres sont juste enregistres, prets a s'activer a leur tour).
 ### Reglages (`/reglages`)
 
 Connexion (IP/port/cle API), forme des boutons (carre/rond, s'applique aux
-16 emplacements), Home Assistant (URL + jeton). Des reglages qu'on ne
+36 emplacements), Home Assistant (URL + jeton). Des reglages qu'on ne
 touche presque jamais une fois l'ecran configure - a l'ecart de la page
 qu'on utilise au quotidien.
 

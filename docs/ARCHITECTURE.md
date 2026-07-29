@@ -5,7 +5,7 @@
                          |  Stream Deck (ESP32-P4)  |
                          |  ESPHome + LVGL          |
                          |  - ecran tactile 1024x600|
-                         |  - 16 emplacements + 3 encodeurs|
+                         |  - 36 emplacements + 3 encodeurs|
                          |  - Wi-Fi via ESP32-C6     |
                          +------------+-------------+
                                       |
@@ -45,7 +45,7 @@ eviter la surcharge (esprit "gerer ses pages d'applications sur un
 telephone") :
 - **Accueil** (`/`) : un ou plusieurs **profils** (onglets), chacun une
   maquette fidele de l'ecran (memes proportions et disposition que le
-  firmware) avec ses propres 16 emplacements (bouton/barre/texte, icone,
+  firmware) avec ses propres emplacements (36 possibles, bouton/barre/texte, icone,
   action) et 3 encodeurs, configurables via popup - les emplacements
   masques sont a part sous la maquette. Les emplacements affiches se
   deplacent/redimensionnent par glisser-depose sur une grille invisible de
@@ -199,12 +199,13 @@ changements de la page courante (chaque page ne touche que sa portion de
   parallele, mais ce n'est **pas necessaire** pour que le Stream Deck
   fonctionne avec le PC.
 
-## Les 16 emplacements (au lieu de boutons fixes)
+## Les 36 emplacements (au lieu de boutons fixes)
 
 LVGL/ESPHome fige la disposition a la compilation - impossible de changer
-le nombre de widgets sans reflasher. Le compromis retenu : 16 emplacements
-PHYSIQUES sont toujours presents dans le firmware (`firmware/slots_*.yaml`
-+ `slot_widgets.yaml`), chacun reconfigurable a chaud (sans reflasher) via
+le nombre de widgets sans reflasher. Le compromis retenu : 36 emplacements
+PHYSIQUES (un par case de la grille invisible 9x4, voir plus bas) sont
+toujours presents dans le firmware (`firmware/slots_*.yaml` +
+`slot_widgets.yaml`), chacun reconfigurable a chaud (sans reflasher) via
 5 entites :
 
 - `text` libelle, `text` valeur (widgets), `text` icone (glyphe brut)
@@ -213,26 +214,33 @@ PHYSIQUES sont toujours presents dans le firmware (`firmware/slots_*.yaml`
 - `text` grille (position/taille - voir "Grille invisible redimensionnable"
   plus bas)
 
-Le firmware ne voit toujours QUE ces 16 emplacements - la bibliotheque
+Le firmware ne voit toujours QUE ces 36 emplacements - la bibliotheque
 illimitee ci-dessous est une couche PC-side au-dessus, invisible pour lui.
+36 = `GRID_COLS * GRID_ROWS` (9x4), la capacite maximale de la grille avec
+des emplacements 1x1 - au-dela, il n'y a de toute facon plus de place a
+l'ecran (`SLOT_COUNT` a ete porte de 16 a 36 pour ne plus etre une limite
+artificielle plus basse que la grille elle-meme, voir
+`scripts/gen_slot_entities.py`/`gen_slot_grid.py`/`gen_slot_widgets.py`/
+`gen_slot_icons.py`).
 
-### Bibliotheque illimitee + assignation (au lieu de 16 boutons figes)
+### Bibliotheque illimitee + assignation (au lieu de boutons figes)
 
-A l'origine, les 16 emplacements etaient a la fois le STOCKAGE (libelle/
-icone/action) et l'AFFICHAGE (position, visible ou non) d'un bouton - la
-seule facon d'avoir plus de 16 boutons configures etait... de ne pas
-pouvoir. Depuis, ces deux roles sont separes (`profiles.py`) :
+A l'origine, les emplacements physiques etaient a la fois le STOCKAGE
+(libelle/icone/action) et l'AFFICHAGE (position, visible ou non) d'un
+bouton - la seule facon d'avoir plus de boutons configures que
+d'emplacements physiques etait... de ne pas pouvoir. Depuis, ces deux
+roles sont separes (`profiles.py`) :
 
 - **`profile["library"]`** : bibliotheque de boutons enregistres, PAS
-  limitee a 16 - chaque entree (`default_library_entry()`) a un `id`
+  limitee - chaque entree (`default_library_entry()`) a un `id`
   stable et porte tout le contenu (libelle/icone/type/action/ha_entity/
   show_light_color). Creee/modifiee/supprimee librement depuis la popup
   d'un bouton (bouton "+" de `dashboard.js` pour en creer une).
-- **`profile["slots"]`** : exactement 16 emplacements PHYSIQUES (miroir
-  1:1 des 16 objets LVGL du firmware), chacun ne stockant plus que sa
-  position/taille de grille et **quelle entree de bibliotheque y est
-  actuellement assignee** (`library_id`, ou `None` si l'emplacement est
-  libre/invisible).
+- **`profile["slots"]`** : exactement `SLOT_COUNT` (36) emplacements
+  PHYSIQUES (miroir 1:1 des objets LVGL du firmware), chacun ne stockant
+  plus que sa position/taille de grille et **quelle entree de
+  bibliotheque y est actuellement assignee** (`library_id`, ou `None` si
+  l'emplacement est libre/invisible).
 - **`profiles.py::resolve_slot(profile, idx)`** : combine les deux pour
   produire un emplacement "resolu" dans l'ANCIEN format tout-en-un (avec
   `visible` derive de `library_id is not None`) - c'est la seule fonction
@@ -242,10 +250,18 @@ pouvoir. Depuis, ces deux roles sont separes (`profiles.py`) :
   changement a un point unique plutot que de toucher chaque consommateur
   independamment.
 - **`profiles.py::migrate_profile_library()`** : migre transparemment un
-  profil de l'ancien format (16 emplacements tout-en-un) vers le nouveau
-  au premier chargement - chaque ancien emplacement devient une entree de
+  profil de l'ancien format (`_LEGACY_SLOT_COUNT` = 16 emplacements
+  tout-en-un, fige independamment de `SLOT_COUNT`) vers le nouveau au
+  premier chargement - chaque ancien emplacement devient une entree de
   bibliotheque, assignee au meme emplacement physique s'il etait visible
-  (aucune perte de configuration existante).
+  (aucune perte de configuration existante). Ne s'execute qu'une fois
+  (garde sur `"library" in profile`).
+- **`profiles.py::ensure_slot_count()`** : complete `profile["slots"]`
+  jusqu'a `SLOT_COUNT` avec des emplacements vides (`library_id: None`) -
+  independant de la migration ci-dessus, pour que les profils DEJA migres
+  (avant que `SLOT_COUNT` ne passe de 16 a 36) recuperent les emplacements
+  physiques supplementaires sans dupliquer d'entrees de bibliotheque.
+  Appele a chaque chargement (`migrate_profiles()`).
 - **Cote JS** (`dashboard.js`) : afficher/retirer un bouton de l'ecran se
   fait par glisser-depose (assigne/libere un `library_id` sur
   `slots[i]`), plus par une case a cocher "Visible" dans la popup (jugee
@@ -275,8 +291,9 @@ avant tout depot/redimensionnement, voir `hasCollision()`).
 - **Poussee vers l'ecran** : `device_client.py::push_config()` envoie une
   seule entite texte compacte par emplacement (`Slot N - grille`, format
   "colonne,ligne,largeur_cases,hauteur_cases", ex "2,1,3,2").
-- **Cote firmware** (`firmware/slot_grid.yaml`, genere par
-  `scripts/gen_slot_grid.py`) : le lambda `on_value` de chaque entite
+- **Cote firmware** (`firmware/slot_grid_1.yaml`/`slot_grid_2.yaml`, deux
+  fichiers generes par `scripts/gen_slot_grid.py` pour rester sous 500
+  lignes chacun avec 36 emplacements) : le lambda `on_value` de chaque entite
   parse ce CSV, calcule la position/taille en pixels (case=96px,
   espacement=12px) et repositionne/redimensionne le bouton de
   l'emplacement (`lv_obj_set_pos`/`lv_obj_set_size`) ainsi que ses
@@ -289,7 +306,7 @@ avant tout depot/redimensionnement, voir `hasCollision()`).
 
 ### Carte meteo (widget dedie, anime)
 
-Widget independant des 16 emplacements generiques (au plus un par
+Widget independant des emplacements generiques (au plus un par
 profil, cle `weather` du profil - voir `profiles.py::default_weather()`),
 partageant la meme grille invisible (meme mecanisme de position/taille
 compact que les emplacements) mais avec son propre contenu/sa propre

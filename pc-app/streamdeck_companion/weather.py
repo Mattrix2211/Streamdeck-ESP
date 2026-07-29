@@ -1,4 +1,4 @@
-"""Carte meteo (widget dedie, distinct des 16 emplacements generiques) -
+"""Carte meteo (widget dedie, distinct des emplacements generiques) -
 lit une entite `weather.*` Home Assistant et en deduit une icone + un
 "style d'animation" pour l'ecran (voir firmware/weather_card.yaml, qui
 affiche/anime en consequence). La correspondance condition -> (icone,

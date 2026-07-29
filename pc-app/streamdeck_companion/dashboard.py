@@ -1,7 +1,7 @@
 """Page de configuration visuelle du Stream Deck, en 2 pages pour eviter la
 surcharge (esprit "gerer ses pages d'applications sur son iPhone") :
 
-- **Accueil** (`/`) : la grille des 16 emplacements ET les 3 encodeurs,
+- **Accueil** (`/`) : la grille des emplacements (36 possibles) ET les 3 encodeurs,
   chacun configurable via sa propre popup (glisser-deposer pour les
   emplacements). C'est la seule page qu'on utilise au quotidien - plus
   besoin d'une page separee pour les encodeurs.

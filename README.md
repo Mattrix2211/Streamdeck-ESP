@@ -33,7 +33,7 @@ identite d'appareil). Deux facons de l'utiliser :
    mettre a jour le firmware plus tard, il suffit de recompiler depuis HA,
    sans rien recopier.
 3. **Appli PC** : voir `pc-app/README.md`. **C'est le seul endroit ou vous
-   configurez** quoi (16 emplacements bouton/widget + 3 encodeurs, actions,
+   configurez** quoi (36 emplacements bouton/widget + 3 encodeurs, actions,
    icones, libelles, forme carre/rond) - apercu visuel glisser-deposer,
    un clic pour envoyer a l'ecran.
 4. **Home Assistant** (facultatif) : l'appareil est decouvert automatiquement
@@ -51,7 +51,7 @@ mapping des GPIO : `docs/WIRING.md`.
 ## Materiel
 
 - Ecran Guition JC1060P470C_I_W (ESP32-P4 + ESP32-C6, tactile GT911)
-- 16 emplacements carres/ronds (bouton, jauge ou texte) + 3 encodeurs
+- 36 emplacements carres/ronds (bouton, jauge ou texte) + 3 encodeurs
   rotatifs, ajustable dans `firmware/package.yaml`/`slots_*.yaml` et
   `docs/WIRING.md`
 

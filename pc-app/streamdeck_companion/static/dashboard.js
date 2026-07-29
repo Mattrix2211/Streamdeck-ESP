@@ -111,7 +111,7 @@ function rectsOverlap(a, b) {
 }
 
 /* La carte meteo (widget dedie, au plus un par profil - voir weather.py)
- * participe a la meme grille que les 16 emplacements physiques : on la
+ * participe a la meme grille que les emplacements physiques : on la
  * traite comme un emplacement "virtuel" d'index -1 partout ou la logique
  * de grille (collision, glisser-depose, redimensionnement) doit la
  * prendre en compte, pour eviter de dupliquer cette logique en deux
@@ -203,9 +203,11 @@ function attachResizeHandle(tile, index) {
 }
 
 /* Bibliotheque de boutons enregistres (voir profiles.py, module docstring)
- * - PAS limitee a 16 : on peut en enregistrer autant qu'on veut, seuls 16
- * au maximum peuvent etre assignes a un emplacement visible a la fois
- * (limite materielle du firmware). Un emplacement physique (slots[i]) ne
+ * - PAS limitee : on peut en enregistrer autant qu'on veut, seuls
+ * GRID_COLS*GRID_ROWS (36) au maximum peuvent etre assignes a un
+ * emplacement visible a la fois (limite materielle du firmware, un
+ * emplacement physique par case de la grille). Un emplacement physique
+ * (slots[i]) ne
  * stocke qu'une position/taille + QUELLE entree y est affichee
  * (library_id) - le contenu (libelle/icone/action...) vit uniquement
  * dans `library`, modifiable une seule fois et reutilisable partout. */
@@ -323,7 +325,7 @@ screenGrid.addEventListener("drop", (e) => {
   if (src.kind === "library") {
     const freeIdx = slots.findIndex((s) => !s.library_id);
     if (freeIdx === -1) {
-      alert("Les 16 emplacements de l'ecran sont deja utilises - retirez-en un d'abord (glissez-le vers la bibliotheque).");
+      alert("Tous les emplacements physiques de l'ecran sont deja utilises - retirez-en un d'abord (glissez-le vers la bibliotheque).");
       return;
     }
     let candidate = { col: target.col, row: target.row, colspan: 1, rowspan: 1 };

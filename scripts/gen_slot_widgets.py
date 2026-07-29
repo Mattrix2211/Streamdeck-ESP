@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Regenere firmware/slot_widgets.yaml (16 emplacements LVGL, mecaniquement
-identiques a part leur index, PLUS le bouton de la carte meteo en 17e
+"""Regenere firmware/slot_widgets.yaml (36 emplacements LVGL, mecaniquement
+identiques a part leur index, PLUS le bouton de la carte meteo en 37e
 element) - a relancer si la structure d'un emplacement change (nouveau
 sous-widget, etc.), pas pour changer la position/taille par defaut d'un
 emplacement precis (ca, c'est firmware/slot_grid.yaml, pousse par l'appli
@@ -8,7 +8,7 @@ PC a la connexion).
 
 Le bouton de la carte meteo (weather_card_btn) est ajoute ICI plutot que
 dans weather_card.yaml : il doit etre un ENFANT de package.yaml::action_grid
-(meme espace de coordonnees que les 16 emplacements, voir gen_weather_card.py
+(meme espace de coordonnees que les 36 emplacements, voir gen_weather_card.py
 pour le detail) - `!include` ne remplace qu'une seule cle, donc les deux
 !include (celui-ci pour la liste de widgets, `packages:` pour le reste de
 la logique meteo) doivent rester coherents.
@@ -28,11 +28,11 @@ CELL = 96
 GAP = 12
 PITCH = 108
 COLS = 9
-SLOT_COUNT = 16
+SLOT_COUNT = 36
 
 OUTPUT = Path(__file__).resolve().parent.parent / "firmware" / "slot_widgets.yaml"
 
-HEADER = """# Widgets LVGL des 16 emplacements + la carte meteo (style YAML flow pour
+HEADER = """# Widgets LVGL des 36 emplacements + la carte meteo (style YAML flow pour
 # rester compact/sous 500 lignes). Genere par scripts/gen_slot_widgets.py,
 # ne pas editer a la main - voir docs/ARCHITECTURE.md pour le systeme de
 # grille redimensionnable. Position/taille par defaut (colonne i%9,

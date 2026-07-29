@@ -1,4 +1,4 @@
-# Carte meteo (widget dedie, distinct des 16 emplacements generiques -
+# Carte meteo (widget dedie, distinct des emplacements generiques -
 # voir docs/ARCHITECTURE.md) : icone + temperature, animee selon la
 # condition (pluie qui tombe, neige, soleil qui scintille, nuages qui
 # derivent, etoiles la nuit). Un seul exemplaire par profil - le bouton

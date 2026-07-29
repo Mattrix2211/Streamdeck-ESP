@@ -1,7 +1,7 @@
 """Connexion persistante et directe au Stream Deck : ecoute les boutons et
 encodeurs, execute les actions configurees localement (aucun code a ecrire,
 tout se regle depuis la page de configuration - voir dashboard.py), et
-pousse la config du profil actif (16 emplacements + forme) vers l'ecran en
+pousse la config du profil actif (36 emplacements physiques + forme) vers l'ecran en
 reutilisant CETTE MEME connexion (pas de reconnexion separee a chaque
 changement). Le profil actif change automatiquement selon l'application
 au premier plan sur le PC (voir profile_watcher.py) ou manuellement
@@ -36,7 +36,7 @@ from . import profiles as profile_utils
 
 LOG = logging.getLogger("streamdeck_client")
 
-SLOT_COUNT = 16
+SLOT_COUNT = 36
 SLOT_LABEL_NAMES = [f"Slot {i} - libelle" for i in range(1, SLOT_COUNT + 1)]
 SLOT_VALUE_NAMES = [f"Slot {i} - valeur" for i in range(1, SLOT_COUNT + 1)]
 SLOT_ICON_NAMES = [f"Slot {i} - icone" for i in range(1, SLOT_COUNT + 1)]
@@ -386,7 +386,7 @@ class DeviceClient:
         ha_client.adjust_encoder_entity(client, entity_id, 1 if direction_str == "up" else -1)
 
     def push_config(self) -> None:
-        """Pousse la config des 16 emplacements (libelle/icone/type/
+        """Pousse la config des emplacements (libelle/icone/type/
         visibilite) du profil ACTIF et la forme vers l'ecran, via la
         connexion deja ouverte. Doit etre appelee depuis le thread/la
         boucle de cette instance (voir schedule_push pour un appel

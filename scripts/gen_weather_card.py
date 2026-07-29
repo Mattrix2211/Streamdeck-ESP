@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Regenere firmware/weather_card.yaml (carte meteo dediee, un seul
-exemplaire - voir docs/ARCHITECTURE.md). Contrairement aux 16 emplacements,
+exemplaire - voir docs/ARCHITECTURE.md). Contrairement aux emplacements,
 peu d'interet a scripter un template par "instance" ici (il n'y en a
 qu'une) - le generateur sert surtout a eviter de recompter les positions
 des gouttes/flocons/nuages a la main si on change leur nombre.
 
 Le bouton de la carte elle-meme (weather_card_btn) n'est PAS dans ce
-fichier : il doit partager le meme espace de coordonnees que les 16
+fichier : il doit partager le meme espace de coordonnees que les
 emplacements (enfant de package.yaml::action_grid, positionne relatif a
 son origine), donc weather_button_widget() est importee et ajoutee par
 scripts/gen_slot_widgets.py a la fin de firmware/slot_widgets.yaml -
@@ -33,7 +33,7 @@ CLOUD_COUNT = 2
 
 OUTPUT = Path(__file__).resolve().parent.parent / "firmware" / "weather_card.yaml"
 
-HEADER = """# Carte meteo (widget dedie, distinct des 16 emplacements generiques -
+HEADER = """# Carte meteo (widget dedie, distinct des emplacements generiques -
 # voir docs/ARCHITECTURE.md) : icone + temperature, animee selon la
 # condition (pluie qui tombe, neige, soleil qui scintille, nuages qui
 # derivent, etoiles la nuit). Un seul exemplaire par profil - le bouton

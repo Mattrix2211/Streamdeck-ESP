@@ -237,12 +237,24 @@ event:
       [
         "action_1", "action_2", "action_3", "action_4", "action_5", "action_6", "action_7", "action_8",
         "action_9", "action_10", "action_11", "action_12", "action_13", "action_14", "action_15", "action_16",
+        "action_17", "action_18", "action_19", "action_20", "action_21", "action_22", "action_23", "action_24",
+        "action_25", "action_26", "action_27", "action_28", "action_29", "action_30", "action_31", "action_32",
+        "action_33", "action_34", "action_35", "action_36",
         "hold_1", "hold_2", "hold_3", "hold_4", "hold_5", "hold_6", "hold_7", "hold_8",
         "hold_9", "hold_10", "hold_11", "hold_12", "hold_13", "hold_14", "hold_15", "hold_16",
+        "hold_17", "hold_18", "hold_19", "hold_20", "hold_21", "hold_22", "hold_23", "hold_24",
+        "hold_25", "hold_26", "hold_27", "hold_28", "hold_29", "hold_30", "hold_31", "hold_32",
+        "hold_33", "hold_34", "hold_35", "hold_36",
         "barre_inc_1", "barre_inc_2", "barre_inc_3", "barre_inc_4", "barre_inc_5", "barre_inc_6", "barre_inc_7", "barre_inc_8",
         "barre_inc_9", "barre_inc_10", "barre_inc_11", "barre_inc_12", "barre_inc_13", "barre_inc_14", "barre_inc_15", "barre_inc_16",
+        "barre_inc_17", "barre_inc_18", "barre_inc_19", "barre_inc_20", "barre_inc_21", "barre_inc_22", "barre_inc_23", "barre_inc_24",
+        "barre_inc_25", "barre_inc_26", "barre_inc_27", "barre_inc_28", "barre_inc_29", "barre_inc_30", "barre_inc_31", "barre_inc_32",
+        "barre_inc_33", "barre_inc_34", "barre_inc_35", "barre_inc_36",
         "barre_dec_1", "barre_dec_2", "barre_dec_3", "barre_dec_4", "barre_dec_5", "barre_dec_6", "barre_dec_7", "barre_dec_8",
         "barre_dec_9", "barre_dec_10", "barre_dec_11", "barre_dec_12", "barre_dec_13", "barre_dec_14", "barre_dec_15", "barre_dec_16",
+        "barre_dec_17", "barre_dec_18", "barre_dec_19", "barre_dec_20", "barre_dec_21", "barre_dec_22", "barre_dec_23", "barre_dec_24",
+        "barre_dec_25", "barre_dec_26", "barre_dec_27", "barre_dec_28", "barre_dec_29", "barre_dec_30", "barre_dec_31", "barre_dec_32",
+        "barre_dec_33", "barre_dec_34", "barre_dec_35", "barre_dec_36",
         "close_color_mode", "close_ha_popup", "popup_next", "popup_prev",
       ]
 
@@ -298,20 +310,30 @@ switch:
           }
 
 # ---------------------------------------------------------------------------
-# 16 emplacements configurables (boutons/widgets) - entites generees dans
-# slots_1_5/6_11/12_16.yaml (decoupees pour rester sous 500 lignes chacune).
+# 36 emplacements physiques configurables (boutons/widgets, un par case de
+# la grille invisible 9x4) - entites generees dans slots_1_5/6_11/12_16.yaml
+# (ecrites a la main avant l'ajout de scripts/gen_slot_entities.py) puis
+# slots_17_21/22_26/27_31/32_36.yaml (generees par ce script, memes
+# emplacements 17-36, decoupees pour rester sous 500 lignes chacune).
 # Chaque emplacement expose libelle/valeur/icone/type/visibilite, pilotable
-# a chaud depuis l'appli PC (pc-app/streamdeck_companion) sans reflasher.
+# a chaud depuis l'appli PC (pc-app/streamdeck_companion) sans reflasher -
+# seuls ceux assignes a une entree de bibliotheque (voir docs/ARCHITECTURE.md)
+# sont visibles a l'ecran.
 # ---------------------------------------------------------------------------
 packages:
   slots_1_5: !include slots_1_5.yaml
   slots_6_11: !include slots_6_11.yaml
   slots_12_16: !include slots_12_16.yaml
+  slots_17_21: !include slots_17_21.yaml
+  slots_22_26: !include slots_22_26.yaml
+  slots_27_31: !include slots_27_31.yaml
+  slots_32_36: !include slots_32_36.yaml
   slot_icons: !include slot_icons.yaml
   ha_popup: !include ha_popup.yaml
   encoder_sync: !include encoder_sync.yaml
   icon_font: !include icon_font.yaml
-  slot_grid: !include slot_grid.yaml
+  slot_grid_1: !include slot_grid_1.yaml
+  slot_grid_2: !include slot_grid_2.yaml
   weather_card: !include weather_card.yaml
 
 # ---------------------------------------------------------------------------

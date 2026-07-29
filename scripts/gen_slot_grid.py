@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Regenere firmware/slot_grid.yaml (une entite texte 'Slot N - grille' par
-emplacement + le lambda qui la traduit en position/taille LVGL) - a
-relancer si la formule de conversion case->pixel change (taille de case,
-espacement, nombre de colonnes...), voir CELL/GAP/PITCH/COLS ci-dessous et
-package.yaml::action_grid (doit rester coherent avec ces constantes).
+"""Regenere firmware/slot_grid_1.yaml + slot_grid_2.yaml (une entite texte
+'Slot N - grille' par emplacement + le lambda qui la traduit en
+position/taille LVGL) - a relancer si la formule de conversion case->pixel
+change (taille de case, espacement, nombre de colonnes...), voir
+CELL/GAP/PITCH/COLS ci-dessous et package.yaml::action_grid (doit rester
+coherent avec ces constantes). Deux fichiers (au lieu d'un seul) pour
+rester sous 500 lignes chacun avec 36 emplacements (~24 lignes/emplacement).
 
 Usage: python3 scripts/gen_slot_grid.py
 """
@@ -16,16 +18,18 @@ CELL = 96
 GAP = 12
 PITCH = 108
 COLS = 9
-SLOT_COUNT = 16
+SLOT_COUNT = 36
+# Repli sous 500 lignes/fichier (~24 lignes/emplacement, voir module docstring).
+SPLIT_AT = 18
 
-OUTPUT = Path(__file__).resolve().parent.parent / "firmware" / "slot_grid.yaml"
+FIRMWARE_DIR = Path(__file__).resolve().parent.parent / "firmware"
 
-HEADER = """# Position/taille de chaque emplacement sur la grille invisible de cases
-# carrees (9 colonnes x 4 lignes, cases de 96px, 12px d'espacement - voir
-# package.yaml::action_grid) - facon "sections" de Home Assistant : chaque
-# emplacement peut occuper 1 ou plusieurs cases, redimensionne/repositionne
-# en direct depuis l'appli PC (glisser-deposer/redimensionner, voir
-# dashboard.js), sans reflasher.
+HEADER = """# Position/taille des emplacements {lo} a {hi} sur la grille invisible de
+# cases carrees (9 colonnes x 4 lignes, cases de 96px, 12px d'espacement -
+# voir package.yaml::action_grid) - facon "sections" de Home Assistant :
+# chaque emplacement peut occuper 1 ou plusieurs cases, redimensionne/
+# repositionne en direct depuis l'appli PC (glisser-depose/redimensionner,
+# voir dashboard.js), sans reflasher.
 #
 # Une seule entite texte par emplacement (au lieu de 4 nombres separes) -
 # format compact "colonne,ligne,largeur_cases,hauteur_cases", ex "2,1,3,2"
@@ -74,10 +78,16 @@ def slot_block(i: int) -> str:
     )
 
 
+def write_chunk(lo: int, hi: int, filename: str) -> None:
+    blocks = [HEADER.format(lo=lo, hi=hi)] + [slot_block(i) for i in range(lo, hi + 1)]
+    out = FIRMWARE_DIR / filename
+    out.write_text("\n".join(blocks) + "\n", encoding="utf-8")
+    print(f"Wrote {out} ({sum(b.count(chr(10)) + 1 for b in blocks)} lines)")
+
+
 def main() -> None:
-    blocks = [HEADER] + [slot_block(i) for i in range(1, SLOT_COUNT + 1)]
-    OUTPUT.write_text("\n".join(blocks) + "\n", encoding="utf-8")
-    print(f"Wrote {OUTPUT} ({sum(b.count(chr(10)) + 1 for b in blocks)} lines)")
+    write_chunk(1, SPLIT_AT, "slot_grid_1.yaml")
+    write_chunk(SPLIT_AT + 1, SLOT_COUNT, "slot_grid_2.yaml")
 
 
 if __name__ == "__main__":

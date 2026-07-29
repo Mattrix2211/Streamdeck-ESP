@@ -1,5 +1,5 @@
-/* Profils (onglets de l'accueil) : chaque profil a sa propre grille de 16
- * emplacements + 3 encodeurs. L'ecran bascule automatiquement sur le
+/* Profils (onglets de l'accueil) : chaque profil a sa propre grille de 36
+ * emplacements physiques + 3 encodeurs. L'ecran bascule automatiquement sur le
  * profil dont le declencheur correspond a l'application au premier plan
  * sur le PC (profile_watcher.py), ou manuellement via "Forcer ce profil"/
  * "Automatique". Depend des variables/elements/fonctions definis dans
@@ -111,7 +111,7 @@ function makeDefaultSlots() {
    * pour la position par defaut (range dans l'ordre de lecture, non
    * utilisee tant que library_id est null). */
   const slots = [];
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < GRID_COLS * GRID_ROWS; i++) {
     slots.push({ library_id: null, grid: { col: i % GRID_COLS, row: Math.floor(i / GRID_COLS), colspan: 1, rowspan: 1 } });
   }
   return slots;

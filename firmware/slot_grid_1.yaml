@@ -1,9 +1,9 @@
-# Position/taille de chaque emplacement sur la grille invisible de cases
-# carrees (9 colonnes x 4 lignes, cases de 96px, 12px d'espacement - voir
-# package.yaml::action_grid) - facon "sections" de Home Assistant : chaque
-# emplacement peut occuper 1 ou plusieurs cases, redimensionne/repositionne
-# en direct depuis l'appli PC (glisser-deposer/redimensionner, voir
-# dashboard.js), sans reflasher.
+# Position/taille des emplacements 1 a 18 sur la grille invisible de
+# cases carrees (9 colonnes x 4 lignes, cases de 96px, 12px d'espacement -
+# voir package.yaml::action_grid) - facon "sections" de Home Assistant :
+# chaque emplacement peut occuper 1 ou plusieurs cases, redimensionne/
+# repositionne en direct depuis l'appli PC (glisser-depose/redimensionner,
+# voir dashboard.js), sans reflasher.
 #
 # Une seule entite texte par emplacement (au lieu de 4 nombres separes) -
 # format compact "colonne,ligne,largeur_cases,hauteur_cases", ex "2,1,3,2"
@@ -383,3 +383,49 @@ text:
           lv_obj_set_width(id(slot16_barre_inc), pw / 2);
           lv_obj_set_height(id(slot16_barre_dec), ph > 6 ? ph - 6 : ph);
           lv_obj_set_height(id(slot16_barre_inc), ph > 6 ? ph - 6 : ph);
+  - platform: template
+    id: slot17_grid_text
+    name: "Slot 17 - grille"
+    mode: text
+    optimistic: true
+    initial_value: "7,1,1,1"
+    max_length: 16
+    on_value:
+      - lambda: |-
+          int col=0,row=0,cs=1,rs=1;
+          sscanf(x.c_str(), "%d,%d,%d,%d", &col, &row, &cs, &rs);
+          const int cell=96, gap=12, pitch=108;
+          int px = col*pitch, py = row*pitch;
+          int pw = cs*cell + (cs-1)*gap;
+          int ph = rs*cell + (rs-1)*gap;
+          lv_obj_set_pos(id(slot17_btn), px, py);
+          lv_obj_set_size(id(slot17_btn), pw, ph);
+          lv_obj_set_width(id(slot17_title), pw > 16 ? pw - 16 : pw);
+          lv_obj_set_width(id(slot17_bar), pw > 16 ? pw - 16 : pw);
+          lv_obj_set_width(id(slot17_barre_dec), pw / 2);
+          lv_obj_set_width(id(slot17_barre_inc), pw / 2);
+          lv_obj_set_height(id(slot17_barre_dec), ph > 6 ? ph - 6 : ph);
+          lv_obj_set_height(id(slot17_barre_inc), ph > 6 ? ph - 6 : ph);
+  - platform: template
+    id: slot18_grid_text
+    name: "Slot 18 - grille"
+    mode: text
+    optimistic: true
+    initial_value: "8,1,1,1"
+    max_length: 16
+    on_value:
+      - lambda: |-
+          int col=0,row=0,cs=1,rs=1;
+          sscanf(x.c_str(), "%d,%d,%d,%d", &col, &row, &cs, &rs);
+          const int cell=96, gap=12, pitch=108;
+          int px = col*pitch, py = row*pitch;
+          int pw = cs*cell + (cs-1)*gap;
+          int ph = rs*cell + (rs-1)*gap;
+          lv_obj_set_pos(id(slot18_btn), px, py);
+          lv_obj_set_size(id(slot18_btn), pw, ph);
+          lv_obj_set_width(id(slot18_title), pw > 16 ? pw - 16 : pw);
+          lv_obj_set_width(id(slot18_bar), pw > 16 ? pw - 16 : pw);
+          lv_obj_set_width(id(slot18_barre_dec), pw / 2);
+          lv_obj_set_width(id(slot18_barre_inc), pw / 2);
+          lv_obj_set_height(id(slot18_barre_dec), ph > 6 ? ph - 6 : ph);
+          lv_obj_set_height(id(slot18_barre_inc), ph > 6 ? ph - 6 : ph);
