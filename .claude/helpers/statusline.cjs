@@ -28,6 +28,9 @@ const os = require('os');
 // Configuration
 const CONFIG = {
   maxAgents: 15,
+  // Header identity defaults to project/repository name. Set `author` to
+  // retain the previous `git config user.name` display (#2682).
+  identityMode: (process.env.RUFLO_STATUSLINE_IDENTITY || 'project').toLowerCase(),
   // Session-cost display. Claude Code's cost.total_cost_usd is a client-side
   // estimate that "may differ from your actual bill" and reads as misleading on
   // subscription plans, where token usage is not billed per dollar. These let
@@ -210,7 +213,9 @@ function getStatuslineData() {
   // 60s TTL (#2337 — don't re-spawn the CLI on every rapid re-render) AND the
   // tighter promo-rotation clock (this fix — don't let a still-fresh 60s
   // cache silently freeze the promo/insight row across multiple 20s slots).
-  if (cache.fresh && cache.promoFresh) return overlayMemoPromo(cache.data);
+  if (cache.fresh && cache.promoFresh) {
+    return applyLocalOverlays(overlayMemoPromo(cache.data));
+  }
 
   // #2337: prefer an already-installed CLI bin via direct `node` invocation —
   // no npx, no registry round-trip, no @latest re-resolve per render. Try
@@ -417,7 +422,7 @@ function buildLocalFallback() {
   return applyLocalOverlays({
     user: { name: 'user', gitBranch: '', modelName: 'Claude Code' },
     v3Progress: { domainsCompleted: 0, totalDomains: 5, dddProgress: 0, patternsLearned: 0, sessionsCompleted: 0 },
-    security: { status: 'NONE', cvesFixed: 0, totalCves: 0 },
+    security: { status: 'NONE', findings: 0, cvesFixed: 0, totalCves: 0 },
     swarm: { activeAgents: 0, maxAgents: CONFIG.maxAgents, coordinationActive: false },
     system: { memoryMB: memMB, contextPct: 0, intelligencePct: 0, subAgents: 0 },
     lastUpdated: new Date().toISOString(),
@@ -476,11 +481,13 @@ function readJSON(filePath) {
 
 function getGitInfo() {
   const result = {
-    name: 'user', gitBranch: '', modified: 0, untracked: 0,
+    name: path.basename(CWD) || 'project', gitBranch: '', modified: 0, untracked: 0,
     staged: 0, ahead: 0, behind: 0,
   };
 
   const script = [
+    'git rev-parse --show-toplevel 2>/dev/null || pwd',
+    'echo "---SEP---"',
     'git config user.name 2>/dev/null || echo user',
     'echo "---SEP---"',
     'git branch --show-current 2>/dev/null',
@@ -494,12 +501,14 @@ function getGitInfo() {
   if (!raw) return result;
 
   const parts = raw.split('---SEP---').map(function(s) { return s.trim(); });
-  if (parts.length >= 4) {
-    result.name = parts[0] || 'user';
-    result.gitBranch = parts[1] || '';
+  if (parts.length >= 5) {
+    const projectName = path.basename(parts[0] || CWD) || path.basename(CWD) || 'project';
+    const authorName = parts[1] || 'user';
+    result.name = CONFIG.identityMode === 'author' ? authorName : projectName;
+    result.gitBranch = parts[2] || '';
 
-    if (parts[2]) {
-      for (const line of parts[2].split('\n')) {
+    if (parts[3]) {
+      for (const line of parts[3].split('\n')) {
         if (!line || line.length < 2) continue;
         const x = line[0], y = line[1];
         if (x === '?' && y === '?') { result.untracked++; continue; }
@@ -508,7 +517,7 @@ function getGitInfo() {
       }
     }
 
-    const ab = (parts[3] || '0 0').split(/\s+/);
+    const ab = (parts[4] || '0 0').split(/\s+/);
     result.ahead = parseInt(ab[0]) || 0;
     result.behind = parseInt(ab[1]) || 0;
   }
@@ -624,12 +633,55 @@ function compareVersions(a, b) {
   return 0;
 }
 
+// #2742: when CWD is a linked git worktree, it has no node_modules of its
+// own (worktrees don't get their own `npm install`), so every CWD-relative
+// probe in getPkgVersion() misses and the version silently falls back to
+// the baked-in default — even though the main repo's install a few
+// directories away is perfectly resolvable. A linked worktree's `.git` is
+// a plain FILE (not a directory) containing `gitdir: <main>/.git/worktrees/
+// <name>`; walk up from CWD to find it, parse the pointer, and strip the
+// trailing `.git/worktrees/<name>` segment to recover the main repo root.
+// Pure fs — no `git rev-parse` spawn (statusline renders are latency-
+// sensitive; this doc comment's neighbors are explicit about avoiding
+// spawns in the render path).
+function resolveWorktreeMainRoot() {
+  try {
+    let dir = CWD;
+    for (;;) {
+      const dotGit = path.join(dir, '.git');
+      if (fs.existsSync(dotGit)) {
+        if (fs.statSync(dotGit).isFile()) {
+          const contents = fs.readFileSync(dotGit, 'utf-8');
+          const m = contents.match(/^gitdir:\s*(.+)$/m);
+          const wtGitDir = m && m[1].trim();
+          if (wtGitDir) {
+            // Git writes this pointer with forward slashes even on Windows
+            // (a git-for-windows convention for its own internal files) —
+            // path.sep (backslash on win32) never matches, so normalize
+            // before searching rather than building an OS-specific marker.
+            const normalized = wtGitDir.replace(/\\/g, '/');
+            const marker = '/.git/worktrees/';
+            const idx = normalized.lastIndexOf(marker);
+            if (idx > 0) return normalized.slice(0, idx);
+          }
+        }
+        return null; // a real (non-worktree) .git dir — nothing to resolve
+      }
+      const parent = path.dirname(dir);
+      if (parent === dir) return null; // reached filesystem root
+      dir = parent;
+    }
+  } catch {
+    return null;
+  }
+}
+
 function getPkgVersion() {
   // Baked in at generation time from the real running CLI's own resolved
   // version (see generateStatuslineScript()'s doc comment) — correct even
   // when this renders via a pure npx invocation with no local install for
   // the candidate scan below to find.
-  let ver = "3.28.0";
+  let ver = "3.32.8";
   try {
     const home = os.homedir();
     const pkgPaths = [
@@ -638,6 +690,17 @@ function getPkgVersion() {
       path.join(CWD, 'node_modules', 'ruflo', 'package.json'),
       path.join(CWD, 'v3', '@claude-flow', 'cli', 'package.json'),
     ];
+    // #2742: CWD is a linked git worktree with no node_modules of its own —
+    // probe the main repo's install too, so a worktree session shows the
+    // same version a main-repo session would.
+    const worktreeMainRoot = resolveWorktreeMainRoot();
+    if (worktreeMainRoot) {
+      pkgPaths.push(
+        path.join(worktreeMainRoot, 'node_modules', '@claude-flow', 'cli', 'package.json'),
+        path.join(worktreeMainRoot, 'node_modules', 'ruflo', 'package.json'),
+        path.join(worktreeMainRoot, 'v3', '@claude-flow', 'cli', 'package.json'),
+      );
+    }
     // #2221: global installs (npm i -g ruflo) live outside CWD/node_modules, so the
     // probes above all miss and the version falls back to the hard-coded default.
     // Derive the global node_modules dir from the running node binary (no npm spawn —
@@ -722,8 +785,7 @@ function generateStatusline() {
   const intelligencePct = system.intelligencePct || 0;
   const memoryMB = system.memoryMB || 0;
   const subAgents = system.subAgents || 0;
-  const cvesFixed = security.cvesFixed || 0;
-  const totalCves = security.totalCves || 0;
+  const findings = Math.max(0, security.findings || 0);
   const secStatus = security.status || 'NONE';
   const adrCount = adrs.count || 0;
   const adrImpl = adrs.implemented || 0;
@@ -778,8 +840,7 @@ function generateStatusline() {
   const hooksColor = hooksEnabled > 0 ? c.brightGreen : c.dim;
   const intellColor = intelligencePct >= 80 ? c.brightGreen : intelligencePct >= 40 ? c.brightYellow : c.dim;
   const swarmInd = coordinationActive ? c.brightGreen + '◉' + c.reset + ' ' : c.dim + '○' + c.reset + ' ';
-  const cvesClean = totalCves === 0 || cvesFixed === totalCves;
-  const healthAllGreen = (secStatus === 'CLEAN' || secStatus === 'NONE') && cvesClean;
+  const healthAllGreen = (secStatus === 'CLEAN' || secStatus === 'NONE') && findings === 0;
   const opsParts = [];
   opsParts.push(c.cyan + 'Swarm ' + swarmInd + agentsColor + activeAgents + c.reset + '/' + c.brightWhite + maxAgents + c.reset);
   if (subAgents > 0) opsParts.push(c.brightPurple + '👥 ' + subAgents + c.reset);
@@ -792,11 +853,11 @@ function generateStatusline() {
   } else {
     if (secStatus === 'PENDING') opsParts.push(c.brightYellow + '🛡 scan pending' + c.reset);
     else if (secStatus === 'IN_PROGRESS') opsParts.push(c.brightYellow + '🛡 scanning…' + c.reset);
+    else if (secStatus === 'ISSUES') opsParts.push(c.brightRed + '🛡 findings' + c.reset);
     else if (secStatus === 'STALE') opsParts.push(c.brightYellow + '🛡 scan stale' + c.reset);
     else if (secStatus !== 'NONE' && secStatus !== 'CLEAN') opsParts.push(c.brightRed + '🛡 ' + secStatus.toLowerCase() + c.reset);
-    if (totalCves > 0 && cvesFixed < totalCves) {
-      const unfixed = totalCves - cvesFixed;
-      opsParts.push(c.brightRed + '⚠ ' + unfixed + ' CVE' + (unfixed === 1 ? '' : 's') + c.reset);
+    if (findings > 0) {
+      opsParts.push(c.brightRed + '⚠ ' + findings + ' finding' + (findings === 1 ? '' : 's') + c.reset);
     }
   }
   lines.push(opsParts.join('  ' + c.dim + '·' + c.reset + '  '));
