@@ -239,9 +239,9 @@ class DeviceClient:
                 idx = int(event_type.rsplit("_", 1)[1]) - 1  # "action_16" -> 15
             except (IndexError, ValueError):
                 return None
-            slots = active.get("slots", [])
-            slot = slots[idx] if 0 <= idx < len(slots) else None
-            return (slot or {}).get("action")
+            if not (0 <= idx < SLOT_COUNT):
+                return None
+            return profile_utils.resolve_slot(active, idx).get("action")
         if entity_name in ENCODER_EVENT_ENTITIES:
             enc_idx = ENCODER_EVENT_ENTITIES.index(entity_name)
             encoders = active.get("encoders", [])
@@ -345,10 +345,9 @@ class DeviceClient:
         except ValueError:
             return
         active = self._active_profile()
-        slots = active.get("slots", [])
-        if not (0 <= idx < len(slots)):
+        if not (0 <= idx < SLOT_COUNT):
             return
-        slot = slots[idx] or {}
+        slot = profile_utils.resolve_slot(active, idx)
         if slot.get("type") != "barre":
             return
         entity_id = slot.get("ha_entity")
@@ -394,30 +393,30 @@ class DeviceClient:
         cross-thread)."""
         if self.client is None or not self.connected:
             raise RuntimeError("Pas encore connecte a l'ecran")
-        slots = self._active_profile().get("slots", [])
+        active = self._active_profile()
         names = zip(SLOT_LABEL_NAMES, SLOT_ICON_NAMES, SLOT_TYPE_NAMES, SLOT_VISIBLE_NAMES, SLOT_GRID_NAMES)
         for i, (label_name, icon_name, type_name, visible_name, grid_name) in enumerate(names):
-            slot = slots[i] if i < len(slots) else None
+            slot = profile_utils.resolve_slot(active, i)
             label_key = self.entity_keys.get(label_name)
             if label_key is not None:
-                self.client.text_command(label_key, ((slot or {}).get("label") or f"Slot {i + 1}")[:24])
+                self.client.text_command(label_key, (slot.get("label") or f"Slot {i + 1}")[:24])
             icon_key = self.entity_keys.get(icon_name)
             if icon_key is not None:
-                self.client.text_command(icon_key, (slot or {}).get("icon_char") or "")
+                self.client.text_command(icon_key, slot.get("icon_char") or "")
             type_key = self.entity_keys.get(type_name)
             if type_key is not None:
-                self.client.select_command(type_key, (slot or {}).get("type") or "bouton")
+                self.client.select_command(type_key, slot.get("type") or "bouton")
             visible_key = self.entity_keys.get(visible_name)
             if visible_key is not None:
-                self.client.switch_command(visible_key, bool((slot or {}).get("visible", i < 12)))
+                self.client.switch_command(visible_key, bool(slot.get("visible")))
             grid_key = self.entity_keys.get(grid_name)
             if grid_key is not None:
-                grid = (slot or {}).get("grid") or profile_utils.default_grid(i)
+                grid = slot.get("grid") or profile_utils.default_grid(i)
                 self.client.text_command(
                     grid_key,
                     f'{grid.get("col", 0)},{grid.get("row", 0)},{grid.get("colspan", 1)},{grid.get("rowspan", 1)}',
                 )
-        weather = self._active_profile().get("weather") or profile_utils.default_weather()
+        weather = active.get("weather") or profile_utils.default_weather()
         weather_visible_key = self.entity_keys.get(WEATHER_VISIBLE_NAME)
         if weather_visible_key is not None:
             self.client.switch_command(weather_visible_key, bool(weather.get("visible")))

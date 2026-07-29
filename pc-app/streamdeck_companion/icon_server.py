@@ -14,6 +14,7 @@ import threading
 from flask import Flask, Response
 
 from . import icon_extract
+from . import profiles as profile_utils
 from .device_client import ICON_SERVER_PORT, DeviceClient
 
 LOG = logging.getLogger("streamdeck_icon_server")
@@ -35,11 +36,11 @@ def create_app(device_client: DeviceClient) -> Flask:
     def slot_icon(n: int):
         png = None
         try:
-            slots = device_client.active_profile().get("slots", [])
-            slot = slots[n - 1] if 1 <= n <= len(slots) else None
-            action = (slot or {}).get("action") or {}
-            if slot and slot.get("type") == "bouton" and action.get("type") == "launch":
-                png = icon_extract.extract_icon_png(action.get("target") or "")
+            if 1 <= n <= profile_utils.SLOT_COUNT:
+                slot = profile_utils.resolve_slot(device_client.active_profile(), n - 1)
+                action = slot.get("action") or {}
+                if slot.get("type") == "bouton" and action.get("type") == "launch":
+                    png = icon_extract.extract_icon_png(action.get("target") or "")
         except Exception:
             LOG.exception("Echec de generation de l'icone pour le slot %d", n)
         return Response(png or _BLANK_PNG, mimetype="image/png")

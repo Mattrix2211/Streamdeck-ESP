@@ -68,20 +68,25 @@ disposition header/grille/encodeurs/statut, tuiles carrees ou rondes selon
 vos reglages) : ce que vous voyez dans le navigateur correspond vraiment a
 ce qui s'affichera sur l'ecran physique, avant meme d'envoyer.
 
-- Les emplacements **visibles** apparaissent dans la maquette d'ecran, a la
+- Les boutons **affiches** apparaissent dans la maquette d'ecran, a la
   meme place qu'ils occuperont reellement.
-- Les emplacements **masques** apparaissent a part, sous la maquette, dans
-  une section "Emplacements masques" (comme la bibliotheque d'apps d'un
-  iPhone) - ils n'apparaissent jamais sur l'ecran reel tant qu'ils restent
-  la.
-- Cliquez une tuile (dans la maquette ou dans les masques) pour ouvrir sa
-  popup de reglages (visibilite, libelle, icone, type, action).
+- Sous la maquette, la **bibliotheque** liste tous les boutons enregistres
+  qui ne sont pas actuellement affiches - PAS limitee a 16, contrairement
+  a l'ecran physique. Enregistrez-en autant que vous voulez (raccourcis,
+  scenes HA, jeux...) pour les reutiliser plus tard, sans jamais etre
+  bloque - seuls 16 au maximum peuvent etre affiches simultanement (limite
+  materielle de l'ecran, 16 boutons physiques dans le firmware).
+- Cliquez une tuile (affichee ou dans la bibliotheque) pour ouvrir sa
+  popup de reglages (libelle, icone, type, action) - un bouton "+" dans la
+  bibliotheque pour en creer un nouveau.
+- **Glissez-deposez** un bouton pour l'afficher/le retirer de l'ecran (le
+  retirer ne le supprime pas, il retourne juste dans la bibliotheque) -
+  bien plus direct qu'une case a cocher "Visible" a chercher dans une
+  popup. Pour supprimer definitivement un bouton, ouvrez sa popup et
+  cliquez "Supprimer".
 
-12 emplacements sont visibles par defaut (comme l'ancien systeme a 12
-boutons), les 4 derniers sont masques - faites-les glisser sur l'ecran (ou
-cochez "Visible sur l'ecran" dans leur popup) des que vous en avez besoin,
-sans reflasher. "Enregistrer et envoyer a l'ecran" sauvegarde et pousse
-immediatement la grille (emplacements + encodeurs) vers l'ecran.
+"Enregistrer et envoyer a l'ecran" sauvegarde et pousse immediatement la
+disposition (boutons affiches + encodeurs) vers l'ecran.
 
 ### Grille redimensionnable (facon "sections" Home Assistant)
 
@@ -89,11 +94,11 @@ L'ecran est decoupe en une grille **invisible** de cases carrees (9
 colonnes x 4 lignes) : un emplacement peut occuper 1 ou plusieurs cases,
 au lieu d'etre fige a une seule taille comme avant.
 
-- **Deplacer** : glissez-deposez un emplacement n'importe ou sur la
+- **Deplacer** : glissez-deposez un bouton affiche n'importe ou sur la
   grille - il se repositionne a la case visee (aimante a la grille).
-  Glissez-le sur la section "Emplacements masques" pour le retirer de
-  l'ecran (sa position/taille est conservee pour la prochaine fois).
-  Glissez un emplacement masque sur la grille pour l'y afficher.
+  Glissez-le sur la bibliotheque pour le retirer de l'ecran. Glissez un
+  bouton de la bibliotheque sur la grille pour l'y afficher (assigne au
+  premier emplacement physique libre).
 - **Redimensionner** : tirez sur le petit repere en bas a droite d'un
   emplacement pour l'agrandir/reduire (en cases entieres), comme les
   widgets petit/moyen/grand d'un iPhone.

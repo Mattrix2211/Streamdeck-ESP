@@ -19,6 +19,7 @@ import logging
 import time
 
 from . import ha_client
+from . import profiles as profile_utils
 
 LOG = logging.getLogger("streamdeck_client")
 
@@ -63,10 +64,9 @@ class ColorModeController:
         direct, jusqu'a fermeture (bouton "X" ou timeout, voir
         check_timeout)."""
         active = self.dc._active_profile()
-        slots = active.get("slots", [])
-        if not (0 <= slot_idx < len(slots)):
+        if not (0 <= slot_idx < profile_utils.SLOT_COUNT):
             return
-        slot = slots[slot_idx] or {}
+        slot = profile_utils.resolve_slot(active, slot_idx)
         action = slot.get("action") or {}
         target = action.get("target") or {}
         if action.get("type") != "home_assistant" or target.get("domain") != "light" or not slot.get("show_light_color"):

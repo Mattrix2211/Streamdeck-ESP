@@ -203,18 +203,57 @@ changements de la page courante (chaque page ne touche que sa portion de
 
 LVGL/ESPHome fige la disposition a la compilation - impossible de changer
 le nombre de widgets sans reflasher. Le compromis retenu : 16 emplacements
-sont toujours presents dans le firmware (`firmware/slots_*.yaml` +
-`slot_widgets.yaml`), chacun montrable/masquable et reconfigurable a chaud
-(sans reflasher) via 6 entites :
+PHYSIQUES sont toujours presents dans le firmware (`firmware/slots_*.yaml`
++ `slot_widgets.yaml`), chacun reconfigurable a chaud (sans reflasher) via
+5 entites :
 
 - `text` libelle, `text` valeur (widgets), `text` icone (glyphe brut)
 - `select` type (`bouton`/`barre`/`texte`)
 - `switch` visible
-- `text` grille (position/taille - voir ci-dessous)
+- `text` grille (position/taille - voir "Grille invisible redimensionnable"
+  plus bas)
 
-12 sont visibles par defaut (comportement identique a l'ancien systeme a
-12 boutons), 4 desactives - a activer depuis la popup d'un emplacement
-("Visible sur l'ecran") quand besoin.
+Le firmware ne voit toujours QUE ces 16 emplacements - la bibliotheque
+illimitee ci-dessous est une couche PC-side au-dessus, invisible pour lui.
+
+### Bibliotheque illimitee + assignation (au lieu de 16 boutons figes)
+
+A l'origine, les 16 emplacements etaient a la fois le STOCKAGE (libelle/
+icone/action) et l'AFFICHAGE (position, visible ou non) d'un bouton - la
+seule facon d'avoir plus de 16 boutons configures etait... de ne pas
+pouvoir. Depuis, ces deux roles sont separes (`profiles.py`) :
+
+- **`profile["library"]`** : bibliotheque de boutons enregistres, PAS
+  limitee a 16 - chaque entree (`default_library_entry()`) a un `id`
+  stable et porte tout le contenu (libelle/icone/type/action/ha_entity/
+  show_light_color). Creee/modifiee/supprimee librement depuis la popup
+  d'un bouton (bouton "+" de `dashboard.js` pour en creer une).
+- **`profile["slots"]`** : exactement 16 emplacements PHYSIQUES (miroir
+  1:1 des 16 objets LVGL du firmware), chacun ne stockant plus que sa
+  position/taille de grille et **quelle entree de bibliotheque y est
+  actuellement assignee** (`library_id`, ou `None` si l'emplacement est
+  libre/invisible).
+- **`profiles.py::resolve_slot(profile, idx)`** : combine les deux pour
+  produire un emplacement "resolu" dans l'ANCIEN format tout-en-un (avec
+  `visible` derive de `library_id is not None`) - c'est la seule fonction
+  que `device_client.py` (`push_config`, `_resolve_action`,
+  `_adjust_barre`), `ha_poller.py`, `ha_mqtt.py`, `icon_server.py` et
+  `color_mode.py` utilisent pour lire un emplacement, ce qui a limite le
+  changement a un point unique plutot que de toucher chaque consommateur
+  independamment.
+- **`profiles.py::migrate_profile_library()`** : migre transparemment un
+  profil de l'ancien format (16 emplacements tout-en-un) vers le nouveau
+  au premier chargement - chaque ancien emplacement devient une entree de
+  bibliotheque, assignee au meme emplacement physique s'il etait visible
+  (aucune perte de configuration existante).
+- **Cote JS** (`dashboard.js`) : afficher/retirer un bouton de l'ecran se
+  fait par glisser-depose (assigne/libere un `library_id` sur
+  `slots[i]`), plus par une case a cocher "Visible" dans la popup (jugee
+  peu pratique) - `library` est rendue comme la section "bibliotheque"
+  (les entrees NON assignees a un emplacement), l'ecran comme les
+  emplacements AVEC une entree assignee. Supprimer une entree
+  (`removeLibraryEntry()`) libere automatiquement l'emplacement physique
+  qui la referencait.
 
 ### Grille invisible redimensionnable (facon "sections" Home Assistant)
 

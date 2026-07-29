@@ -88,15 +88,31 @@ def format_ha_target(action: dict) -> str:
 
 
 def normalize_slots(raw_slots: list[dict] | None) -> list[dict]:
-    """Complete a exactement SLOT_COUNT emplacements (tronque/complete avec
-    des valeurs par defaut si la config sur disque en a moins/plus)."""
+    """Complete a exactement SLOT_COUNT emplacements PHYSIQUES (position/
+    taille + quelle entree de bibliotheque y est assignee - voir
+    profiles.py::resolve_slot pour le contenu resolu). Tronque/complete
+    avec des valeurs par defaut si la config sur disque en a moins/plus."""
     slots = list(raw_slots or [])
     normalized = []
     for i in range(SLOT_COUNT):
         slot = {**profile_utils.default_slot(i), **(slots[i] if i < len(slots) else {})}
-        action = {"type": "none", "target": ""} if slot["type"] != "bouton" else slot.get("action") or {"type": "none", "target": ""}
-        slot["action"] = action
         normalized.append(slot)
+    return normalized
+
+
+def normalize_library(raw_library: list[dict] | None) -> list[dict]:
+    """Bibliotheque de boutons enregistres - PAS limitee a SLOT_COUNT (voir
+    profiles.py, module docstring) : autant d'entrees que l'utilisateur en
+    cree, seules SLOT_COUNT peuvent etre assignees a un emplacement visible
+    a la fois. Complete chaque entree avec les valeurs par defaut (profils
+    enregistres avant l'introduction de la bibliotheque)."""
+    normalized = []
+    for entry in (raw_library or []):
+        entry_id = entry.get("id") or f"lib-{len(normalized)}-{id(entry)}"
+        merged = {**profile_utils.default_library_entry(entry_id), **entry, "id": entry_id}
+        if merged["type"] != "bouton":
+            merged["action"] = {"type": "none", "target": ""}
+        normalized.append(merged)
     return normalized
 
 
@@ -151,46 +167,60 @@ def fields_to_encoders(raw_encoders: list[dict]) -> list[dict]:
 
 
 def profile_to_fields(profile: dict) -> dict:
-    """Version d'un profil prete pour le template/JS : slots completes a
-    SLOT_COUNT avec leur action_field, encoders en forme champ texte."""
-    slots = normalize_slots(profile.get("slots"))
-    for slot in slots:
-        slot["action_field"] = target_to_field(slot["action"].get("type", "none"), slot["action"].get("target"))
+    """Version d'un profil prete pour le template/JS : emplacements
+    physiques (position/assignation) + bibliotheque complete (avec
+    action_field), encoders en forme champ texte. La resolution
+    emplacement<->contenu se fait cote JS (voir dashboard.js::resolveSlot),
+    comme pour weather/encoders - le backend ne fait que normaliser/
+    persister."""
+    library = normalize_library(profile.get("library"))
+    for entry in library:
+        entry["action_field"] = target_to_field(entry["action"].get("type", "none"), entry["action"].get("target"))
     return {
         "name": profile.get("name", profile_utils.DEFAULT_PROFILE_NAME),
         "trigger": profile.get("trigger"),
-        "slots": slots,
+        "slots": normalize_slots(profile.get("slots")),
+        "library": library,
         "encoders": encoders_to_fields(profile.get("encoders")),
         "weather": normalize_weather(profile.get("weather")),
     }
 
 
-def _resolve_icon_char(slot: dict) -> str:
+def _resolve_icon_char(entry: dict) -> str:
     """Icone poussee vers l'ecran (voir device_client.py::push_config) :
     icone reelle de l'appli/jeu si l'action est 'launch' et que
     l'extraction reussit tout de suite (voir icon_extract.py - Windows
     uniquement, appelle deja l'extraction pour peupler son cache et
     valider la cible), sinon le glyphe Material Icons choisi (icons.py)."""
-    action = slot.get("action") or {}
+    action = entry.get("action") or {}
     if action.get("type") == "launch":
         target = action.get("target") or ""
         if icon_extract.extract_icon_png(target) is not None:
             return f"REAL:{icon_extract.icon_version(target)}"
-    return icons.icon_char(slot.get("icon", ""))
+    return icons.icon_char(entry.get("icon", ""))
 
 
 def fields_to_profile(raw_profile: dict) -> dict:
     """Inverse de profile_to_fields : reconvertit un profil recu du
-    formulaire (slots/encoders en forme champ texte) vers le format
+    formulaire (bibliotheque/encoders en forme champ texte) vers le format
     persistable dans dashboard_config.yaml."""
+    library = normalize_library(raw_profile.get("library"))
+    for entry in library:
+        action_type = entry.get("action", {}).get("type", "none")
+        action_field = entry.pop("action_field", "")
+        entry["action"] = {"type": action_type, "target": field_to_target(action_type, action_field)}
+        entry["show_light_color"] = bool(entry.get("show_light_color"))
+        entry["icon_char"] = _resolve_icon_char(entry)
+        entry["label"] = (entry.get("label") or "").strip()[:24] or entry["label"]
+    library_ids = {entry["id"] for entry in library}
     slots = normalize_slots(raw_profile.get("slots"))
     for slot in slots:
-        action_type = slot.get("action", {}).get("type", "none")
-        action_field = slot.pop("action_field", "")
-        slot["action"] = {"type": action_type, "target": field_to_target(action_type, action_field)}
-        slot["show_light_color"] = bool(slot.get("show_light_color"))
-        slot["icon_char"] = _resolve_icon_char(slot)
-        slot["label"] = (slot.get("label") or "").strip()[:24] or slot["label"]
+        # Une entree assignee a un emplacement peut avoir ete supprimee de
+        # la bibliotheque entre-temps (voir "Supprimer" du popup) - on
+        # libere alors l'emplacement plutot que de garder une reference
+        # morte.
+        if slot.get("library_id") not in library_ids:
+            slot["library_id"] = None
     name = (raw_profile.get("name") or "").strip()[:24] or profile_utils.DEFAULT_PROFILE_NAME
     trigger = raw_profile.get("trigger")
     trigger = {"process": trigger["process"].strip()} if trigger and (trigger.get("process") or "").strip() else None
@@ -198,6 +228,7 @@ def fields_to_profile(raw_profile: dict) -> dict:
         "name": name,
         "trigger": trigger,
         "slots": slots,
+        "library": library,
         "encoders": fields_to_encoders(raw_profile.get("encoders") or []),
         "weather": normalize_weather(raw_profile.get("weather")),
     }

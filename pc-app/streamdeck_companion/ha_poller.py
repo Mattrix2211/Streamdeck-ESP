@@ -13,6 +13,7 @@ import logging
 import threading
 
 from . import ha_client as ha
+from . import profiles as profile_utils
 from . import weather as weather_module
 from .device_client import DeviceClient
 
@@ -32,12 +33,11 @@ def poll_once(device_client: DeviceClient) -> dict[int, str]:
     client = ha.HomeAssistantClient(ha_conf.get("url", ""), ha_conf.get("token", ""))
     if not client.configured:
         return {}
-    slots = device_client.active_profile().get("slots") or []
+    active = device_client.active_profile()
     values: dict[int, str] = {}
     colors: dict[int, str] = {}
-    for idx, slot in enumerate(slots):
-        if not slot:
-            continue
+    for idx in range(profile_utils.SLOT_COUNT):
+        slot = profile_utils.resolve_slot(active, idx)
         slot_type = slot.get("type", "bouton")
         if slot_type in ("barre", "texte"):
             entity_id = slot.get("ha_entity")
@@ -63,7 +63,7 @@ def poll_once(device_client: DeviceClient) -> dict[int, str]:
                 if state is not None:
                     colors[idx] = ha.light_color_hex(state)
 
-    weather = device_client.active_profile().get("weather") or {}
+    weather = active.get("weather") or {}
     if weather.get("visible") and weather.get("entity"):
         try:
             info = weather_module.read_weather(client, weather["entity"])

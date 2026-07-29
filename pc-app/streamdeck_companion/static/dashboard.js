@@ -21,12 +21,16 @@ let manualOverride = MANUAL_OVERRIDE;
  * via les popups s'appliquent donc directement a `profiles[activeEditIndex]`.
  * switchProfileTab() les re-pointe vers le profil choisi. */
 let slots = profiles[activeEditIndex].slots;
+let library = profiles[activeEditIndex].library;
 let encoders = profiles[activeEditIndex].encoders;
 let weather = profiles[activeEditIndex].weather;
-/* Index du glisser-depose en cours - un index de emplacement (0-15) ou -1
- * pour la carte meteo (voir gridItem()), null si aucun glisser en cours. */
-let dragSrcIndex = null;
-let currentIndex = null;
+/* Source du glisser-depose en cours (voir renderGrid()) :
+ * {kind: "slot", index} (emplacement physique deja affiche, 0-15),
+ * {kind: "library", id} (bouton de la bibliotheque, pas encore affiche),
+ * {kind: "weather"}, ou null si aucun glisser en cours. */
+let dragSrc = null;
+let currentLibraryId = null;
+let isNewLibraryEntry = false;
 let currentEncoderIndex = null;
 let editingProfileIndex = null;
 
@@ -107,12 +111,19 @@ function rectsOverlap(a, b) {
 }
 
 /* La carte meteo (widget dedie, au plus un par profil - voir weather.py)
- * participe a la meme grille que les 16 emplacements : on la traite comme
- * un emplacement "virtuel" d'index -1 partout ou la logique de grille
- * (collision, glisser-depose, redimensionnement) doit la prendre en
- * compte, pour eviter de dupliquer cette logique en deux versions. */
+ * participe a la meme grille que les 16 emplacements physiques : on la
+ * traite comme un emplacement "virtuel" d'index -1 partout ou la logique
+ * de grille (collision, glisser-depose, redimensionnement) doit la
+ * prendre en compte, pour eviter de dupliquer cette logique en deux
+ * versions. Un emplacement physique (0-15) est "visible" s'il a une
+ * entree de bibliotheque assignee (library_id) - la visibilite n'est
+ * plus un booleen stocke separement (voir profiles.py::resolve_slot). */
 function gridItem(index) {
   return index === -1 ? weather : slots[index];
+}
+
+function isPhysVisible(index) {
+  return index === -1 ? !!weather.visible : !!slots[index].library_id;
 }
 
 /* True si `rect` (candidat de position/taille) chevauche un AUTRE
@@ -122,8 +133,7 @@ function hasCollision(excludeIndex, rect) {
   const indices = [-1, ...slots.map((_, i) => i)];
   return indices.some((i) => {
     if (i === excludeIndex) return false;
-    const item = gridItem(i);
-    return item.visible && rectsOverlap(rect, slotGrid(item));
+    return isPhysVisible(i) && rectsOverlap(rect, slotGrid(gridItem(i)));
   });
 }
 
@@ -192,36 +202,56 @@ function attachResizeHandle(tile, index) {
   tile.appendChild(handle);
 }
 
-function makeTile(slot, index, isGrid) {
+/* Bibliotheque de boutons enregistres (voir profiles.py, module docstring)
+ * - PAS limitee a 16 : on peut en enregistrer autant qu'on veut, seuls 16
+ * au maximum peuvent etre assignes a un emplacement visible a la fois
+ * (limite materielle du firmware). Un emplacement physique (slots[i]) ne
+ * stocke qu'une position/taille + QUELLE entree y est affichee
+ * (library_id) - le contenu (libelle/icone/action...) vit uniquement
+ * dans `library`, modifiable une seule fois et reutilisable partout. */
+function libraryEntry(id) {
+  return library.find((e) => e.id === id) || null;
+}
+
+function assignedLibraryIds() {
+  return new Set(slots.map((s) => s.library_id).filter(Boolean));
+}
+
+function removeLibraryEntry(entryId) {
+  const idx = library.findIndex((e) => e.id === entryId);
+  if (idx !== -1) library.splice(idx, 1);
+  slots.forEach((s) => { if (s.library_id === entryId) s.library_id = null; });
+}
+
+function makeSlotTile(entry, physIndex, isGrid) {
   const tile = document.createElement("div");
   tile.className = "slot-tile shape-" + (SHAPE === "rond" ? "rond" : "carre");
-  if (slot.type && slot.type !== "bouton") tile.classList.add("has-widget");
+  if (entry.type && entry.type !== "bouton") tile.classList.add("has-widget");
   tile.draggable = true;
-  tile.dataset.index = String(index);
 
   if (isGrid) {
-    const g = slotGrid(slot);
+    const g = slotGrid(slots[physIndex]);
     tile.style.gridColumn = `${g.col + 1} / span ${g.colspan}`;
     tile.style.gridRow = `${g.row + 1} / span ${g.rowspan}`;
   }
 
   const icon = document.createElement("div");
   icon.className = "icon";
-  const launchTarget = slot.action && slot.action.type === "launch" ? slot.action.target : "";
+  const launchTarget = entry.action && entry.action.type === "launch" ? entry.action.target : "";
   if (launchTarget) {
     const img = document.createElement("img");
     img.src = "/preview-icon.png?target=" + encodeURIComponent(launchTarget);
     img.alt = "";
-    img.onerror = () => { img.replaceWith(document.createTextNode(iconChar(slot.icon))); };
+    img.onerror = () => { img.replaceWith(document.createTextNode(iconChar(entry.icon))); };
     icon.appendChild(img);
   } else {
-    icon.textContent = iconChar(slot.icon);
+    icon.textContent = iconChar(entry.icon);
   }
   tile.appendChild(icon);
 
   const label = document.createElement("div");
   label.className = "label";
-  label.textContent = slot.label || `Slot ${index + 1}`;
+  label.textContent = entry.label || "Bouton";
   tile.appendChild(label);
 
   /* Sur le vrai ecran, "barre"/"texte" affichent une jauge ou une valeur
@@ -230,51 +260,90 @@ function makeTile(slot, index, isGrid) {
    * navigateur (c'est ha_poller.py qui pousse la vraie valeur a l'ecran) :
    * on affiche juste un espace reserve pour montrer OU et COMMENT elle
    * s'affichera. */
-  if (slot.type === "barre") {
+  if (entry.type === "barre") {
     const bar = document.createElement("div");
     bar.className = "widget-bar";
     bar.appendChild(document.createElement("span"));
     tile.appendChild(bar);
-  } else if (slot.type === "texte") {
+  } else if (entry.type === "texte") {
     const value = document.createElement("div");
     value.className = "widget-value";
-    value.textContent = slot.ha_entity ? "--" : "";
+    value.textContent = entry.ha_entity ? "--" : "";
     tile.appendChild(value);
   }
 
-  tile.addEventListener("click", () => openModal(index));
-  tile.addEventListener("dragstart", () => { dragSrcIndex = index; });
-  tile.addEventListener("dragend", () => { dragSrcIndex = null; });
+  tile.addEventListener("click", () => openModal(entry.id));
+  tile.addEventListener("dragstart", () => {
+    dragSrc = isGrid ? { kind: "slot", index: physIndex } : { kind: "library", id: entry.id };
+  });
+  tile.addEventListener("dragend", () => { dragSrc = null; });
 
-  if (isGrid) attachResizeHandle(tile, index);
+  if (isGrid) attachResizeHandle(tile, physIndex);
 
   return tile;
 }
 
+function makeAddTile() {
+  const tile = document.createElement("div");
+  tile.className = "slot-tile add-tile";
+  tile.title = "Ajouter un nouveau bouton a la bibliotheque";
+  const plus = document.createElement("div");
+  plus.className = "icon";
+  plus.textContent = "+";
+  tile.appendChild(plus);
+  const label = document.createElement("div");
+  label.className = "label";
+  label.textContent = "Ajouter";
+  tile.appendChild(label);
+  tile.addEventListener("click", () => {
+    const id = `lib-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+    library.push({
+      id, label: "Nouveau bouton", icon: "", icon_char: "", type: "bouton",
+      action: { type: "none", target: "" }, action_field: "", ha_entity: "", show_light_color: false,
+    });
+    openModal(id, true);
+  });
+  return tile;
+}
+
 /* Deplacer/redimensionner se fait au niveau du CONTENEUR (grille ou tray)
- * plutot que par tuile - une tuile deposee "swap" son contenu entier dans
- * l'ancien systeme a taille fixe, incompatible avec une position/taille
- * libre : ici, deposer met a jour la position de la tuile SOURCE (et sa
- * visibilite), sans toucher aux autres. */
+ * plutot que par tuile : deposer un emplacement/la meteo deja affiche
+ * change juste sa position ; deposer un bouton de la bibliotheque
+ * l'assigne au premier emplacement physique libre. */
 screenGrid.addEventListener("dragover", (e) => { e.preventDefault(); screenGrid.classList.add("drag-over"); });
 screenGrid.addEventListener("dragleave", (e) => { if (e.target === screenGrid) screenGrid.classList.remove("drag-over"); });
 screenGrid.addEventListener("drop", (e) => {
   e.preventDefault();
   screenGrid.classList.remove("drag-over");
-  if (dragSrcIndex === null) return;
-  const item = gridItem(dragSrcIndex);
-  const g = slotGrid(item);
+  if (!dragSrc) return;
+  const src = dragSrc;
+  dragSrc = null;
   const target = pointToCell(e.clientX, e.clientY);
+
+  if (src.kind === "library") {
+    const freeIdx = slots.findIndex((s) => !s.library_id);
+    if (freeIdx === -1) {
+      alert("Les 16 emplacements de l'ecran sont deja utilises - retirez-en un d'abord (glissez-le vers la bibliotheque).");
+      return;
+    }
+    let candidate = { col: target.col, row: target.row, colspan: 1, rowspan: 1 };
+    if (hasCollision(freeIdx, candidate)) candidate = { ...findFreeCell(freeIdx, 1, 1), colspan: 1, rowspan: 1 };
+    slots[freeIdx] = { library_id: src.id, grid: candidate };
+    renderGrid();
+    return;
+  }
+
+  const idx = src.kind === "weather" ? -1 : src.index;
+  const item = gridItem(idx);
+  const g = slotGrid(item);
   const candidate = {
     col: Math.min(target.col, GRID_COLS - g.colspan),
     row: Math.min(target.row, GRID_ROWS - g.rowspan),
     colspan: g.colspan,
     rowspan: g.rowspan,
   };
-  const srcIndex = dragSrcIndex;
-  dragSrcIndex = null;
-  if (hasCollision(srcIndex, candidate)) return;
-  item.visible = true;
+  if (hasCollision(idx, candidate)) return;
+  if (idx === -1) weather.visible = true;
   item.grid = candidate;
   renderGrid();
 });
@@ -284,21 +353,22 @@ hiddenTray.addEventListener("dragleave", (e) => { if (e.target === hiddenTray) h
 hiddenTray.addEventListener("drop", (e) => {
   e.preventDefault();
   hiddenTray.classList.remove("drag-over");
-  if (dragSrcIndex === null) return;
-  gridItem(dragSrcIndex).visible = false;
-  dragSrcIndex = null;
+  if (!dragSrc) return;
+  if (dragSrc.kind === "weather") weather.visible = false;
+  else if (dragSrc.kind === "slot") slots[dragSrc.index].library_id = null;
+  dragSrc = null;
   renderGrid();
 });
 
 /* Carte meteo (widget dedie, voir weather.py/firmware/weather_card.yaml) -
  * meme grille/collision que les emplacements (voir gridItem(-1)), mais
  * contenu et popup de configuration distincts (pas d'action/type/icone a
- * choisir, juste une entite HA weather.* et une visibilite). */
+ * choisir, juste une entite HA weather.* et une visibilite - c'est une
+ * carte unique, pas un choix parmi une bibliotheque). */
 function makeWeatherTile(isGrid) {
   const tile = document.createElement("div");
   tile.className = "slot-tile weather-tile shape-" + (SHAPE === "rond" ? "rond" : "carre");
   tile.draggable = true;
-  tile.dataset.index = "-1";
 
   if (isGrid) {
     const g = slotGrid(weather);
@@ -322,8 +392,8 @@ function makeWeatherTile(isGrid) {
   tile.appendChild(value);
 
   tile.addEventListener("click", openWeatherModal);
-  tile.addEventListener("dragstart", () => { dragSrcIndex = -1; });
-  tile.addEventListener("dragend", () => { dragSrcIndex = null; });
+  tile.addEventListener("dragstart", () => { dragSrc = { kind: "weather" }; });
+  tile.addEventListener("dragend", () => { dragSrc = null; });
 
   if (isGrid) attachResizeHandle(tile, -1);
 
@@ -333,30 +403,23 @@ function makeWeatherTile(isGrid) {
 function renderGrid() {
   screenGrid.innerHTML = "";
   hiddenTray.innerHTML = "";
-  let hiddenCount = 0;
 
-  slots.forEach((slot, index) => {
-    if (slot.visible) {
-      screenGrid.appendChild(makeTile(slot, index, true));
-    } else {
-      hiddenTray.appendChild(makeTile(slot, index, false));
-      hiddenCount += 1;
-    }
+  slots.forEach((phys, index) => {
+    if (!phys.library_id) return;
+    const entry = libraryEntry(phys.library_id);
+    if (entry) screenGrid.appendChild(makeSlotTile(entry, index, true));
   });
 
-  if (weather.visible) {
-    screenGrid.appendChild(makeWeatherTile(true));
-  } else {
-    hiddenTray.appendChild(makeWeatherTile(false));
-    hiddenCount += 1;
-  }
+  if (weather.visible) screenGrid.appendChild(makeWeatherTile(true));
 
-  if (hiddenCount === 0) {
-    const empty = document.createElement("p");
-    empty.className = "hidden-tray-empty";
-    empty.textContent = "Aucun - tous les emplacements visibles sont sur l'ecran.";
-    hiddenTray.appendChild(empty);
-  }
+  const assignedIds = assignedLibraryIds();
+  library.forEach((entry) => {
+    if (!assignedIds.has(entry.id)) hiddenTray.appendChild(makeSlotTile(entry, null, false));
+  });
+
+  if (!weather.visible) hiddenTray.appendChild(makeWeatherTile(false));
+
+  hiddenTray.appendChild(makeAddTile());
 }
 
 function renderEncoderMock() {
@@ -405,59 +468,70 @@ function updateLaunchPickerVisibility() {
   updateAudioPickerVisibility();
 }
 
-function openModal(index) {
-  currentIndex = index;
-  const slot = slots[index];
-  document.getElementById("modal-title").textContent = `Emplacement ${index + 1}`;
-  document.getElementById("modal-visible").checked = !!slot.visible;
-  document.getElementById("modal-label").value = slot.label || "";
-  document.getElementById("modal-type").value = slot.type || "bouton";
-  document.getElementById("modal-action-type").value = (slot.action && slot.action.type) || "none";
-  document.getElementById("modal-action-target").value = slot.action_field || "";
-  document.getElementById("modal-ha-entity").value = slot.ha_entity || "";
-  document.getElementById("modal-show-light-color").checked = !!slot.show_light_color;
-  selectedAppTarget = slot.action_field || null;
-  modal.dataset.selectedIcon = slot.icon || "";
+/* Edite une entree de bibliotheque (pas un emplacement physique - un
+ * bouton se configure une fois et peut etre affiche/retire de l'ecran
+ * librement par glisser-depose, voir renderGrid()). `isNew` : l'entree
+ * vient d'etre creee par le bouton "+" (makeAddTile) - annuler la supprime
+ * au lieu de la laisser trainer vide dans la bibliotheque. */
+function openModal(entryId, isNew) {
+  const entry = libraryEntry(entryId);
+  if (!entry) return;
+  currentLibraryId = entryId;
+  isNewLibraryEntry = !!isNew;
+  document.getElementById("modal-title").textContent = entry.label || "Nouveau bouton";
+  document.getElementById("modal-label").value = entry.label || "";
+  document.getElementById("modal-type").value = entry.type || "bouton";
+  document.getElementById("modal-action-type").value = (entry.action && entry.action.type) || "none";
+  document.getElementById("modal-action-target").value = entry.action_field || "";
+  document.getElementById("modal-ha-entity").value = entry.ha_entity || "";
+  document.getElementById("modal-show-light-color").checked = !!entry.show_light_color;
+  selectedAppTarget = entry.action_field || null;
+  modal.dataset.selectedIcon = entry.icon || "";
   document.getElementById("icon-search").value = "";
-  renderIconPicker(slot.icon || "");
+  renderIconPicker(entry.icon || "");
   updateModalFieldsVisibility();
   modal.classList.remove("hidden");
 }
 
 function closeModal() {
   modal.classList.add("hidden");
-  currentIndex = null;
+  currentLibraryId = null;
+  isNewLibraryEntry = false;
 }
 
 document.getElementById("modal-type").addEventListener("change", updateModalFieldsVisibility);
 document.getElementById("modal-action-type").addEventListener("change", updateLaunchPickerVisibility);
-document.getElementById("modal-cancel").addEventListener("click", closeModal);
 document.getElementById("icon-search").addEventListener("input", (e) => {
   renderIconPicker(modal.dataset.selectedIcon || "", e.target.value);
 });
 
-document.getElementById("modal-apply").addEventListener("click", () => {
-  if (currentIndex === null) return;
-  const slot = slots[currentIndex];
-  const wasVisible = !!slot.visible;
-  slot.visible = document.getElementById("modal-visible").checked;
-  if (slot.visible && !wasVisible) {
-    /* Rendu visible autrement que par glisser-depose (case a cocher) - la
-     * position enregistree peut chevaucher un emplacement deja affiche,
-     * on cherche alors la premiere case libre plutot que de superposer. */
-    const g = slotGrid(slot);
-    if (hasCollision(currentIndex, g)) {
-      const free = findFreeCell(currentIndex, g.colspan, g.rowspan);
-      slot.grid = { col: free.col, row: free.row, colspan: g.colspan, rowspan: g.rowspan };
-    }
+document.getElementById("modal-cancel").addEventListener("click", () => {
+  if (isNewLibraryEntry && currentLibraryId !== null) {
+    removeLibraryEntry(currentLibraryId);
+    renderGrid();
   }
-  slot.label = document.getElementById("modal-label").value.trim() || `Slot ${currentIndex + 1}`;
-  slot.type = document.getElementById("modal-type").value;
-  slot.icon = modal.dataset.selectedIcon || "";
-  slot.action = { type: document.getElementById("modal-action-type").value, target: null };
-  slot.action_field = document.getElementById("modal-action-target").value;
-  slot.ha_entity = document.getElementById("modal-ha-entity").value.trim();
-  slot.show_light_color = document.getElementById("modal-show-light-color").checked;
+  closeModal();
+});
+
+document.getElementById("modal-delete").addEventListener("click", () => {
+  if (currentLibraryId !== null) {
+    removeLibraryEntry(currentLibraryId);
+    renderGrid();
+  }
+  closeModal();
+});
+
+document.getElementById("modal-apply").addEventListener("click", () => {
+  if (currentLibraryId === null) return;
+  const entry = libraryEntry(currentLibraryId);
+  if (!entry) return;
+  entry.label = document.getElementById("modal-label").value.trim() || "Bouton";
+  entry.type = document.getElementById("modal-type").value;
+  entry.icon = modal.dataset.selectedIcon || "";
+  entry.action = { type: document.getElementById("modal-action-type").value, target: null };
+  entry.action_field = document.getElementById("modal-action-target").value;
+  entry.ha_entity = document.getElementById("modal-ha-entity").value.trim();
+  entry.show_light_color = document.getElementById("modal-show-light-color").checked;
   renderGrid();
   closeModal();
 });

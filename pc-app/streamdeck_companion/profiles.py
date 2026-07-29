@@ -32,20 +32,93 @@ def default_grid(i: int) -> dict:
 
 
 def default_slot(i: int) -> dict:
-    return {
-        "label": f"Slot {i + 1}",
-        "icon": "",
-        "type": "bouton",
-        "visible": i < 12,
-        "action": {"type": "none", "target": ""},
-        "ha_entity": "",
-        "show_light_color": False,
-        "grid": default_grid(i),
-    }
+    """Emplacement PHYSIQUE i (0-15) - juste sa position/taille et QUELLE
+    entree de bibliotheque (voir default_library_entry) y est affichee, si
+    aucune (`library_id: None`) l'emplacement est simplement vide/invisible.
+    Le contenu (libelle/icone/action...) ne vit plus ici depuis l'ajout de
+    la bibliotheque illimitee - voir resolve_slot()."""
+    return {"library_id": None, "grid": default_grid(i)}
 
 
 def default_slots() -> list[dict]:
     return [default_slot(i) for i in range(SLOT_COUNT)]
+
+
+def default_library_entry(entry_id: str) -> dict:
+    """Entree de bibliotheque vide (voir bouton "+" de l'appli PC) - le
+    nombre d'entrees n'est PAS limite a 16 contrairement aux emplacements
+    physiques : on peut en enregistrer autant que voulu, seuls 16 au
+    maximum peuvent etre assignes a un emplacement visible a la fois
+    (limite materielle du firmware, voir slot_widgets.yaml)."""
+    return {
+        "id": entry_id,
+        "label": "Nouveau bouton",
+        "icon": "",
+        "icon_char": "",
+        "type": "bouton",
+        "action": {"type": "none", "target": ""},
+        "ha_entity": "",
+        "show_light_color": False,
+    }
+
+
+def find_library_entry(library: list[dict] | None, entry_id: str | None) -> dict | None:
+    if not entry_id:
+        return None
+    return next((e for e in (library or []) if e.get("id") == entry_id), None)
+
+
+def resolve_slot(profile: dict, idx: int) -> dict:
+    """Emplacement physique idx (0-15) RESOLU : combine sa position/taille
+    de grille avec le contenu (libelle/icone/action/...) de l'entree de
+    bibliotheque qui lui est assignee, dans le MEME format qu'un ancien
+    emplacement "tout-en-un" - pour que push_config()/_resolve_action()/
+    ha_poller.py n'aient pas besoin de connaitre la bibliotheque. Renvoie
+    un emplacement vide/invisible si rien n'y est assigne."""
+    slots = profile.get("slots") or []
+    phys = slots[idx] if idx < len(slots) else {}
+    grid = phys.get("grid") or default_grid(idx)
+    entry = find_library_entry(profile.get("library"), phys.get("library_id"))
+    if entry is None:
+        return {
+            "label": f"Slot {idx + 1}", "icon": "", "icon_char": "", "type": "bouton", "visible": False,
+            "action": {"type": "none", "target": ""}, "ha_entity": "", "show_light_color": False,
+            "grid": grid, "library_id": None,
+        }
+    return {**entry, "visible": True, "grid": grid, "library_id": phys.get("library_id")}
+
+
+def migrate_profile_library(profile: dict) -> None:
+    """Migre un profil de l'ancien format (16 emplacements "tout-en-un" -
+    libelle/icone/action directement dans slots[i]) vers le modele
+    bibliotheque+assignation (voir resolve_slot) - modifie `profile` sur
+    place, ne fait rien si une cle "library" existe deja. Preserve
+    integralement le contenu et l'etat visible/masque existants : chaque
+    ancien emplacement devient une entree de bibliotheque, assignee au
+    meme emplacement physique s'il etait visible."""
+    if "library" in profile:
+        return
+    old_slots = profile.get("slots") or []
+    library, new_slots = [], []
+    for i in range(SLOT_COUNT):
+        old = old_slots[i] if i < len(old_slots) else {}
+        entry_id = f"lib-{i}"
+        library.append({
+            "id": entry_id,
+            "label": old.get("label") or f"Slot {i + 1}",
+            "icon": old.get("icon", ""),
+            "icon_char": old.get("icon_char", ""),
+            "type": old.get("type", "bouton"),
+            "action": old.get("action") or {"type": "none", "target": ""},
+            "ha_entity": old.get("ha_entity", ""),
+            "show_light_color": bool(old.get("show_light_color")),
+        })
+        new_slots.append({
+            "library_id": entry_id if old.get("visible", i < 12) else None,
+            "grid": old.get("grid") or default_grid(i),
+        })
+    profile["slots"] = new_slots
+    profile["library"] = library
 
 
 def default_encoders() -> list[dict]:
@@ -63,23 +136,27 @@ def default_weather() -> dict:
 def default_profile(name: str = DEFAULT_PROFILE_NAME, trigger: dict | None = None) -> dict:
     return {
         "name": name, "trigger": trigger, "slots": default_slots(), "encoders": default_encoders(),
-        "weather": default_weather(),
+        "weather": default_weather(), "library": [],
     }
 
 
 def migrate_profiles(config: dict) -> list[dict]:
     """Retourne config['profiles'], migrant l'ancien format (slots/encoders
     a la racine, avant l'introduction des profils) vers un profil "Defaut"
-    unique si besoin - transparent pour les configs existantes."""
+    unique si besoin - transparent pour les configs existantes. Migre
+    egalement chaque profil vers le modele bibliotheque+assignation si
+    besoin (voir migrate_profile_library)."""
     profiles = config.get("profiles")
-    if profiles:
-        return profiles
-    profile = default_profile()
-    if "slots" in config:
-        profile["slots"] = config["slots"]
-    if "encoders" in config:
-        profile["encoders"] = config["encoders"]
-    return [profile]
+    if not profiles:
+        profile = default_profile()
+        if "slots" in config:
+            profile["slots"] = config["slots"]
+        if "encoders" in config:
+            profile["encoders"] = config["encoders"]
+        profiles = [profile]
+    for profile in profiles:
+        migrate_profile_library(profile)
+    return profiles
 
 
 def find_profile(profiles: list[dict], name: str | None) -> dict | None:

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-  <p class="sub">Aperçu fidele de l'ecran (memes proportions et disposition). Cliquez un emplacement ou un encodeur pour le configurer. Glissez-deposez un emplacement pour le repositionner sur la grille invisible, ou tirez sur son coin bas-droit pour le redimensionner (facon "sections" Home Assistant) - deux emplacements ne peuvent pas se chevaucher.</p>
+  <p class="sub">Aperçu fidele de l'ecran (memes proportions et disposition). Cliquez un bouton ou un encodeur pour le configurer. Glissez-deposez un bouton pour le repositionner sur la grille invisible ou l'afficher/le retirer de l'ecran, tirez sur son coin bas-droit pour le redimensionner (facon "sections" Home Assistant) - deux boutons ne peuvent pas se chevaucher. La bibliotheque (sous l'ecran) n'est pas limitee a 16 : enregistrez-en autant que vous voulez, seuls 16 au maximum peuvent etre affiches a la fois.</p>
 
   <div class="profile-bar">
     <div id="profile-tabs" class="profile-tabs"></div>
@@ -25,8 +25,8 @@
     </div>
 
     <div class="hidden-tray-section">
-      <h2>Emplacements masques</h2>
-      <p class="hint">N'apparaissent pas sur l'ecran. Cliquez pour configurer/activer, ou glissez-les sur la grille de l'ecran ci-dessus pour les y afficher (glissez un emplacement de l'ecran ici pour le masquer).</p>
+      <h2>Bibliotheque de boutons</h2>
+      <p class="hint">Tous vos boutons enregistres, illimites - ceux ci-dessous ne sont pas affiches sur l'ecran. Cliquez pour configurer, glissez-les sur la grille de l'ecran ci-dessus pour les y afficher (glissez un bouton de l'ecran ici pour le retirer, sans le supprimer). "+" pour en creer un nouveau.</p>
       <div id="hidden-tray" class="hidden-tray"></div>
     </div>
 
@@ -36,9 +36,7 @@
 
   <div id="slot-modal" class="modal-backdrop hidden">
     <div class="modal">
-      <h2 id="modal-title">Emplacement</h2>
-      <label>Visible sur l'ecran</label>
-      <input type="checkbox" id="modal-visible">
+      <h2 id="modal-title">Bouton</h2>
 
       <label>Libelle</label>
       <input type="text" id="modal-label" maxlength="24">
@@ -95,6 +93,7 @@
 
       <div class="modal-buttons">
         <button type="button" id="modal-cancel" class="secondary">Annuler</button>
+        <button type="button" id="modal-delete" class="danger">Supprimer</button>
         <button type="button" id="modal-apply">Appliquer</button>
       </div>
     </div>

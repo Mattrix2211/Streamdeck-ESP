@@ -26,6 +26,7 @@ import logging
 import threading
 
 from . import ha_client as ha
+from . import profiles as profile_utils
 from .device_client import DeviceClient
 
 LOG = logging.getLogger("streamdeck_ha_mqtt")
@@ -145,12 +146,11 @@ class MqttBridge:
         self._pending_timers.pop(entity_id, None)
         if not self.device_client.connected:
             return
-        slots = self.device_client.active_profile().get("slots") or []
+        active = self.device_client.active_profile()
         values: dict[int, str] = {}
         colors: dict[int, str] = {}
-        for idx, slot in enumerate(slots):
-            if not slot:
-                continue
+        for idx in range(profile_utils.SLOT_COUNT):
+            slot = profile_utils.resolve_slot(active, idx)
             slot_type = slot.get("type", "bouton")
             if slot_type in ("barre", "texte") and slot.get("ha_entity") == entity_id:
                 values[idx] = ha.format_widget_value(state, slot_type)

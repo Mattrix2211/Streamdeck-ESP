@@ -130,12 +130,18 @@ button.danger:hover { background: rgba(230,57,70,.12); }
 .encoder-mock-bar { height: 4px; border-radius: 2px; background: var(--slate); overflow: hidden; }
 .encoder-mock-bar > span { display: block; height: 100%; background: var(--signal); width: 0%; }
 
-/* --- Emplacements masques (hors ecran, App Library-like) --- */
+/* --- Bibliotheque de boutons (hors ecran, App Library-like) --- */
 .hidden-tray-section { margin-top: 20px; }
 .hidden-tray { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
 .hidden-tray .slot-tile { width: 110px; aspect-ratio: 232/96; opacity: 0.55; }
 .hidden-tray .slot-tile:hover { opacity: 1; }
-.hidden-tray-empty { color: var(--fog); font-size: 13px; font-style: italic; }
+.hidden-tray .add-tile {
+  opacity: 1; border-style: dashed; border-color: var(--slate); background: transparent;
+  justify-content: center;
+}
+.hidden-tray .add-tile:hover { border-color: var(--signal); }
+.hidden-tray .add-tile .icon { font-size: 20px; color: var(--signal); font-family: inherit; }
+.hidden-tray .add-tile .label { color: var(--mist); }
 
 /* --- Popup de configuration d'un emplacement --- */
 .modal-backdrop {

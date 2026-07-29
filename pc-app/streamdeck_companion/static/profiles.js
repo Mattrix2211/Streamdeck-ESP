@@ -9,6 +9,7 @@
 function switchProfileTab(index) {
   activeEditIndex = index;
   slots = profiles[index].slots;
+  library = profiles[index].library;
   encoders = profiles[index].encoders;
   weather = profiles[index].weather;
   renderProfileTabs();
@@ -102,18 +103,22 @@ document.getElementById("profile-auto-btn").addEventListener("click", () => {
 });
 
 function makeDefaultSlots() {
+  /* Emplacements PHYSIQUES (position/taille uniquement, voir
+   * profiles.py::default_slot) - un nouveau profil demarre avec un ecran
+   * vide (aucune entree de bibliotheque assignee), a l'utilisateur de
+   * glisser des boutons dessus depuis la bibliotheque (vide elle aussi,
+   * voir makeDefaultLibrary). Meme formule que profiles.py::default_grid
+   * pour la position par defaut (range dans l'ordre de lecture, non
+   * utilisee tant que library_id est null). */
   const slots = [];
   for (let i = 0; i < 16; i++) {
-    slots.push({
-      label: `Slot ${i + 1}`, icon: "", type: "bouton", visible: i < 12,
-      action: { type: "none", target: "" }, action_field: "", ha_entity: "",
-      /* Meme formule que profiles.py::default_grid - range dans l'ordre
-       * de lecture sur la grille invisible (9 colonnes), sans quoi tous
-       * les emplacements d'un nouveau profil se chevaucheraient a (0,0). */
-      grid: { col: i % GRID_COLS, row: Math.floor(i / GRID_COLS), colspan: 1, rowspan: 1 },
-    });
+    slots.push({ library_id: null, grid: { col: i % GRID_COLS, row: Math.floor(i / GRID_COLS), colspan: 1, rowspan: 1 } });
   }
   return slots;
+}
+
+function makeDefaultLibrary() {
+  return [];
 }
 
 function makeDefaultEncoders() {
@@ -186,7 +191,10 @@ document.getElementById("profile-modal-save").addEventListener("click", () => {
   const triggerProcess = document.getElementById("profile-modal-trigger").value.trim();
   const trigger = triggerProcess ? { process: triggerProcess } : null;
   if (editingProfileIndex === null) {
-    profiles.push({ name, trigger, slots: makeDefaultSlots(), encoders: makeDefaultEncoders(), weather: makeDefaultWeather() });
+    profiles.push({
+      name, trigger, slots: makeDefaultSlots(), library: makeDefaultLibrary(),
+      encoders: makeDefaultEncoders(), weather: makeDefaultWeather(),
+    });
     closeProfileModal();
     switchProfileTab(profiles.length - 1);
   } else {
