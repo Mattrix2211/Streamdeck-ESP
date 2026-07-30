@@ -538,6 +538,127 @@ document.getElementById("modal-apply").addEventListener("click", () => {
   closeModal();
 });
 
+/* Mode simple (par defaut) vs avance (3 blocs horaire/antihoraire/appui
+ * independants) : la config avancee reste possible ("Personnalise") mais
+ * le cas courant - une seule entite/appli, horaire = augmente/antihoraire
+ * = diminue - se regle en un seul picker au lieu de repeter la meme cible
+ * deux fois avec des prefixes up:/down: a deviner. detectSimpleKind()
+ * reconnait une config existante qui suit ce patron (compose par
+ * composeSimpleEncoder ou migree depuis l'ancien mode avance) pour
+ * pre-remplir le mode simple a la reouverture ; sinon ("Personnalise")
+ * les 3 blocs avances restent la source de verite, inchanges.*/
+const NONE_ACTION = { type: "none", target: "" };
+
+function detectSimpleKind(enc) {
+  const cw = enc.clockwise || NONE_ACTION;
+  const acw = enc.anticlockwise || NONE_ACTION;
+  const press = enc.press || NONE_ACTION;
+  const isNone = (a) => (a.type || "none") === "none";
+  const targetApp = (a, prefix) => (a.target || "").startsWith(prefix) ? a.target.slice(prefix.length) : null;
+
+  if (isNone(cw) && isNone(acw) && isNone(press)) return { kind: "none" };
+
+  if (cw.type === "ha_adjust" && acw.type === "ha_adjust" && isNone(press)) {
+    const cwEntity = targetApp(cw, "up:");
+    const acwEntity = targetApp(acw, "down:");
+    if (cwEntity && cwEntity === acwEntity) return { kind: "ha_adjust", entityId: cwEntity };
+  }
+
+  if (cw.type === "app_volume" && acw.type === "app_volume") {
+    const cwApp = targetApp(cw, "up:");
+    const acwApp = targetApp(acw, "down:");
+    const muteOk = isNone(press) || (press.type === "app_mute" && press.target === cwApp);
+    if (cwApp && cwApp === acwApp && muteOk) return { kind: "app_volume", app: cwApp, mute: press.type === "app_mute" };
+  }
+
+  if (cw.type === "media" && cw.target === "vol_up" && acw.type === "media" && acw.target === "vol_down") {
+    const muteOk = isNone(press) || (press.type === "media" && press.target === "mute");
+    if (muteOk) return { kind: "media", mute: press.type === "media" };
+  }
+
+  return { kind: "custom" };
+}
+
+function composeSimpleEncoder(kind) {
+  if (kind === "none") return { clockwise: { ...NONE_ACTION }, anticlockwise: { ...NONE_ACTION }, press: { ...NONE_ACTION } };
+  const mute = document.getElementById("encoder-simple-mute").checked;
+  if (kind === "ha_adjust") {
+    const entityId = document.getElementById("encoder-simple-ha-search").dataset.entityId || "";
+    if (!entityId) return { clockwise: { ...NONE_ACTION }, anticlockwise: { ...NONE_ACTION }, press: { ...NONE_ACTION } };
+    return {
+      clockwise: { type: "ha_adjust", target: `up:${entityId}` },
+      anticlockwise: { type: "ha_adjust", target: `down:${entityId}` },
+      press: { ...NONE_ACTION },
+    };
+  }
+  if (kind === "app_volume") {
+    const app = document.getElementById("encoder-simple-app").value;
+    if (!app) return { clockwise: { ...NONE_ACTION }, anticlockwise: { ...NONE_ACTION }, press: { ...NONE_ACTION } };
+    return {
+      clockwise: { type: "app_volume", target: `up:${app}` },
+      anticlockwise: { type: "app_volume", target: `down:${app}` },
+      press: mute ? { type: "app_mute", target: app } : { ...NONE_ACTION },
+    };
+  }
+  if (kind === "media") {
+    return {
+      clockwise: { type: "media", target: "vol_up" },
+      anticlockwise: { type: "media", target: "vol_down" },
+      press: mute ? { type: "media", target: "mute" } : { ...NONE_ACTION },
+    };
+  }
+  return { clockwise: { ...NONE_ACTION }, anticlockwise: { ...NONE_ACTION }, press: { ...NONE_ACTION } };
+}
+
+function populateSimpleAppPicker() {
+  const select = document.getElementById("encoder-simple-app");
+  const current = select.value;
+  select.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Choisir une application...";
+  select.appendChild(placeholder);
+  (audioSessions || []).forEach((session) => {
+    const opt = document.createElement("option");
+    opt.value = session.key;
+    opt.textContent = session.name;
+    select.appendChild(opt);
+  });
+  select.value = current;
+}
+
+function selectSimpleHaEntity(entity) {
+  const search = document.getElementById("encoder-simple-ha-search");
+  search.value = entity.name;
+  search.dataset.entityId = entity.entity_id;
+}
+
+function applyEncoderSimpleVisibility() {
+  const kind = document.getElementById("encoder-simple-kind").value;
+  document.getElementById("encoder-simple-ha-fields").style.display = kind === "ha_adjust" ? "block" : "none";
+  document.getElementById("encoder-simple-app").style.display = kind === "app_volume" ? "block" : "none";
+  document.getElementById("encoder-simple-mute-row").style.display = (kind === "app_volume" || kind === "media") ? "block" : "none";
+  document.getElementById("encoder-simple-hint").style.display = (kind === "none" || kind === "custom") ? "none" : "block";
+  document.getElementById("encoder-advanced-block").style.display = kind === "custom" ? "block" : "none";
+
+  if (kind === "ha_adjust") {
+    loadHaEntitiesIfNeeded((err) => {
+      document.getElementById("encoder-simple-ha-status").textContent = err || "";
+      renderEntityList(
+        "encoder-simple-ha-list", document.getElementById("encoder-simple-ha-search").value,
+        selectSimpleHaEntity, HA_ADJUST_DOMAINS,
+      );
+    });
+  } else if (kind === "app_volume") {
+    loadAudioSessionsIfNeeded(() => populateSimpleAppPicker());
+  }
+}
+
+document.getElementById("encoder-simple-kind").addEventListener("change", applyEncoderSimpleVisibility);
+document.getElementById("encoder-simple-ha-search").addEventListener("input", (e) => {
+  renderEntityList("encoder-simple-ha-list", e.target.value, selectSimpleHaEntity, HA_ADJUST_DOMAINS);
+});
+
 function openEncoderModal(index) {
   currentEncoderIndex = index;
   document.getElementById("encoder-modal-title").textContent = `Encodeur ${index + 1}`;
@@ -549,6 +670,25 @@ function openEncoderModal(index) {
     updateEncoderAppPickerVisibility(direction);
     updateEncoderHaPickerVisibility(direction);
   });
+
+  const detected = detectSimpleKind(enc);
+  document.getElementById("encoder-simple-kind").value = detected.kind;
+  document.getElementById("encoder-simple-mute").checked = !!detected.mute;
+  applyEncoderSimpleVisibility();
+  if (detected.kind === "ha_adjust") {
+    loadHaEntitiesIfNeeded(() => {
+      const entity = (haEntities || []).find((e) => e.entity_id === detected.entityId);
+      const search = document.getElementById("encoder-simple-ha-search");
+      search.value = entity ? entity.name : detected.entityId;
+      search.dataset.entityId = detected.entityId;
+    });
+  } else if (detected.kind === "app_volume") {
+    loadAudioSessionsIfNeeded(() => {
+      populateSimpleAppPicker();
+      document.getElementById("encoder-simple-app").value = detected.app;
+    });
+  }
+
   encoderModal.classList.remove("hidden");
 }
 
@@ -560,13 +700,19 @@ function closeEncoderModal() {
 document.getElementById("encoder-modal-cancel").addEventListener("click", closeEncoderModal);
 document.getElementById("encoder-modal-apply").addEventListener("click", () => {
   if (currentEncoderIndex === null) return;
-  const enc = {};
-  DIRECTIONS.forEach((direction) => {
-    enc[direction] = {
-      type: document.getElementById(`encoder-modal-${direction}-type`).value,
-      target: document.getElementById(`encoder-modal-${direction}-target`).value,
-    };
-  });
+  const kind = document.getElementById("encoder-simple-kind").value;
+  let enc;
+  if (kind !== "custom") {
+    enc = composeSimpleEncoder(kind);
+  } else {
+    enc = {};
+    DIRECTIONS.forEach((direction) => {
+      enc[direction] = {
+        type: document.getElementById(`encoder-modal-${direction}-type`).value,
+        target: document.getElementById(`encoder-modal-${direction}-target`).value,
+      };
+    });
+  }
   encoders[currentEncoderIndex] = enc;
   closeEncoderModal();
 });

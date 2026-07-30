@@ -43,7 +43,7 @@
 
       <label>Type</label>
       <select id="modal-type">
-        {% for t in slot_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+        {% for t in slot_types %}<option value="{{ t }}">{{ slot_type_labels.get(t, t) }}</option>{% endfor %}
       </select>
 
       <label>Icone</label>
@@ -53,7 +53,7 @@
       <div id="modal-action-fields">
         <label>Action (au clic)</label>
         <select id="modal-action-type">
-          {% for t in action_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+          {% for t in action_types %}<option value="{{ t }}">{{ action_type_labels.get(t, t) }}</option>{% endfor %}
         </select>
         <div id="modal-app-library">
           <input type="text" id="modal-app-search" placeholder="Rechercher une application...">
@@ -102,41 +102,75 @@
   <div id="encoder-modal" class="modal-backdrop hidden">
     <div class="modal">
       <h2 id="encoder-modal-title">Encodeur</h2>
-      {% for direction, dlabel in [("clockwise", "Sens horaire"), ("anticlockwise", "Sens antihoraire"), ("press", "Appui")] %}
-      <div class="encoder-block">
-        <label style="margin-top:0">{{ dlabel }}</label>
-        <div class="encoder-row">
-          <select id="encoder-modal-{{ direction }}-type">
-            {% for t in action_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
-          </select>
-          <input type="text" id="encoder-modal-{{ direction }}-target"
-                 placeholder="vol_up / ctrl+z / light.toggle:light.bureau / up:chrome.exe / up:light.bureau">
+
+      <div id="encoder-simple-block">
+        <label style="margin-top:0">Cette molette controle...</label>
+        <select id="encoder-simple-kind">
+          <option value="none">Rien</option>
+          <option value="ha_adjust">Une lumiere / un appareil Home Assistant</option>
+          <option value="app_volume">Le volume d'une application</option>
+          <option value="media">Le volume general du PC</option>
+          <option value="custom">Personnalise (reglages avances)</option>
+        </select>
+
+        <div id="encoder-simple-ha-fields" style="display:none">
+          <input type="text" id="encoder-simple-ha-search" placeholder="Rechercher une entite...">
+          <div id="encoder-simple-ha-list" class="entity-list"></div>
+          <p id="encoder-simple-ha-status" class="hint"></p>
         </div>
-        <select id="encoder-modal-{{ direction }}-app" class="encoder-app-picker" style="display:none">
+
+        <select id="encoder-simple-app" class="encoder-app-picker" style="display:none">
           <option value="">Choisir une application...</option>
         </select>
-        <div id="encoder-modal-{{ direction }}-ha-fields" class="encoder-ha-fields" style="display:none">
-          <input type="text" id="encoder-modal-{{ direction }}-ha-search" placeholder="Rechercher une entite...">
-          <div id="encoder-modal-{{ direction }}-ha-list" class="entity-list"></div>
-          <p id="encoder-modal-{{ direction }}-ha-status" class="hint"></p>
-          <select id="encoder-modal-{{ direction }}-ha-service" style="display:none"></select>
+
+        <div id="encoder-simple-mute-row" style="display:none">
+          <label><input type="checkbox" id="encoder-simple-mute"> Couper le son avec l'appui</label>
         </div>
+
+        <p id="encoder-simple-hint" class="hint" style="display:none">
+          Sens horaire = augmente, sens antihoraire = diminue - la barre de l'encodeur affiche la vraie valeur.
+        </p>
       </div>
-      {% endfor %}
-      <p class="hint">
-        <b>keys</b> (ex "ctrl+shift+s") &middot; <b>launch</b> (chemin/commande) &middot;
-        <b>url</b> (site web/URI) &middot; <b>media</b> (play_pause/next/previous/vol_up/vol_down/mute) &middot;
-        <b>home_assistant</b> (choisissez l'entite puis le service dans la liste ci-dessus, appel direct
-        pour un service sans parametre) &middot;
-        <b>ha_adjust</b> (choisissez l'entite dans la liste, le sens horaire/antihoraire est applique
-        automatiquement) : ajuste vraiment par pas la luminosite/volume/vitesse/position/temperature d'une entite
-        <code>light</code>/<code>media_player</code>/<code>fan</code>/<code>cover</code>/<code>climate</code>,
-        pratique quand aucun service HA sans parametre n'existe (ex un volet ou un thermostat) &middot;
-        <b>app_volume</b>/<b>app_mute</b> (choisissez l'application dans la liste, meme principe) &middot;
-        <b>none</b>. Pour un encodeur "volume" (general ou par appli) ou lie a une entite HA
-        (luminosite/volume/vitesse/position/temperature), la barre affiche automatiquement la vraie valeur
-        des que sens horaire et antihoraire ciblent la meme chose en sens opposes.
-      </p>
+
+      <div id="encoder-advanced-block" style="display:none">
+        {% for direction, dlabel in [("clockwise", "Sens horaire"), ("anticlockwise", "Sens antihoraire"), ("press", "Appui")] %}
+        <div class="encoder-block">
+          <label style="margin-top:0">{{ dlabel }}</label>
+          <div class="encoder-row">
+            <select id="encoder-modal-{{ direction }}-type">
+              {% for t in action_types %}<option value="{{ t }}">{{ action_type_labels.get(t, t) }}</option>{% endfor %}
+            </select>
+            <input type="text" id="encoder-modal-{{ direction }}-target"
+                   placeholder="vol_up / ctrl+z / light.toggle:light.bureau / up:chrome.exe / up:light.bureau">
+          </div>
+          <select id="encoder-modal-{{ direction }}-app" class="encoder-app-picker" style="display:none">
+            <option value="">Choisir une application...</option>
+          </select>
+          <div id="encoder-modal-{{ direction }}-ha-fields" class="encoder-ha-fields" style="display:none">
+            <input type="text" id="encoder-modal-{{ direction }}-ha-search" placeholder="Rechercher une entite...">
+            <div id="encoder-modal-{{ direction }}-ha-list" class="entity-list"></div>
+            <p id="encoder-modal-{{ direction }}-ha-status" class="hint"></p>
+            <select id="encoder-modal-{{ direction }}-ha-service" style="display:none"></select>
+          </div>
+        </div>
+        {% endfor %}
+        <p class="hint">
+          <b>Raccourci clavier</b> (ex "ctrl+shift+s") &middot; <b>Lancer une application</b> (chemin/commande) &middot;
+          <b>Ouvrir un site web</b> (URL/URI) &middot;
+          <b>Musique / volume du PC</b> (play_pause/next/previous/vol_up/vol_down/mute) &middot;
+          <b>Action Home Assistant</b> (choisissez l'entite puis le service dans la liste ci-dessus, appel direct
+          pour un service sans parametre) &middot;
+          <b>Ajuster un appareil Home Assistant</b> (choisissez l'entite dans la liste, le sens horaire/antihoraire
+          est applique automatiquement) : ajuste vraiment par pas la luminosite/volume/vitesse/position/temperature
+          d'une entite <code>light</code>/<code>media_player</code>/<code>fan</code>/<code>cover</code>/<code>climate</code>,
+          pratique quand aucun service HA sans parametre n'existe (ex un volet ou un thermostat) &middot;
+          <b>Volume/Couper le son d'une application</b> (choisissez l'application dans la liste, meme principe).
+          Pour un encodeur "volume" (general ou par appli) ou lie a une entite HA (luminosite/volume/vitesse/
+          position/temperature), la barre affiche automatiquement la vraie valeur des que sens horaire et
+          antihoraire ciblent la meme chose en sens opposes.
+        </p>
+      </div>
+
       <div class="modal-buttons">
         <button type="button" id="encoder-modal-cancel" class="secondary">Annuler</button>
         <button type="button" id="encoder-modal-apply">Appliquer</button>

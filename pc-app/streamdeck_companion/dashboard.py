@@ -50,7 +50,23 @@ ACTION_TYPES = [
     "none", "keys", "launch", "url", "media", "home_assistant", "audio_output",
     "app_volume", "app_mute", "ha_adjust",
 ]
+# Libelles en clair pour le menu deroulant du type d'action (voir
+# home.html) - les noms techniques ci-dessus (ACTION_TYPES) restent les
+# valeurs stockees en config/comparees en JS, seul le texte affiche change.
+ACTION_TYPE_LABELS = {
+    "none": "Aucune",
+    "keys": "Raccourci clavier",
+    "launch": "Lancer une application",
+    "url": "Ouvrir un site web",
+    "media": "Musique / volume du PC",
+    "home_assistant": "Action Home Assistant",
+    "audio_output": "Changer de haut-parleur",
+    "app_volume": "Volume d'une application",
+    "app_mute": "Couper le son d'une application",
+    "ha_adjust": "Ajuster un appareil Home Assistant",
+}
 SLOT_TYPES = ["bouton", "barre", "texte"]
+SLOT_TYPE_LABELS = {"bouton": "Bouton", "barre": "Barre (jauge HA)", "texte": "Texte (valeur HA)"}
 DIRECTIONS = ["clockwise", "anticlockwise", "press"]
 
 
@@ -250,7 +266,9 @@ def index():
         manual_override=manual_override,
         shape=config.get("shape", "carre"),
         action_types=ACTION_TYPES,
+        action_type_labels=ACTION_TYPE_LABELS,
         slot_types=SLOT_TYPES,
+        slot_type_labels=SLOT_TYPE_LABELS,
         directions=DIRECTIONS,
         icon_choices=icons.icon_choices(),
         saved=request.args.get("saved") == "1",
