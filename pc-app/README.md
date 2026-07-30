@@ -315,10 +315,11 @@ Necessite Home Assistant configure dans **Reglages** (URL + jeton d'acces
 longue duree). Si la connexion echoue, un message clair s'affiche
 (URL injoignable / jeton refuse) au lieu d'une erreur technique brute.
 
-**Limitation actuelle** : ce picker equipe la popup d'un **emplacement**.
-Les 3 encodeurs utilisent encore le champ texte compact
-`domaine.service:entite` a taper a la main (pas encore de picker dedie -
-possible dans un prochain chantier si besoin).
+Les 3 encodeurs ont le meme picker, pour les actions `home_assistant` ET
+`ha_adjust` : cherchez l'entite, choisissez le service si besoin - le sens
+horaire/antihoraire (`up`/`down` pour `ha_adjust`) est deduit automatiquement
+de la direction editee, plus besoin de le deviner/taper a la main. Le champ
+texte compact reste modifiable directement pour les cas avances.
 
 ## Synchronisation instantanee via MQTT (facultatif)
 

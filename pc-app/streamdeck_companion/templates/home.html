@@ -115,19 +115,24 @@
         <select id="encoder-modal-{{ direction }}-app" class="encoder-app-picker" style="display:none">
           <option value="">Choisir une application...</option>
         </select>
+        <div id="encoder-modal-{{ direction }}-ha-fields" class="encoder-ha-fields" style="display:none">
+          <input type="text" id="encoder-modal-{{ direction }}-ha-search" placeholder="Rechercher une entite...">
+          <div id="encoder-modal-{{ direction }}-ha-list" class="entity-list"></div>
+          <p id="encoder-modal-{{ direction }}-ha-status" class="hint"></p>
+          <select id="encoder-modal-{{ direction }}-ha-service" style="display:none"></select>
+        </div>
       </div>
       {% endfor %}
       <p class="hint">
         <b>keys</b> (ex "ctrl+shift+s") &middot; <b>launch</b> (chemin/commande) &middot;
         <b>url</b> (site web/URI) &middot; <b>media</b> (play_pause/next/previous/vol_up/vol_down/mute) &middot;
-        <b>home_assistant</b> (format "domaine.service:entite", appel direct - pour un service sans parametre) &middot;
-        <b>ha_adjust</b> (format "up:entite" / "down:entite", sens horaire = up, antihoraire = down) : ajuste
-        vraiment par pas la luminosite/volume/vitesse/position/temperature d'une entite
+        <b>home_assistant</b> (choisissez l'entite puis le service dans la liste ci-dessus, appel direct
+        pour un service sans parametre) &middot;
+        <b>ha_adjust</b> (choisissez l'entite dans la liste, le sens horaire/antihoraire est applique
+        automatiquement) : ajuste vraiment par pas la luminosite/volume/vitesse/position/temperature d'une entite
         <code>light</code>/<code>media_player</code>/<code>fan</code>/<code>cover</code>/<code>climate</code>,
         pratique quand aucun service HA sans parametre n'existe (ex un volet ou un thermostat) &middot;
-        <b>app_volume</b> (format "up:app.exe" / "down:app.exe", sens horaire = up, antihoraire = down) &middot;
-        <b>app_mute</b> (nom de l'appli, ex "chrome.exe") : bascule son son, pratique sur l'appui en
-        complement d'un "app_volume" sur la rotation &middot;
+        <b>app_volume</b>/<b>app_mute</b> (choisissez l'application dans la liste, meme principe) &middot;
         <b>none</b>. Pour un encodeur "volume" (general ou par appli) ou lie a une entite HA
         (luminosite/volume/vitesse/position/temperature), la barre affiche automatiquement la vraie valeur
         des que sens horaire et antihoraire ciblent la meme chose en sens opposes.

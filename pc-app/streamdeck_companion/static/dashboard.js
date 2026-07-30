@@ -547,6 +547,7 @@ function openEncoderModal(index) {
     document.getElementById(`encoder-modal-${direction}-type`).value = d.type || "none";
     document.getElementById(`encoder-modal-${direction}-target`).value = d.target || "";
     updateEncoderAppPickerVisibility(direction);
+    updateEncoderHaPickerVisibility(direction);
   });
   encoderModal.classList.remove("hidden");
 }
@@ -633,8 +634,10 @@ function applyEncoderAppSelection(direction) {
 }
 
 DIRECTIONS.forEach((direction) => {
-  document.getElementById(`encoder-modal-${direction}-type`)
-    .addEventListener("change", () => updateEncoderAppPickerVisibility(direction));
+  document.getElementById(`encoder-modal-${direction}-type`).addEventListener("change", () => {
+    updateEncoderAppPickerVisibility(direction);
+    updateEncoderHaPickerVisibility(direction);
+  });
   document.getElementById(`encoder-modal-${direction}-app`)
     .addEventListener("change", () => applyEncoderAppSelection(direction));
 });
