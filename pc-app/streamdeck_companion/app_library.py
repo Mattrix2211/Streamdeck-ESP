@@ -2,9 +2,20 @@
 dans une liste plutot que de taper/chercher un chemin a la main (voir le
 menu "Applications installees" de la popup d'emplacement, type d'action
 'launch'). Windows uniquement : parcourt les raccourcis du menu Demarrer
-(commun a tous les utilisateurs + ceux de l'utilisateur courant) et resout
-leur cible reelle via winshell/pywin32 - la meme technique que Windows lui-
-meme utilise pour afficher son propre menu Demarrer.
+(commun a tous les utilisateurs + ceux de l'utilisateur courant) via
+winshell/pywin32 - la meme technique que Windows lui-meme utilise pour
+afficher son propre menu Demarrer.
+
+Le bouton enregistre le CHEMIN DU RACCOURCI (.lnk) lui-meme, pas sa cible
+resolue (Targetpath) - une appli qui se met a jour toute seule (Discord,
+Claude Desktop...) change souvent de dossier versionne, ce qui rend un
+chemin .exe fige invalide au prochain lancement/extraction d'icone (voir
+icon_extract.py) sans que l'utilisateur ne comprenne pourquoi. Le
+raccourci, lui, reste au meme endroit et est mis a jour EN PLACE par
+l'installeur/le mecanisme d'auto-update - _launch() (actions.py, via le
+shell) et extract_icon_png() (icon_extract.py, deja capable de resoudre un
+.lnk) suivent donc automatiquement la cible actuelle sans jamais avoir a
+recreer le bouton.
 """
 
 from __future__ import annotations
@@ -19,7 +30,10 @@ _EXCLUDE_NAME_HINTS = ("uninstall", "desinstall", "readme", "changelog", "help",
 
 
 def list_installed_apps() -> list[dict[str, str]]:
-    """Retourne [{name, target}], trie par nom, deduplique par cible."""
+    """Retourne [{name, target}], trie par nom, deduplique par cible reelle
+    (evite les doublons quand plusieurs raccourcis pointent vers la meme
+    appli) - `target` est le chemin du RACCOURCI (.lnk), pas la cible
+    resolue (voir docstring du module)."""
     if SYSTEM != "Windows":
         raise RuntimeError("La bibliotheque d'applications n'est disponible que sur Windows")
 
@@ -54,7 +68,8 @@ def list_installed_apps() -> list[dict[str, str]]:
                 if not target or target in seen_targets:
                     continue
                 seen_targets.add(target)
-                apps.append({"name": name, "target": f'"{target}"' if " " in target else target})
+                lnk_str = str(lnk_path)
+                apps.append({"name": name, "target": f'"{lnk_str}"' if " " in lnk_str else lnk_str})
     finally:
         pythoncom.CoUninitialize()
 

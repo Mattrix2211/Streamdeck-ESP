@@ -58,9 +58,12 @@ def _launch(target: str) -> None:
     # shell=True (plutot que os.startfile/Popen liste) pour supporter les
     # cibles avec arguments (ex: Discord se lance via
     # "%LOCALAPPDATA%\Discord\Update.exe --processStart Discord.exe" sur
-    # Windows, un jeu peut avoir des flags de lancement...). La cible vient
-    # de la config de l'utilisateur (dashboard_config.yaml), pas d'une
-    # entree distante non authentifiee.
+    # Windows, un jeu peut avoir des flags de lancement...) ET les chemins
+    # de raccourci .lnk (voir app_library.py) - le shell les ouvre via la
+    # meme association que l'Explorateur, donc la cible reelle est toujours
+    # suivie meme si une appli auto-mise-a-jour a change de dossier. La
+    # cible vient de la config de l'utilisateur (dashboard_config.yaml),
+    # pas d'une entree distante non authentifiee.
     if SYSTEM == "Darwin" and not target.strip().startswith("open "):
         subprocess.Popen(["open", target])  # noqa: S603
     else:
