@@ -50,6 +50,14 @@ ACTION_TYPES = [
     "none", "keys", "launch", "url", "media", "home_assistant", "audio_output",
     "app_volume", "app_mute", "ha_adjust",
 ]
+# Sous-ensemble propose sur un BOUTON (popup d'emplacement) - exclut
+# ha_adjust/app_volume, qui n'ont de sens qu'avec un sens de rotation
+# horaire/antihoraire (augmenter/diminuer par pas) : sur un bouton
+# (simple clic), ils faisaient doublon avec "home_assistant"/"app_mute"
+# sans que la difference soit claire. Restent proposes tels quels sur les
+# encodeurs (voir ENCODER_ACTION_TYPES), leur seul contexte utile.
+SLOT_ACTION_TYPES = [t for t in ACTION_TYPES if t not in ("ha_adjust", "app_volume")]
+ENCODER_ACTION_TYPES = ACTION_TYPES
 # Libelles en clair pour le menu deroulant du type d'action (voir
 # home.html) - les noms techniques ci-dessus (ACTION_TYPES) restent les
 # valeurs stockees en config/comparees en JS, seul le texte affiche change.
@@ -59,14 +67,18 @@ ACTION_TYPE_LABELS = {
     "launch": "Lancer une application",
     "url": "Ouvrir un site web",
     "media": "Musique / volume du PC",
-    "home_assistant": "Action Home Assistant",
+    "home_assistant": "Action Home Assistant (ex: allumer, eteindre, basculer...)",
     "audio_output": "Changer de haut-parleur",
     "app_volume": "Volume d'une application",
     "app_mute": "Couper le son d'une application",
     "ha_adjust": "Ajuster un appareil Home Assistant",
 }
 SLOT_TYPES = ["bouton", "barre", "texte"]
-SLOT_TYPE_LABELS = {"bouton": "Bouton", "barre": "Barre (jauge HA)", "texte": "Texte (valeur HA)"}
+SLOT_TYPE_LABELS = {
+    "bouton": "Bouton - declenche une action au clic",
+    "barre": "Jauge - affiche une valeur Home Assistant en barre (ex: batterie, luminosite)",
+    "texte": "Texte - affiche une valeur Home Assistant en chiffres (ex: temperature)",
+}
 DIRECTIONS = ["clockwise", "anticlockwise", "press"]
 
 
@@ -265,7 +277,8 @@ def index():
         active_profile_name=active_profile_name or (profiles[0]["name"] if profiles else None),
         manual_override=manual_override,
         shape=config.get("shape", "carre"),
-        action_types=ACTION_TYPES,
+        action_types=SLOT_ACTION_TYPES,
+        encoder_action_types=ENCODER_ACTION_TYPES,
         action_type_labels=ACTION_TYPE_LABELS,
         slot_types=SLOT_TYPES,
         slot_type_labels=SLOT_TYPE_LABELS,

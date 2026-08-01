@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-  <p class="sub">Aperçu fidele de l'ecran (memes proportions et disposition). Cliquez un bouton ou un encodeur pour le configurer. Glissez-deposez un bouton pour le repositionner sur la grille invisible ou l'afficher/le retirer de l'ecran, tirez sur son coin bas-droit pour le redimensionner (facon "sections" Home Assistant) - deux boutons ne peuvent pas se chevaucher. La bibliotheque (sous l'ecran) n'est pas limitee a 16 : enregistrez-en autant que vous voulez, seuls 16 au maximum peuvent etre affiches a la fois.</p>
+  <p class="sub">Aperçu fidele de l'ecran. Cliquez un bouton ou un encodeur pour le configurer. Glissez-deposez un bouton pour le deplacer sur l'ecran (tirez son coin bas-droit pour l'agrandir - deux boutons ne peuvent pas se chevaucher), ou vers "Vos boutons" en dessous pour le retirer de l'ecran sans le supprimer. Creez-en autant que vous voulez : seuls ceux affiches sur l'ecran (36 maximum, la place disponible) sont utilisables sur l'appareil.</p>
 
   <div class="profile-bar">
     <div id="profile-tabs" class="profile-tabs"></div>
@@ -25,8 +25,8 @@
     </div>
 
     <div class="hidden-tray-section">
-      <h2>Bibliotheque de boutons</h2>
-      <p class="hint">Tous vos boutons enregistres, illimites - ceux ci-dessous ne sont pas affiches sur l'ecran. Cliquez pour configurer, glissez-les sur la grille de l'ecran ci-dessus pour les y afficher (glissez un bouton de l'ecran ici pour le retirer, sans le supprimer). "+" pour en creer un nouveau.</p>
+      <h2>Vos boutons</h2>
+      <p class="hint">Boutons enregistres mais pas affiches sur l'ecran en ce moment. Cliquez pour les modifier, glissez-les sur l'ecran ci-dessus pour les y afficher. "+" pour en creer un nouveau.</p>
       <div id="hidden-tray" class="hidden-tray"></div>
     </div>
 
@@ -138,7 +138,7 @@
           <label style="margin-top:0">{{ dlabel }}</label>
           <div class="encoder-row">
             <select id="encoder-modal-{{ direction }}-type">
-              {% for t in action_types %}<option value="{{ t }}">{{ action_type_labels.get(t, t) }}</option>{% endfor %}
+              {% for t in encoder_action_types %}<option value="{{ t }}">{{ action_type_labels.get(t, t) }}</option>{% endfor %}
             </select>
             <input type="text" id="encoder-modal-{{ direction }}-target"
                    placeholder="vol_up / ctrl+z / light.toggle:light.bureau / up:chrome.exe / up:light.bureau">

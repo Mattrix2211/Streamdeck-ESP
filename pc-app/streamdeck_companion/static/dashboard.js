@@ -475,6 +475,22 @@ function updateLaunchPickerVisibility() {
  * librement par glisser-depose, voir renderGrid()). `isNew` : l'entree
  * vient d'etre creee par le bouton "+" (makeAddTile) - annuler la supprime
  * au lieu de la laisser trainer vide dans la bibliotheque. */
+/* Ajoute temporairement `value` comme option d'un select s'il n'y est pas
+ * deja - pour un bouton configure avant que le menu ne soit elague (voir
+ * SLOT_ACTION_TYPES cote Python : ha_adjust/app_volume retires des choix
+ * proposes sur un bouton, restent valides sur les encodeurs) : sans ca,
+ * le navigateur affiche silencieusement une AUTRE option, et "Appliquer"
+ * ecraserait le reglage existant sans que l'utilisateur y touche. */
+function ensureSelectHasOption(selectId, value) {
+  if (!value) return;
+  const select = document.getElementById(selectId);
+  if ([...select.options].some((o) => o.value === value)) return;
+  const opt = document.createElement("option");
+  opt.value = value;
+  opt.textContent = `${value} (ancien reglage)`;
+  select.insertBefore(opt, select.firstChild);
+}
+
 function openModal(entryId, isNew) {
   const entry = libraryEntry(entryId);
   if (!entry) return;
@@ -483,6 +499,7 @@ function openModal(entryId, isNew) {
   document.getElementById("modal-title").textContent = entry.label || "Nouveau bouton";
   document.getElementById("modal-label").value = entry.label || "";
   document.getElementById("modal-type").value = entry.type || "bouton";
+  ensureSelectHasOption("modal-action-type", entry.action && entry.action.type);
   document.getElementById("modal-action-type").value = (entry.action && entry.action.type) || "none";
   document.getElementById("modal-action-target").value = entry.action_field || "";
   document.getElementById("modal-ha-entity").value = entry.ha_entity || "";
