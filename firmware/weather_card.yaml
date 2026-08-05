@@ -167,7 +167,7 @@ interval:
 
           lv_obj_t *ray[5] = {id(weather_ray1), id(weather_ray2), id(weather_ray3), id(weather_ray4), id(weather_ray5)};
           const int ray_x[5] = {50, 65, 59, 41, 35};
-          const int ray_y[5] = {2, 13, 31, 31, 13};
+          const int ray_y[5] = {26, 37, 55, 55, 37};
           for (int i = 0; i < 5; i++) {
             if (show_sun) lv_obj_clear_flag(ray[i], LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(ray[i], LV_OBJ_FLAG_HIDDEN);
             if (show_sun) {
