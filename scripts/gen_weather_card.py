@@ -86,7 +86,9 @@ def _sub_widgets() -> list[str]:
     for i in range(1, STAR_COUNT + 1):
         parts.append(_obj_decl(f"weather_star{i}", 3, 3, 999, "0xFFF176"))
     for i in range(1, RAY_COUNT + 1):
-        parts.append(_obj_decl(f"weather_ray{i}", 3, 14, 1, "0xFFC107"))
+        # Petits points (pas des barres orientees, voir build_interval_lambda
+        # pour le pourquoi) disposes en halo circulaire autour de l'icone.
+        parts.append(_obj_decl(f"weather_ray{i}", 5, 5, 999, "0xFFC107"))
     parts.append(
         '{label: {id: weather_icon_lbl, text: "", text_font: font_icons, '
         'text_color: 0xFFFFFF, align: top_mid, y: 10}}'
@@ -185,10 +187,17 @@ def build_interval_lambda() -> str:
     lines.append("}")
     lines.append("")
 
+    # Halo circulaire de points (pas de barres orientees vers l'exterieur -
+    # tourner un objet demanderait lv_obj_set_style_transform_angle, une API
+    # non encore utilisee/eprouvee ailleurs dans ce firmware, voir le
+    # raisonnement "pas de lv_anim_t" en tete de fichier) centre sur l'icone
+    # (align top_mid, y=10 - voir _sub_widgets) : 5 points repartis tous les
+    # 72 degres sur un cercle, coordonnees precalculees en pourcentage de la
+    # largeur/hauteur de la carte pour rester correct si elle est redimensionnee.
     ray_ids = ", ".join(f"id(weather_ray{i})" for i in range(1, RAY_COUNT + 1))
     lines.append(f"lv_obj_t *ray[{RAY_COUNT}] = {{{ray_ids}}};")
-    lines.append(f"const int ray_x[{RAY_COUNT}] = {{10, 30, 50, 70, 90}};")
-    lines.append(f"const int ray_y[{RAY_COUNT}] = {{45, 20, 15, 20, 45}};")
+    lines.append(f"const int ray_x[{RAY_COUNT}] = {{50, 65, 59, 41, 35}};")
+    lines.append(f"const int ray_y[{RAY_COUNT}] = {{2, 13, 31, 31, 13}};")
     lines.append(f"for (int i = 0; i < {RAY_COUNT}; i++) {{")
     lines.append("  if (show_sun) lv_obj_clear_flag(ray[i], LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(ray[i], LV_OBJ_FLAG_HIDDEN);")
     lines.append("  if (show_sun) {")
