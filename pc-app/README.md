@@ -119,11 +119,12 @@ emplacements (glisser-deposer/redimensionner pareil) mais se configure a
 part - cliquez la tuile "Meteo" (dans la maquette ou les emplacements
 masques) pour choisir une entite `weather.*` Home Assistant.
 
-Affiche une icone + la temperature + un libelle de condition en clair
-(ex "Ensoleille", "Pluie") regroupes en un seul bloc compact a gauche de
-la carte (icone a gauche, temperature en gras au-dessus du libelle,
-inspire de la carte meteo Lovelace `bramkragten/weather-card`) plutot
-qu'ecartes aux extremites, **animee selon la condition** :
+Affiche une icone + la temperature, regroupees en une unite compacte
+centree sur la carte (icone a gauche, grande temperature en gras a
+droite - inspire de la carte meteo Lovelace `bramkragten/weather-card`,
+dont le bloc "conditions actuelles" se limite volontairement a
+icone+temperature, sans texte de condition) plutot qu'ecartees aux
+extremites, **animee selon la condition** :
 
 | condition Home Assistant | animation |
 |---|---|

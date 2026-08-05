@@ -19,50 +19,40 @@ from . import icons
 # Styles d'animation geres cote firmware (voir weather_card.yaml) - un
 # style regroupe plusieurs conditions proches visuellement, pour rester
 # a un nombre de familles d'animation gerable (chacune est un pool
-# d'objets LVGL pre-declares, pas de creation dynamique possible). Le
-# libelle en clair (3e valeur) n'entraine aucune contrainte firmware -
-# affiche tel quel dans "Meteo - condition", voir gen_weather_card.py.
-_CONDITION_MAP: dict[str, tuple[str, str, str]] = {
-    "sunny": ("wb_sunny", "soleil", "Ensoleille"),
-    "clear-night": ("nightlight_round", "nuit", "Ciel degage"),
-    "partlycloudy": ("wb_cloudy", "nuage", "Eclaircies"),
-    "cloudy": ("cloud", "nuage", "Nuageux"),
-    "fog": ("cloud_off", "nuage", "Brouillard"),
-    "windy": ("air", "aucune", "Venteux"),
-    "windy-variant": ("air", "aucune", "Venteux"),
-    "rainy": ("water_drop", "pluie", "Pluie"),
-    "pouring": ("water_drop", "pluie", "Forte pluie"),
-    "hail": ("grain", "pluie", "Grele"),
-    "lightning": ("thunderstorm", "pluie", "Orage"),
-    "lightning-rainy": ("thunderstorm", "pluie", "Orage et pluie"),
-    "snowy": ("ac_unit", "neige", "Neige"),
-    "snowy-rainy": ("ac_unit", "neige", "Neige et pluie"),
-    "exceptional": ("warning", "aucune", "Alerte meteo"),
+# d'objets LVGL pre-declares, pas de creation dynamique possible).
+_CONDITION_MAP: dict[str, tuple[str, str]] = {
+    "sunny": ("wb_sunny", "soleil"),
+    "clear-night": ("nightlight_round", "nuit"),
+    "partlycloudy": ("wb_cloudy", "nuage"),
+    "cloudy": ("cloud", "nuage"),
+    "fog": ("cloud_off", "nuage"),
+    "windy": ("air", "aucune"),
+    "windy-variant": ("air", "aucune"),
+    "rainy": ("water_drop", "pluie"),
+    "pouring": ("water_drop", "pluie"),
+    "hail": ("grain", "pluie"),
+    "lightning": ("thunderstorm", "pluie"),
+    "lightning-rainy": ("thunderstorm", "pluie"),
+    "snowy": ("ac_unit", "neige"),
+    "snowy-rainy": ("ac_unit", "neige"),
+    "exceptional": ("warning", "aucune"),
 }
-_DEFAULT_ICON, _DEFAULT_STYLE, _DEFAULT_LABEL = "wb_cloudy", "aucune", ""
+_DEFAULT_ICON, _DEFAULT_STYLE = "wb_cloudy", "aucune"
 
 
 def condition_icon_char(condition: str) -> str:
     """Glyphe (voir icons.py) pour une condition meteo HA - case vide sur
     l'ecran si la condition est inconnue plutot qu'une erreur (une future
     version de HA pourrait ajouter une condition non repertoriee ici)."""
-    icon_key, _, _ = _CONDITION_MAP.get(condition, (_DEFAULT_ICON, _DEFAULT_STYLE, _DEFAULT_LABEL))
+    icon_key, _ = _CONDITION_MAP.get(condition, (_DEFAULT_ICON, _DEFAULT_STYLE))
     return icons.icon_char(icon_key)
 
 
 def condition_animation_style(condition: str) -> str:
     """Style d'animation (voir firmware/weather_card.yaml) pour une
     condition meteo HA - 'aucune' (icone statique) si inconnue."""
-    _, style, _ = _CONDITION_MAP.get(condition, (_DEFAULT_ICON, _DEFAULT_STYLE, _DEFAULT_LABEL))
+    _, style = _CONDITION_MAP.get(condition, (_DEFAULT_ICON, _DEFAULT_STYLE))
     return style
-
-
-def condition_label(condition: str) -> str:
-    """Libelle en clair (francais) pour une condition meteo HA - chaine
-    vide si inconnue (le firmware masque simplement la ligne, pas
-    d'erreur affichee pour une condition pas encore repertoriee ici)."""
-    _, _, label = _CONDITION_MAP.get(condition, (_DEFAULT_ICON, _DEFAULT_STYLE, _DEFAULT_LABEL))
-    return label
 
 
 def format_temperature(state: dict) -> str:
@@ -82,10 +72,9 @@ def format_temperature(state: dict) -> str:
 
 
 def read_weather(client, entity_id: str) -> dict | None:
-    """{icon_char, animation_style, temperature, condition_label} pour
-    `entity_id`, ou None si l'entite est introuvable/non configuree - voir
-    ha_poller.py, qui pousse ces 4 valeurs vers l'ecran (Meteo - icone/
-    animation/temperature/condition)."""
+    """{icon_char, animation_style, temperature} pour `entity_id`, ou None
+    si l'entite est introuvable/non configuree - voir ha_poller.py, qui
+    pousse ces 3 valeurs vers l'ecran (Meteo - icone/animation/temperature)."""
     if not entity_id:
         return None
     state = client.get_state(entity_id)
@@ -96,5 +85,4 @@ def read_weather(client, entity_id: str) -> dict | None:
         "icon_char": condition_icon_char(condition),
         "animation_style": condition_animation_style(condition),
         "temperature": format_temperature(state),
-        "condition_label": condition_label(condition),
     }

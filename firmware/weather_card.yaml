@@ -7,9 +7,11 @@
 # les entites/la logique d'animation qui le pilotent.
 #
 # L'appli PC (weather.py) traduit l'entite weather.* de Home Assistant en
-# 4 valeurs poussees ici : "Meteo - icone" (glyphe), "Meteo - animation"
-# (style : soleil/nuit/nuage/pluie/neige/aucune), "Meteo - temperature"
-# (texte forme) et "Meteo - condition" (libelle en clair, ex "Ensoleille").
+# 3 valeurs poussees ici : "Meteo - icone" (glyphe), "Meteo - animation"
+# (style : soleil/nuit/nuage/pluie/neige/aucune) et "Meteo - temperature"
+# (texte forme) - pas de libelle de condition en texte, la vraie carte de
+# reference (bramkragten/weather-card) n'en affiche pas non plus dans son
+# bloc "current" (verifie sur son code source), seuls icone+temperature.
 # Le firmware ne connait PAS Home Assistant - il se
 # contente d'afficher/animer selon le style recu, comme les emplacements
 # recoivent deja leur glyphe tout fait plutot que de choisir eux-memes.
@@ -94,15 +96,6 @@ text:
     on_value:
       - lvgl.label.update: {id: weather_temp_lbl, text: !lambda "return x;"}
   - platform: template
-    id: weather_condition_text
-    name: "Meteo - condition"
-    mode: text
-    optimistic: true
-    initial_value: ""
-    max_length: 20
-    on_value:
-      - lvgl.label.update: {id: weather_condition_lbl, text: !lambda "return x;"}
-  - platform: template
     id: weather_animation_text
     name: "Meteo - animation"
     mode: text
@@ -176,12 +169,12 @@ interval:
           }
 
           lv_obj_t *ray[5] = {id(weather_ray1), id(weather_ray2), id(weather_ray3), id(weather_ray4), id(weather_ray5)};
-          const int ray_x[5] = {30, 51, 43, 17, 9};
+          const int ray_dx[5] = {0, 21, 13, -13, -21};
           const int ray_dy[5] = {-22, -7, 18, 18, -7};
           for (int i = 0; i < 5; i++) {
             if (show_sun) lv_obj_clear_flag(ray[i], LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(ray[i], LV_OBJ_FLAG_HIDDEN);
             if (show_sun) {
-              lv_obj_set_pos(ray[i], ray_x[i], h / 2 + ray_dy[i]);
+              lv_obj_set_pos(ray[i], w / 2 - 30 + ray_dx[i], h / 2 + ray_dy[i]);
               int phase = (t * 3 + i * 30) % 150;
               int opa = phase < 75 ? 80 + phase * 2 : 80 + (150 - phase) * 2;
               lv_obj_set_style_bg_opa(ray[i], opa, 0);
