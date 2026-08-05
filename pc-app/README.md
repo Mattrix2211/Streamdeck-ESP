@@ -321,6 +321,17 @@ horaire/antihoraire (`up`/`down` pour `ha_adjust`) est deduit automatiquement
 de la direction editee, plus besoin de le deviner/taper a la main. Le champ
 texte compact reste modifiable directement pour les cas avances.
 
+## Indicateur "Hors ligne"
+
+Si une entite liee a un widget `texte` ou a la carte meteo ne repond plus
+(Home Assistant injoignable, entite supprimee/renommee...) pendant au moins
+2 sondages consecutifs (~30s), l'ecran affiche "Hors ligne" a la place de la
+derniere valeur au lieu de rester silencieusement fige dessus - des que la
+lecture reussit a nouveau, la vraie valeur revient immediatement. Un widget
+`barre` (jauge sans texte visible, voir plus bas) reste a sa derniere
+position connue sans indicateur dedie, faute d'un moyen propre de signaler
+"hors ligne" sur une simple barre sans ajouter une nouvelle entite firmware.
+
 ## Synchronisation instantanee via MQTT (facultatif)
 
 Par defaut, les widgets `barre`/`texte` et la couleur d'ampoule sont

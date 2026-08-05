@@ -13,6 +13,7 @@ import logging
 import threading
 
 from . import ha_client as ha
+from . import icons
 from . import profiles as profile_utils
 from . import weather as weather_module
 from .device_client import DeviceClient
@@ -20,6 +21,33 @@ from .device_client import DeviceClient
 LOG = logging.getLogger("streamdeck_ha_poller")
 
 POLL_INTERVAL = 15.0
+# Nombre d'echecs de lecture CONSECUTIFS avant de considerer une entite
+# hors ligne (~30s a POLL_INTERVAL=15s) - pas un simple blip reseau isole,
+# pour eviter qu'un widget clignote "Hors ligne" a chaque sondage manque.
+# Tant que le seuil n'est pas atteint, la derniere valeur connue reste
+# affichee telle quelle (rien n'est pousse), comme avant.
+STALE_AFTER = 2
+OFFLINE_TEXT = "Hors ligne"
+
+# Compteur d'echecs consecutifs par entite - en memoire seulement (reset
+# au redemarrage de l'appli), partage entre widgets et carte meteo.
+_fail_counts: dict[str, int] = {}
+
+
+def _read_state_or_offline(client: ha.HomeAssistantClient, entity_id: str) -> tuple[dict | None, bool]:
+    """Lit l'etat HA de `entity_id`, en trackant les echecs consecutifs
+    (voir STALE_AFTER) - retourne (etat ou None, True si l'entite vient de
+    depasser le seuil d'echecs et doit etre affichee comme hors ligne)."""
+    try:
+        state = client.get_state(entity_id)
+    except Exception:
+        LOG.exception("Echec de lecture de l'etat HA pour %s", entity_id)
+        state = None
+    if state is not None:
+        _fail_counts[entity_id] = 0
+        return state, False
+    _fail_counts[entity_id] = _fail_counts.get(entity_id, 0) + 1
+    return None, _fail_counts[entity_id] >= STALE_AFTER
 
 
 def poll_once(device_client: DeviceClient) -> dict[int, str]:
@@ -42,38 +70,47 @@ def poll_once(device_client: DeviceClient) -> dict[int, str]:
         if slot_type in ("barre", "texte"):
             entity_id = slot.get("ha_entity")
             if entity_id:
-                try:
-                    state = client.get_state(entity_id)
-                except Exception:
-                    LOG.exception("Echec de lecture de l'etat HA pour %s", entity_id)
-                    state = None
+                state, offline = _read_state_or_offline(client, entity_id)
                 if state is not None:
                     values[idx] = ha.format_widget_value(state, slot_type)
+                elif offline and slot_type == "texte":
+                    # "barre" n'a pas de texte visible (juste la jauge, voir
+                    # firmware/slot_widgets.yaml) - rien de propre a afficher
+                    # pour signaler hors ligne sans nouvelle entite firmware,
+                    # la derniere position connue reste affichee telle quelle.
+                    values[idx] = OFFLINE_TEXT
 
         action = slot.get("action") or {}
         if action.get("type") == "home_assistant" and slot.get("show_light_color"):
             target = action.get("target") or {}
             entity_id = target.get("entity_id")
             if target.get("domain") == "light" and entity_id:
-                try:
-                    state = client.get_state(entity_id)
-                except Exception:
-                    LOG.exception("Echec de lecture de l'etat HA pour %s", entity_id)
-                    state = None
+                # Pas d'indicateur hors ligne dedie ici (contrairement a
+                # texte/meteo) : sans lecture recente, l'apercu couleur
+                # reste simplement a sa derniere valeur connue - acceptable
+                # pour un simple apercu, pas la donnee principale du bouton.
+                state, _offline = _read_state_or_offline(client, entity_id)
                 if state is not None:
                     colors[idx] = ha.light_color_hex(state)
 
     weather = active.get("weather") or {}
     if weather.get("visible") and weather.get("entity"):
+        weather_entity = weather["entity"]
         try:
-            info = weather_module.read_weather(client, weather["entity"])
+            info = weather_module.read_weather(client, weather_entity)
         except Exception:
-            LOG.exception("Echec de lecture de la carte meteo pour %s", weather.get("entity"))
+            LOG.exception("Echec de lecture de la carte meteo pour %s", weather_entity)
             info = None
-        if info is not None and device_client.connected:
-            device_client.schedule_push_weather_display(
-                info["icon_char"], info["animation_style"], info["temperature"]
-            )
+        if info is not None:
+            _fail_counts[weather_entity] = 0
+            if device_client.connected:
+                device_client.schedule_push_weather_display(
+                    info["icon_char"], info["animation_style"], info["temperature"]
+                )
+        else:
+            _fail_counts[weather_entity] = _fail_counts.get(weather_entity, 0) + 1
+            if _fail_counts[weather_entity] >= STALE_AFTER and device_client.connected:
+                device_client.schedule_push_weather_display(icons.icon_char("warning"), "aucune", OFFLINE_TEXT)
 
     if device_client.connected:
         if values:
