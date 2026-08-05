@@ -145,6 +145,17 @@ recourir a l'API d'animation LVGL (`lv_anim_t`) dont le comportement exact
 est trop incertain sans pouvoir compiler/tester directement sur le
 materiel.
 
+**Icone** : illustration [amCharts](https://www.amcharts.com/free-animated-svg-weather-icons/)
+(CC-BY 4.0) convertie une fois en PNG (`scripts/convert_weather_icons.py`,
+sources dans `scripts/weather_icons_src/`) et servie par `icon_server.py` -
+les animations SMIL/CSS de ces SVG ne peuvent pas s'executer sur l'ecran
+(LVGL/ESP32 ne rend pas de SVG anime), seule l'illustration statique est
+recuperee, notre propre animation (pluie/neige/rayons ci-dessus) tourne
+autour. `sunny`/`clear-night`/`cloudy`/`partlycloudy`/`fog`/`rainy`/
+`pouring`/`hail`/`lightning`/`lightning-rainy`/`snowy`/`snowy-rainy` ont
+une illustration dediee ; `windy`/`windy-variant`/`exceptional` retombent
+sur un glyphe simple (pas d'illustration adaptee dans ce pack).
+
 Necessite une integration meteo configuree dans Home Assistant (ex
 "Meteo-France", "OpenWeatherMap", "Pirate Weather"...) exposant une
 entite `weather.*`.

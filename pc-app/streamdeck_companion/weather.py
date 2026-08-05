@@ -10,6 +10,20 @@ Conditions standard Home Assistant (`weather.Weather.condition`) :
 clear-night, cloudy, exceptional, fog, hail, lightning, lightning-rainy,
 partlycloudy, pouring, rainy, snowy, snowy-rainy, sunny, windy,
 windy-variant.
+
+Icones : illustrations amCharts (https://www.amcharts.com/free-animated-svg-weather-icons/,
+CC-BY 4.0, voir pc-app/README.md) converties une fois en PNG (voir
+scripts/convert_weather_icons.py) et servies par icon_server.py, plutot
+que le glyphe Material Icons utilise ailleurs - memes SVG que ceux
+empaquetes par bramkragten/weather-card, dont l'utilisateur voulait le
+rendu. Les animations SMIL/CSS de ces SVG ne sont pas utilisables sur cet
+ecran (LVGL/ESP32 ne rend pas de SVG anime, voir weather_card.yaml) -
+seule l'illustration statique est recuperee, notre propre animation
+LVGL (pluie/neige/rayons) tourne autour comme avant. Meme convention
+"REAL:<cle>" que les icones d'appli/jeu (voir slots_*.yaml) pour
+basculer entre image et glyphe de repli cote firmware - toutes les
+conditions n'ont pas d'illustration dediee dans ce pack (windy,
+exceptional), auquel cas on retombe sur le glyphe Material Icons.
 """
 
 from __future__ import annotations
@@ -20,38 +34,48 @@ from . import icons
 # style regroupe plusieurs conditions proches visuellement, pour rester
 # a un nombre de familles d'animation gerable (chacune est un pool
 # d'objets LVGL pre-declares, pas de creation dynamique possible).
-_CONDITION_MAP: dict[str, tuple[str, str]] = {
-    "sunny": ("wb_sunny", "soleil"),
-    "clear-night": ("nightlight_round", "nuit"),
-    "partlycloudy": ("wb_cloudy", "nuage"),
-    "cloudy": ("cloud", "nuage"),
-    "fog": ("cloud_off", "nuage"),
-    "windy": ("air", "aucune"),
-    "windy-variant": ("air", "aucune"),
-    "rainy": ("water_drop", "pluie"),
-    "pouring": ("water_drop", "pluie"),
-    "hail": ("grain", "pluie"),
-    "lightning": ("thunderstorm", "pluie"),
-    "lightning-rainy": ("thunderstorm", "pluie"),
-    "snowy": ("ac_unit", "neige"),
-    "snowy-rainy": ("ac_unit", "neige"),
-    "exceptional": ("warning", "aucune"),
+# 3e valeur : cle de l'icone amCharts pre-convertie (voir WEATHER_ICON_KEYS
+# et icon_server.py), None si aucune illustration dediee dans ce pack -
+# repli sur le glyphe Material Icons (icon_key) dans ce cas.
+_CONDITION_MAP: dict[str, tuple[str, str, str | None]] = {
+    "sunny": ("wb_sunny", "soleil", "soleil"),
+    "clear-night": ("nightlight_round", "nuit", "nuit"),
+    "partlycloudy": ("wb_cloudy", "nuage", "nuage"),
+    "cloudy": ("cloud", "nuage", "nuage"),
+    "fog": ("cloud_off", "nuage", "nuage"),
+    "windy": ("air", "aucune", None),
+    "windy-variant": ("air", "aucune", None),
+    "rainy": ("water_drop", "pluie", "pluie"),
+    "pouring": ("water_drop", "pluie", "pluie"),
+    "hail": ("grain", "pluie", "pluie"),
+    "lightning": ("thunderstorm", "pluie", "orage"),
+    "lightning-rainy": ("thunderstorm", "pluie", "orage"),
+    "snowy": ("ac_unit", "neige", "neige"),
+    "snowy-rainy": ("ac_unit", "neige", "neige"),
+    "exceptional": ("warning", "aucune", None),
 }
-_DEFAULT_ICON, _DEFAULT_STYLE = "wb_cloudy", "aucune"
+_DEFAULT_ICON, _DEFAULT_STYLE, _DEFAULT_REAL = "wb_cloudy", "aucune", None
+
+# Liste blanche des cles d'icone meteo valides (voir icon_server.py) - les
+# fichiers PNG correspondants vivent dans static/weather_icons/.
+WEATHER_ICON_KEYS = frozenset(key for _, _, key in _CONDITION_MAP.values() if key is not None)
 
 
-def condition_icon_char(condition: str) -> str:
-    """Glyphe (voir icons.py) pour une condition meteo HA - case vide sur
-    l'ecran si la condition est inconnue plutot qu'une erreur (une future
-    version de HA pourrait ajouter une condition non repertoriee ici)."""
-    icon_key, _ = _CONDITION_MAP.get(condition, (_DEFAULT_ICON, _DEFAULT_STYLE))
+def condition_icon_value(condition: str) -> str:
+    """Valeur a pousser dans 'Meteo - icone' : 'REAL:<cle>' si une
+    illustration amCharts existe pour cette condition (voir
+    WEATHER_ICON_KEYS), sinon le glyphe Material Icons de repli - meme
+    convention que les icones d'appli/jeu (voir slots_*.yaml)."""
+    icon_key, _, real_key = _CONDITION_MAP.get(condition, (_DEFAULT_ICON, _DEFAULT_STYLE, _DEFAULT_REAL))
+    if real_key:
+        return f"REAL:{real_key}"
     return icons.icon_char(icon_key)
 
 
 def condition_animation_style(condition: str) -> str:
     """Style d'animation (voir firmware/weather_card.yaml) pour une
     condition meteo HA - 'aucune' (icone statique) si inconnue."""
-    _, style = _CONDITION_MAP.get(condition, (_DEFAULT_ICON, _DEFAULT_STYLE))
+    _, style, _ = _CONDITION_MAP.get(condition, (_DEFAULT_ICON, _DEFAULT_STYLE, _DEFAULT_REAL))
     return style
 
 
@@ -82,7 +106,7 @@ def read_weather(client, entity_id: str) -> dict | None:
         return None
     condition = state.get("state", "")
     return {
-        "icon_char": condition_icon_char(condition),
+        "icon_char": condition_icon_value(condition),
         "animation_style": condition_animation_style(condition),
         "temperature": format_temperature(state),
     }

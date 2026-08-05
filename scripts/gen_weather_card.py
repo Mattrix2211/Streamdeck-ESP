@@ -102,6 +102,14 @@ def _sub_widgets() -> list[str]:
     # redimensionnee tres haute/etroite, un ancrage aux bords laisse un
     # grand vide (retour utilisateur sur photo reelle) - centrer le groupe
     # reste equilibre quelle que soit la forme de la carte.
+    # Illustration amCharts (voir weather.py::WEATHER_ICON_KEYS) OU glyphe
+    # Material Icons de repli - meme bascule "REAL:<cle>" que les icones
+    # d'appli/jeu (voir slots_*.yaml/slot_icons.yaml), un seul des deux est
+    # visible a la fois (voir le lambda "Meteo - icone" dans weather_card.yaml).
+    parts.append(
+        '{image: {id: weather_icon_widget, src: weather_icon_img, width: 56, height: 56, '
+        'align: center, x: -30, hidden: true}}'
+    )
     parts.append(
         '{label: {id: weather_icon_lbl, text: "", text_font: font_icons, '
         'text_color: 0xFFFFFF, align: center, x: -30}}'
@@ -261,6 +269,16 @@ switch:
     on_turn_off:
       - lvgl.widget.update: {{id: weather_card_btn, hidden: true}}
 
+# Illustration meteo amCharts pre-convertie (voir weather.py,
+# scripts/convert_weather_icons.py, icon_server.py) - meme mecanisme que
+# slot_icons.yaml (online_image + rappel lvgl.image.update une fois les
+# pixels reellement prets), pas de version/hash dans l'URL contrairement
+# aux icones d'appli : le jeu d'icones meteo est fixe, seule la CLE (donc
+# l'URL) change d'une condition a l'autre, ce qui suffit a declencher un
+# nouveau telechargement.
+online_image:
+  - {{id: weather_icon_img, url: "http://0.0.0.0/x.png", format: PNG, type: RGB565, byte_order: LITTLE_ENDIAN, resize: 56x56, buffer_size: 12288, update_interval: never, http_request_id: http_client, on_download_finished: [{{lvgl.image.update: {{id: weather_icon_widget, src: weather_icon_img}}}}, {{lambda: "lv_obj_invalidate(id(weather_icon_widget));"}}]}}
+
 text:
   - platform: template
     id: weather_grid_text
@@ -287,9 +305,8 @@ text:
     mode: text
     optimistic: true
     initial_value: ""
-    max_length: 4
-    on_value:
-      - lvgl.label.update: {{id: weather_icon_lbl, text: !lambda "return x;"}}
+    max_length: 12
+    on_value: [{{if: {{condition: {{lambda: 'return x.rfind("REAL:", 0) == 0;'}}, then: [{{lambda: "lv_obj_add_flag(id(weather_icon_lbl), LV_OBJ_FLAG_HIDDEN); lv_obj_clear_flag(id(weather_icon_widget), LV_OBJ_FLAG_HIDDEN);"}}, {{online_image.set_url: {{id: weather_icon_img, url: !lambda 'return id(pc_base_url_text).state + "/weather-icon/" + x.substr(5) + ".png";'}}}}], else: [{{lambda: "lv_obj_clear_flag(id(weather_icon_lbl), LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(id(weather_icon_widget), LV_OBJ_FLAG_HIDDEN);"}}, {{lvgl.label.update: {{id: weather_icon_lbl, text: !lambda "return x;"}}}}]}}}}]
   - platform: template
     id: weather_temperature_text
     name: "Meteo - temperature"
