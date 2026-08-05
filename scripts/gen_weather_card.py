@@ -42,9 +42,10 @@ HEADER = """# Carte meteo (widget dedie, distinct des emplacements generiques -
 # les entites/la logique d'animation qui le pilotent.
 #
 # L'appli PC (weather.py) traduit l'entite weather.* de Home Assistant en
-# 3 valeurs poussees ici : "Meteo - icone" (glyphe), "Meteo - animation"
-# (style : soleil/nuit/nuage/pluie/neige/aucune) et "Meteo - temperature"
-# (texte forme). Le firmware ne connait PAS Home Assistant - il se
+# 4 valeurs poussees ici : "Meteo - icone" (glyphe), "Meteo - animation"
+# (style : soleil/nuit/nuage/pluie/neige/aucune), "Meteo - temperature"
+# (texte forme) et "Meteo - condition" (libelle en clair, ex "Ensoleille").
+# Le firmware ne connait PAS Home Assistant - il se
 # contente d'afficher/animer selon le style recu, comme les emplacements
 # recoivent deja leur glyphe tout fait plutot que de choisir eux-memes.
 #
@@ -89,20 +90,26 @@ def _sub_widgets() -> list[str]:
         # Petits points (pas des barres orientees, voir build_interval_lambda
         # pour le pourquoi) disposes en halo circulaire autour de l'icone.
         parts.append(_obj_decl(f"weather_ray{i}", 5, 5, 999, "0xFFC107"))
-    # Icone + temperature regroupees au CENTRE de la carte (pas ecartelees
-    # entre le haut et le bas - voir bramkragten/weather-card, retour
-    # utilisateur sur photo reelle : l'ancien agencement laissait un grand
-    # vide entre les deux). Petits ecarts symetriques de part et d'autre du
-    # centre plutot que colles aux bords, pour rester un groupe compact
-    # quelle que soit la taille de la carte (redimensionnable).
+    # Icone a gauche + pile temperature (gros, en gras)/condition (petit,
+    # en clair) a droite - facon bramkragten/weather-card (retour
+    # utilisateur : le veut "comme ce repo"), plutot que l'icone et la
+    # temperature ecartelees chacune sur un bord oppose de la carte. Icone
+    # ancree a une marge fixe (pas en %) : une icone ne doit pas s'eloigner
+    # du bord quelle que soit la taille de la carte, meme logique que les
+    # decalages fixes deja utilises pour les etoiles plus bas.
     parts.append(
         '{label: {id: weather_icon_lbl, text: "", text_font: font_icons, '
-        'text_color: 0xFFFFFF, align: center, y: -18}}'
+        'text_color: 0xFFFFFF, align: left_mid, x: 14}}'
     )
     parts.append(
-        '{label: {id: weather_temp_lbl, text: "", text_font: font_body, '
-        'text_color: 0xFFFFFF, text_align: center, align: center, y: 20, '
-        'long_mode: dot, width: 90}}'
+        '{label: {id: weather_temp_lbl, text: "", text_font: font_mono_bold, '
+        'text_color: 0xFFFFFF, text_align: left, align: left_mid, x: 54, y: -12, '
+        'long_mode: dot, width: 110}}'
+    )
+    parts.append(
+        '{label: {id: weather_condition_lbl, text: "", text_font: font_body, '
+        'text_color: 0xB8C7D6, text_align: left, align: left_mid, x: 54, y: 14, '
+        'long_mode: dot, width: 110}}'
     )
     return parts
 
@@ -197,17 +204,20 @@ def build_interval_lambda() -> str:
     # tourner un objet demanderait lv_obj_set_style_transform_angle, une API
     # non encore utilisee/eprouvee ailleurs dans ce firmware, voir le
     # raisonnement "pas de lv_anim_t" en tete de fichier) centre sur l'icone
-    # (align center, y=-18 - voir _sub_widgets) : 5 points repartis tous les
-    # 72 degres sur un cercle, coordonnees precalculees en pourcentage de la
-    # largeur/hauteur de la carte pour rester correct si elle est redimensionnee.
+    # (align left_mid, x=14 - voir _sub_widgets) : 5 points repartis tous les
+    # 72 degres sur un cercle de rayon fixe (22px) autour du centre de
+    # l'icone (~30px du bord gauche, verticalement centre sur la carte) -
+    # decalages fixes en x (l'icone est ancree a une marge fixe, pas en %),
+    # decalage en y ajoute a h/2 pour rester centre verticalement quelle que
+    # soit la hauteur de la carte.
     ray_ids = ", ".join(f"id(weather_ray{i})" for i in range(1, RAY_COUNT + 1))
     lines.append(f"lv_obj_t *ray[{RAY_COUNT}] = {{{ray_ids}}};")
-    lines.append(f"const int ray_x[{RAY_COUNT}] = {{50, 65, 59, 41, 35}};")
-    lines.append(f"const int ray_y[{RAY_COUNT}] = {{26, 37, 55, 55, 37}};")
+    lines.append(f"const int ray_x[{RAY_COUNT}] = {{30, 51, 43, 17, 9}};")
+    lines.append(f"const int ray_dy[{RAY_COUNT}] = {{-22, -7, 18, 18, -7}};")
     lines.append(f"for (int i = 0; i < {RAY_COUNT}; i++) {{")
     lines.append("  if (show_sun) lv_obj_clear_flag(ray[i], LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(ray[i], LV_OBJ_FLAG_HIDDEN);")
     lines.append("  if (show_sun) {")
-    lines.append("    lv_obj_set_pos(ray[i], (ray_x[i] * w) / 100, (ray_y[i] * h) / 100);")
+    lines.append("    lv_obj_set_pos(ray[i], ray_x[i], h / 2 + ray_dy[i]);")
     lines.append("    int phase = (t * 3 + i * 30) % 150;")
     lines.append("    int opa = phase < 75 ? 80 + phase * 2 : 80 + (150 - phase) * 2;")
     lines.append("    lv_obj_set_style_bg_opa(ray[i], opa, 0);")
@@ -290,6 +300,15 @@ text:
     max_length: 16
     on_value:
       - lvgl.label.update: {{id: weather_temp_lbl, text: !lambda "return x;"}}
+  - platform: template
+    id: weather_condition_text
+    name: "Meteo - condition"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 20
+    on_value:
+      - lvgl.label.update: {{id: weather_condition_lbl, text: !lambda "return x;"}}
   - platform: template
     id: weather_animation_text
     name: "Meteo - animation"

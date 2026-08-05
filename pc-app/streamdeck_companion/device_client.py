@@ -50,13 +50,14 @@ SLOT_GRID_NAMES = [f"Slot {i} - grille" for i in range(1, SLOT_COUNT + 1)]
 
 # Carte meteo (widget dedie, au plus un par profil - voir weather.py et
 # firmware/weather_card.yaml). Meme mecanisme de grille que les
-# emplacements (WEATHER_GRID_NAME), plus 3 entites de contenu poussees
+# emplacements (WEATHER_GRID_NAME), plus 4 entites de contenu poussees
 # periodiquement par ha_poller.py.
 WEATHER_GRID_NAME = "Meteo - grille"
 WEATHER_VISIBLE_NAME = "Meteo - visible"
 WEATHER_ICON_NAME = "Meteo - icone"
 WEATHER_ANIMATION_NAME = "Meteo - animation"
 WEATHER_TEMPERATURE_NAME = "Meteo - temperature"
+WEATHER_CONDITION_NAME = "Meteo - condition"
 
 SHAPE_ENTITY_NAME = "Forme des boutons"
 ACTION_EVENT_ENTITY = "Bouton d'action ecran"
@@ -161,7 +162,7 @@ class DeviceClient:
         tracked_text_select = (
             *SLOT_LABEL_NAMES, *SLOT_VALUE_NAMES, *SLOT_ICON_NAMES, *SLOT_COLOR_NAMES, *SLOT_TYPE_NAMES,
             *SLOT_GRID_NAMES, *ENCODER_LABEL_NAMES,
-            WEATHER_GRID_NAME, WEATHER_ICON_NAME, WEATHER_ANIMATION_NAME, WEATHER_TEMPERATURE_NAME,
+            WEATHER_GRID_NAME, WEATHER_ICON_NAME, WEATHER_ANIMATION_NAME, WEATHER_TEMPERATURE_NAME, WEATHER_CONDITION_NAME,
             SHAPE_ENTITY_NAME, STATUS_ENTITY_NAME, PC_BASE_URL_ENTITY_NAME, ha_popup_module.TITLE_TEXT_NAME,
         )
         # Switches ecrits par le PC uniquement (visibilite d'un panneau/
@@ -434,7 +435,9 @@ class DeviceClient:
         if shape and shape_key is not None:
             self.client.select_command(shape_key, shape)
 
-    def push_weather_display(self, icon_char: str, animation_style: str, temperature: str) -> None:
+    def push_weather_display(
+        self, icon_char: str, animation_style: str, temperature: str, condition_label: str = ""
+    ) -> None:
         """Pousse le contenu de la carte meteo (voir weather.py) - separe
         de push_config() (position/visibilite) pour ne pas re-pousser la
         geometrie a chaque rafraichissement periodique (ha_poller.py)."""
@@ -449,9 +452,16 @@ class DeviceClient:
         temperature_key = self.entity_keys.get(WEATHER_TEMPERATURE_NAME)
         if temperature_key is not None:
             self.client.text_command(temperature_key, temperature[:16])
+        condition_key = self.entity_keys.get(WEATHER_CONDITION_NAME)
+        if condition_key is not None:
+            self.client.text_command(condition_key, condition_label[:20])
 
-    def schedule_push_weather_display(self, icon_char: str, animation_style: str, temperature: str, timeout: float = 5.0) -> None:
-        self._run_threadsafe(lambda: self.push_weather_display(icon_char, animation_style, temperature), timeout)
+    def schedule_push_weather_display(
+        self, icon_char: str, animation_style: str, temperature: str, condition_label: str = "", timeout: float = 5.0
+    ) -> None:
+        self._run_threadsafe(
+            lambda: self.push_weather_display(icon_char, animation_style, temperature, condition_label), timeout
+        )
 
     def push_slot_values(self, values: dict[int, str]) -> None:
         """Pousse uniquement les valeurs (widgets barre/texte) pour les
