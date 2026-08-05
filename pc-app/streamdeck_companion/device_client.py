@@ -290,7 +290,7 @@ class DeviceClient:
                 self.color_mode.enter(idx)
                 return
             if event_type.startswith("barre_inc_") or event_type.startswith("barre_dec_"):
-                self._adjust_barre(event_type)
+                self._run_action_in_background(lambda: self._adjust_barre(event_type), f"l'ajustement tactile {event_type!r}")
                 return
             if event_type.startswith("action_"):
                 try:
@@ -324,9 +324,11 @@ class DeviceClient:
                     idx = int(state.event_type.rsplit("_", 1)[1]) - 1
                     self.ha_popup.open(idx, action)
                 else:
-                    self._run_home_assistant_action(action)
+                    self._run_action_in_background(
+                        lambda: self._run_home_assistant_action(action), f"l'action Home Assistant pour {entity_name}"
+                    )
             elif action.get("type") == "ha_adjust":
-                self._run_ha_adjust(action)
+                self._run_action_in_background(lambda: self._run_ha_adjust(action), f"l'ajustement HA pour {entity_name}")
             else:
                 action_runner.run(action)
         except Exception:
@@ -541,6 +543,27 @@ class DeviceClient:
             raise RuntimeError("Le client n'a pas encore demarre sa boucle")
         future = asyncio.run_coroutine_threadsafe(self._call_sync(fn), self.loop)
         future.result(timeout=timeout)
+
+    def _run_action_in_background(self, fn, description: str) -> None:
+        """Execute une action bloquante (appel HTTP Home Assistant synchrone
+        via `requests`, jusqu'a 5s de timeout - voir ha_client.py) hors de la
+        boucle asyncio DEDIEE a cette connexion (voir docstring de classe) -
+        sans ca, un appel HA lent gele tout le reste (autres boutons/
+        encodeurs, keepalive de la connexion a l'ecran) pendant que ce seul
+        appel se termine. Fire-and-forget : ces actions ne poussent rien vers
+        `self.client` ensuite (pas de risque d'appel depuis le mauvais
+        thread), seule l'exception est a journaliser puisque plus rien ne
+        l'observe une fois hors de ce callback synchrone."""
+        future = self.loop.run_in_executor(None, fn)
+
+        def _log_if_failed(fut: asyncio.Future) -> None:
+            if fut.cancelled():
+                return
+            exc = fut.exception()
+            if exc is not None:
+                LOG.error("Echec de %s : %r", description, exc)
+
+        future.add_done_callback(_log_if_failed)
 
     async def _call_sync(self, fn) -> None:
         fn()
