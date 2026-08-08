@@ -42,12 +42,13 @@ HEADER = """# Carte meteo (widget dedie, distinct des emplacements generiques -
 # les entites/la logique d'animation qui le pilotent.
 #
 # L'appli PC (weather.py) traduit l'entite weather.* de Home Assistant en
-# 3 valeurs poussees ici : "Meteo - icone" (glyphe), "Meteo - animation"
-# (style : soleil/nuit/nuage/pluie/neige/aucune) et "Meteo - temperature"
-# (texte forme) - pas de libelle de condition en texte, la vraie carte de
-# reference (bramkragten/weather-card) n'en affiche pas non plus dans son
-# bloc "current" (verifie sur son code source), seuls icone+temperature.
-# Le firmware ne connait PAS Home Assistant - il se
+# 4 valeurs poussees ici : "Meteo - icone" (illustration amCharts ou glyphe
+# de repli), "Meteo - animation" (style : soleil/nuit/nuage/pluie/neige/
+# aucune), "Meteo - temperature" (texte forme) et "Meteo - condition"
+# (libelle en clair, ex "Ensoleille" - facon breezy-weather, dont l'en-tete
+# affiche la condition en texte au-dessus d'un gros numero, plutot que
+# bramkragten/weather-card qui n'en montre pas). Le firmware ne connait PAS
+# Home Assistant - il se
 # contente d'afficher/animer selon le style recu, comme les emplacements
 # recoivent deja leur glyphe tout fait plutot que de choisir eux-memes.
 #
@@ -92,32 +93,37 @@ def _sub_widgets() -> list[str]:
         # Petits points (pas des barres orientees, voir build_interval_lambda
         # pour le pourquoi) disposes en halo circulaire autour de l'icone.
         parts.append(_obj_decl(f"weather_ray{i}", 5, 5, 999, "0xFFC107"))
-    # Icone + temperature regroupees en UNE unite compacte (icone a gauche,
-    # grande temperature en gras a droite, style bramkragten/weather-card
-    # verifie sur le vrai code source : gros glyphe + gros nombre, PAS de
-    # texte de condition dans son bloc "current" - voir dist/weather-card.js
-    # ::renderCurrent(), aucune ligne "Ensoleille" nulle part). Le GROUPE
-    # entier est ancre au CENTRE de la carte (decalages fixes en x depuis le
-    # centre, pas depuis un bord) plutot qu'aux bords : sur une carte
-    # redimensionnee tres haute/etroite, un ancrage aux bords laisse un
-    # grand vide (retour utilisateur sur photo reelle) - centrer le groupe
-    # reste equilibre quelle que soit la forme de la carte.
+    # Synthese finale (apres 3 references differentes) : condition en texte
+    # en haut ("Ensoleille"), icone amCharts au milieu, GROSSE temperature
+    # en bas - facon breezy-weather (gros numero = le vrai "hero", condition
+    # au-dessus, PAS d'icone dans son en-tete a elle) combine a l'illustration
+    # amCharts (bramkragten/weather-card, deja convertie) et au regroupement
+    # compact centre (retour utilisateur : un ancrage aux bords laisse un
+    # grand vide sur une carte redimensionnee haute/etroite). Empile
+    # verticalement, ancre au CENTRE de la carte (decalages en y depuis le
+    # centre, pas depuis un bord) pour rester equilibre quelle que soit la
+    # forme de la carte.
+    parts.append(
+        '{label: {id: weather_condition_lbl, text: "", text_font: font_body, '
+        'text_color: 0xB8C7D6, text_align: center, align: center, y: -46, '
+        'long_mode: dot, width: 140}}'
+    )
     # Illustration amCharts (voir weather.py::WEATHER_ICON_KEYS) OU glyphe
     # Material Icons de repli - meme bascule "REAL:<cle>" que les icones
     # d'appli/jeu (voir slots_*.yaml/slot_icons.yaml), un seul des deux est
     # visible a la fois (voir le lambda "Meteo - icone" dans weather_card.yaml).
     parts.append(
         '{image: {id: weather_icon_widget, src: weather_icon_img, width: 56, height: 56, '
-        'align: center, x: -30, hidden: true}}'
+        'align: center, y: -2, hidden: true}}'
     )
     parts.append(
         '{label: {id: weather_icon_lbl, text: "", text_font: font_icons, '
-        'text_color: 0xFFFFFF, align: center, x: -30}}'
+        'text_color: 0xFFFFFF, align: center, y: -2}}'
     )
     parts.append(
-        '{label: {id: weather_temp_lbl, text: "", text_font: font_mono_bold, '
-        'text_color: 0xFFFFFF, text_align: left, align: center, x: 35, '
-        'long_mode: dot, width: 90}}'
+        '{label: {id: weather_temp_lbl, text: "", text_font: font_mono_xl, '
+        'text_color: 0xFFFFFF, text_align: center, align: center, y: 40, '
+        'long_mode: dot, width: 150}}'
     )
     return parts
 
@@ -212,19 +218,19 @@ def build_interval_lambda() -> str:
     # tourner un objet demanderait lv_obj_set_style_transform_angle, une API
     # non encore utilisee/eprouvee ailleurs dans ce firmware, voir le
     # raisonnement "pas de lv_anim_t" en tete de fichier) centre sur l'icone
-    # (align center, x=-30 - voir _sub_widgets) : 5 points repartis tous les
+    # (align center, y=-2 - voir _sub_widgets) : 5 points repartis tous les
     # 72 degres sur un cercle de rayon fixe (22px), decalages en x/y fixes
     # ajoutes a (w/2, h/2) pour suivre le CENTRE de la carte quelle que soit
     # sa taille (meme logique de "groupe ancre au centre" que l'icone/la
-    # temperature).
+    # temperature/la condition).
     ray_ids = ", ".join(f"id(weather_ray{i})" for i in range(1, RAY_COUNT + 1))
     lines.append(f"lv_obj_t *ray[{RAY_COUNT}] = {{{ray_ids}}};")
     lines.append(f"const int ray_dx[{RAY_COUNT}] = {{0, 21, 13, -13, -21}};")
-    lines.append(f"const int ray_dy[{RAY_COUNT}] = {{-22, -7, 18, 18, -7}};")
+    lines.append(f"const int ray_dy[{RAY_COUNT}] = {{-24, -9, 16, 16, -9}};")
     lines.append(f"for (int i = 0; i < {RAY_COUNT}; i++) {{")
     lines.append("  if (show_sun) lv_obj_clear_flag(ray[i], LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(ray[i], LV_OBJ_FLAG_HIDDEN);")
     lines.append("  if (show_sun) {")
-    lines.append("    lv_obj_set_pos(ray[i], w / 2 - 30 + ray_dx[i], h / 2 + ray_dy[i]);")
+    lines.append("    lv_obj_set_pos(ray[i], w / 2 + ray_dx[i], h / 2 - 2 + ray_dy[i]);")
     lines.append("    int phase = (t * 3 + i * 30) % 150;")
     lines.append("    int opa = phase < 75 ? 80 + phase * 2 : 80 + (150 - phase) * 2;")
     lines.append("    lv_obj_set_style_bg_opa(ray[i], opa, 0);")
@@ -316,6 +322,15 @@ text:
     max_length: 16
     on_value:
       - lvgl.label.update: {{id: weather_temp_lbl, text: !lambda "return x;"}}
+  - platform: template
+    id: weather_condition_text
+    name: "Meteo - condition"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 20
+    on_value:
+      - lvgl.label.update: {{id: weather_condition_lbl, text: !lambda "return x;"}}
   - platform: template
     id: weather_animation_text
     name: "Meteo - animation"

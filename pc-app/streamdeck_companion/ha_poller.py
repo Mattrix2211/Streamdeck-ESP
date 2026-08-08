@@ -105,12 +105,12 @@ def poll_once(device_client: DeviceClient) -> dict[int, str]:
             _fail_counts[weather_entity] = 0
             if device_client.connected:
                 device_client.schedule_push_weather_display(
-                    info["icon_char"], info["animation_style"], info["temperature"]
+                    info["icon_char"], info["animation_style"], info["temperature"], info["condition_label"]
                 )
         else:
             _fail_counts[weather_entity] = _fail_counts.get(weather_entity, 0) + 1
             if _fail_counts[weather_entity] >= STALE_AFTER and device_client.connected:
-                device_client.schedule_push_weather_display(icons.icon_char("warning"), "aucune", OFFLINE_TEXT)
+                device_client.schedule_push_weather_display(icons.icon_char("warning"), "aucune", OFFLINE_TEXT, "")
 
     if device_client.connected:
         if values:

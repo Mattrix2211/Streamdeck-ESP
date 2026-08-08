@@ -357,6 +357,9 @@ font:
   - file: "gfonts://JetBrains Mono@700"
     id: font_mono_bold
     size: 22
+  - file: "gfonts://JetBrains Mono@700"
+    id: font_mono_xl
+    size: 34
 
 # Pas d'image externe ici volontairement : un chemin de fichier dans un
 # package importe via `packages: url:` (HA) se resolvent par rapport au

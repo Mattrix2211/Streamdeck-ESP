@@ -36,29 +36,30 @@ from . import icons
 # d'objets LVGL pre-declares, pas de creation dynamique possible).
 # 3e valeur : cle de l'icone amCharts pre-convertie (voir WEATHER_ICON_KEYS
 # et icon_server.py), None si aucune illustration dediee dans ce pack -
-# repli sur le glyphe Material Icons (icon_key) dans ce cas.
-_CONDITION_MAP: dict[str, tuple[str, str, str | None]] = {
-    "sunny": ("wb_sunny", "soleil", "soleil"),
-    "clear-night": ("nightlight_round", "nuit", "nuit"),
-    "partlycloudy": ("wb_cloudy", "nuage", "nuage"),
-    "cloudy": ("cloud", "nuage", "nuage"),
-    "fog": ("cloud_off", "nuage", "nuage"),
-    "windy": ("air", "aucune", None),
-    "windy-variant": ("air", "aucune", None),
-    "rainy": ("water_drop", "pluie", "pluie"),
-    "pouring": ("water_drop", "pluie", "pluie"),
-    "hail": ("grain", "pluie", "pluie"),
-    "lightning": ("thunderstorm", "pluie", "orage"),
-    "lightning-rainy": ("thunderstorm", "pluie", "orage"),
-    "snowy": ("ac_unit", "neige", "neige"),
-    "snowy-rainy": ("ac_unit", "neige", "neige"),
-    "exceptional": ("warning", "aucune", None),
+# repli sur le glyphe Material Icons (icon_key) dans ce cas. 4e valeur :
+# libelle en clair affiche au-dessus de l'icone (facon breezy-weather).
+_CONDITION_MAP: dict[str, tuple[str, str, str | None, str]] = {
+    "sunny": ("wb_sunny", "soleil", "soleil", "Ensoleille"),
+    "clear-night": ("nightlight_round", "nuit", "nuit", "Ciel degage"),
+    "partlycloudy": ("wb_cloudy", "nuage", "nuage", "Eclaircies"),
+    "cloudy": ("cloud", "nuage", "nuage", "Nuageux"),
+    "fog": ("cloud_off", "nuage", "nuage", "Brouillard"),
+    "windy": ("air", "aucune", None, "Venteux"),
+    "windy-variant": ("air", "aucune", None, "Venteux"),
+    "rainy": ("water_drop", "pluie", "pluie", "Pluie"),
+    "pouring": ("water_drop", "pluie", "pluie", "Forte pluie"),
+    "hail": ("grain", "pluie", "pluie", "Grele"),
+    "lightning": ("thunderstorm", "pluie", "orage", "Orage"),
+    "lightning-rainy": ("thunderstorm", "pluie", "orage", "Orage et pluie"),
+    "snowy": ("ac_unit", "neige", "neige", "Neige"),
+    "snowy-rainy": ("ac_unit", "neige", "neige", "Neige et pluie"),
+    "exceptional": ("warning", "aucune", None, "Alerte meteo"),
 }
-_DEFAULT_ICON, _DEFAULT_STYLE, _DEFAULT_REAL = "wb_cloudy", "aucune", None
+_DEFAULT_ICON, _DEFAULT_STYLE, _DEFAULT_REAL, _DEFAULT_LABEL = "wb_cloudy", "aucune", None, ""
 
 # Liste blanche des cles d'icone meteo valides (voir icon_server.py) - les
 # fichiers PNG correspondants vivent dans static/weather_icons/.
-WEATHER_ICON_KEYS = frozenset(key for _, _, key in _CONDITION_MAP.values() if key is not None)
+WEATHER_ICON_KEYS = frozenset(key for _, _, key, _label in _CONDITION_MAP.values() if key is not None)
 
 
 def condition_icon_value(condition: str) -> str:
@@ -66,7 +67,9 @@ def condition_icon_value(condition: str) -> str:
     illustration amCharts existe pour cette condition (voir
     WEATHER_ICON_KEYS), sinon le glyphe Material Icons de repli - meme
     convention que les icones d'appli/jeu (voir slots_*.yaml)."""
-    icon_key, _, real_key = _CONDITION_MAP.get(condition, (_DEFAULT_ICON, _DEFAULT_STYLE, _DEFAULT_REAL))
+    icon_key, _, real_key, _label = _CONDITION_MAP.get(
+        condition, (_DEFAULT_ICON, _DEFAULT_STYLE, _DEFAULT_REAL, _DEFAULT_LABEL)
+    )
     if real_key:
         return f"REAL:{real_key}"
     return icons.icon_char(icon_key)
@@ -75,8 +78,15 @@ def condition_icon_value(condition: str) -> str:
 def condition_animation_style(condition: str) -> str:
     """Style d'animation (voir firmware/weather_card.yaml) pour une
     condition meteo HA - 'aucune' (icone statique) si inconnue."""
-    _, style, _ = _CONDITION_MAP.get(condition, (_DEFAULT_ICON, _DEFAULT_STYLE, _DEFAULT_REAL))
+    _, style, _, _label = _CONDITION_MAP.get(condition, (_DEFAULT_ICON, _DEFAULT_STYLE, _DEFAULT_REAL, _DEFAULT_LABEL))
     return style
+
+
+def condition_label(condition: str) -> str:
+    """Libelle en clair (francais) affiche au-dessus de l'icone (voir
+    weather_card.yaml) - chaine vide si condition inconnue."""
+    _, _, _real, label = _CONDITION_MAP.get(condition, (_DEFAULT_ICON, _DEFAULT_STYLE, _DEFAULT_REAL, _DEFAULT_LABEL))
+    return label
 
 
 def format_temperature(state: dict) -> str:
@@ -96,9 +106,10 @@ def format_temperature(state: dict) -> str:
 
 
 def read_weather(client, entity_id: str) -> dict | None:
-    """{icon_char, animation_style, temperature} pour `entity_id`, ou None
-    si l'entite est introuvable/non configuree - voir ha_poller.py, qui
-    pousse ces 3 valeurs vers l'ecran (Meteo - icone/animation/temperature)."""
+    """{icon_char, animation_style, temperature, condition_label} pour
+    `entity_id`, ou None si l'entite est introuvable/non configuree - voir
+    ha_poller.py, qui pousse ces 4 valeurs vers l'ecran (Meteo -
+    icone/animation/temperature/condition)."""
     if not entity_id:
         return None
     state = client.get_state(entity_id)
@@ -109,4 +120,5 @@ def read_weather(client, entity_id: str) -> dict | None:
         "icon_char": condition_icon_value(condition),
         "animation_style": condition_animation_style(condition),
         "temperature": format_temperature(state),
+        "condition_label": condition_label(condition),
     }
