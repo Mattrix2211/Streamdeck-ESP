@@ -141,6 +141,7 @@
   }
 
   async function bootstrap() {
+    if (!document.getElementById("modal-action-type")) return;
     try {
       const response = await fetch(API_URL);
       if (!response.ok) return;
