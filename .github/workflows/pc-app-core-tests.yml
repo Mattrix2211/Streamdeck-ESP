@@ -18,6 +18,7 @@ on:
       - "pc-app/streamdeck_companion/runtime_action_catalog.py"
       - "pc-app/streamdeck_companion/dashboard_v2_catalog.py"
       - "pc-app/streamdeck_companion/dashboard_action_choices.py"
+      - "pc-app/streamdeck_companion/dashboard_v2_api.py"
       - "pc-app/streamdeck_companion/v2_device_client.py"
       - "pc-app/streamdeck_companion/tray.py"
       - "pc-app/streamdeck_companion/ha_poller.py"
@@ -43,6 +44,7 @@ on:
       - "pc-app/streamdeck_companion/runtime_action_catalog.py"
       - "pc-app/streamdeck_companion/dashboard_v2_catalog.py"
       - "pc-app/streamdeck_companion/dashboard_action_choices.py"
+      - "pc-app/streamdeck_companion/dashboard_v2_api.py"
       - "pc-app/streamdeck_companion/v2_device_client.py"
       - "pc-app/streamdeck_companion/tray.py"
       - "pc-app/streamdeck_companion/ha_poller.py"
@@ -93,6 +95,7 @@ jobs:
           streamdeck_companion/runtime_action_catalog.py
           streamdeck_companion/dashboard_v2_catalog.py
           streamdeck_companion/dashboard_action_choices.py
+          streamdeck_companion/dashboard_v2_api.py
           streamdeck_companion/v2_device_client.py
 
       - name: Type-check V2 Core and independent adapters
@@ -113,6 +116,7 @@ jobs:
           streamdeck_companion/runtime_action_catalog.py
           streamdeck_companion/dashboard_v2_catalog.py
           streamdeck_companion/dashboard_action_choices.py
+          streamdeck_companion/dashboard_v2_api.py
 
       - name: Type-check V2 DeviceClient wrapper boundary
         working-directory: pc-app
@@ -131,6 +135,7 @@ jobs:
           streamdeck_companion/runtime_action_catalog.py
           streamdeck_companion/dashboard_v2_catalog.py
           streamdeck_companion/dashboard_action_choices.py
+          streamdeck_companion/dashboard_v2_api.py
           streamdeck_companion/v2_device_client.py
 
       - name: Run Core and compatibility tests
