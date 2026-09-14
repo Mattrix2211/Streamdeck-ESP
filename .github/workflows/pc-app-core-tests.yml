@@ -109,7 +109,7 @@ jobs:
         working-directory: pc-app
         run: |
           coverage run --source=streamdeck_companion/core -m unittest discover -s tests
-          coverage report --show-missing
+          coverage report --show-missing --fail-under=90
 
   firmware-contract:
     runs-on: ubuntu-latest
