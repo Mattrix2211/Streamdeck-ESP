@@ -37,6 +37,7 @@ def build_dashboard_action_catalog() -> dict[str, Any]:
                         "required": field.required,
                         "default": field.default,
                         "options": field.options,
+                        "options_source": field.options_source,
                     }
                     for field in schema.fields
                 ),
