@@ -7,10 +7,15 @@ from streamdeck_companion.core import (
     ActionDefinition,
     ActionEngine,
     ActionRegistry,
+    ActionState,
     ActionValidationError,
     DuplicateActionError,
+    InputEvent,
+    InputKind,
     MissingExecutorError,
+    StateStore,
     Trigger,
+    TriggerBindings,
     UnknownActionError,
 )
 from streamdeck_companion.core.legacy import from_legacy, to_legacy
@@ -72,6 +77,47 @@ class ActionEngineTests(unittest.TestCase):
         engine = ActionEngine(registry)
         with self.assertRaises(MissingExecutorError):
             engine.execute(ActionCommand("known", {}))
+
+
+class EventBindingTests(unittest.TestCase):
+    def test_same_source_can_bind_independent_triggers(self):
+        bindings = TriggerBindings()
+        press = ActionCommand("press_action")
+        hold = ActionCommand("hold_action")
+        bindings.bind("button:1", Trigger.PRESS, press)
+        bindings.bind("button:1", Trigger.HOLD, hold)
+
+        self.assertEqual(
+            bindings.resolve(InputEvent("button:1", InputKind.BUTTON, Trigger.PRESS)),
+            press,
+        )
+        self.assertEqual(
+            bindings.resolve(InputEvent("button:1", InputKind.BUTTON, Trigger.HOLD)),
+            hold,
+        )
+
+    def test_encoder_rotation_uses_generic_trigger(self):
+        bindings = TriggerBindings()
+        command = ActionCommand("volume_up")
+        bindings.bind("encoder:2", Trigger.ROTATE_CW, command)
+        event = InputEvent("encoder:2", InputKind.ENCODER, Trigger.ROTATE_CW)
+        self.assertEqual(bindings.resolve(event), command)
+
+
+class StateStoreTests(unittest.TestCase):
+    def test_update_notifies_subscribers_and_updates_snapshot(self):
+        store = StateStore()
+        seen = []
+        unsubscribe = store.subscribe(seen.append)
+
+        state = store.update("light.salon", status=ActionState.ON, value=True)
+        self.assertEqual(store.get("light.salon"), state)
+        self.assertEqual(store.snapshot()["light.salon"], state)
+        self.assertEqual(seen, [state])
+
+        unsubscribe()
+        store.update("light.salon", status=ActionState.OFF, value=False)
+        self.assertEqual(len(seen), 1)
 
 
 class LegacyAdapterTests(unittest.TestCase):
