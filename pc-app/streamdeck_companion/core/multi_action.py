@@ -120,9 +120,9 @@ class MultiActionRunner:
 
         state.status = MultiActionStatus.RUNNING
         self._run_steps(definition.steps, definition.error_policy, context or {}, state)
-        if state.cancel_requested:
-            state.status = MultiActionStatus.CANCELLED
-        elif state.errors and definition.error_policy == ErrorPolicy.STOP:
+        if state.status == MultiActionStatus.CANCELLED:
+            return state
+        if state.errors and definition.error_policy == ErrorPolicy.STOP:
             state.status = MultiActionStatus.ERROR
         else:
             state.status = MultiActionStatus.COMPLETED
@@ -137,6 +137,7 @@ class MultiActionRunner:
     ) -> None:
         for step in steps:
             if state.cancel_requested:
+                state.status = MultiActionStatus.CANCELLED
                 return
             try:
                 self._run_step(step, error_policy, context, state)
