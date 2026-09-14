@@ -9,7 +9,8 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 
-NONE_ACTION = {"id": "none", "name": "Aucune", "category": "Streamdeck", "inputs": ("button", "encoder")}
+NONE_ACTION_ID = "none"
+NONE_ACTION_NAME = "Aucune"
 
 
 def action_choices(catalog: Mapping[str, Any], input_kind: str) -> tuple[dict[str, str], ...]:
@@ -17,7 +18,7 @@ def action_choices(catalog: Mapping[str, Any], input_kind: str) -> tuple[dict[st
     if input_kind not in {"button", "encoder"}:
         raise ValueError(f"unsupported input kind: {input_kind!r}")
 
-    choices: list[dict[str, str]] = [{"id": NONE_ACTION["id"], "label": NONE_ACTION["name"]}]
+    choices: list[dict[str, str]] = [{"id": NONE_ACTION_ID, "label": NONE_ACTION_NAME}]
     actions = catalog.get("actions") or ()
     for action in actions:
         if not isinstance(action, Mapping):
@@ -38,7 +39,7 @@ def choice_ids(catalog: Mapping[str, Any], input_kind: str) -> tuple[str, ...]:
 
 def choice_labels(catalog: Mapping[str, Any]) -> dict[str, str]:
     """Return one label map for both dashboard input contexts."""
-    labels = {"none": "Aucune"}
+    labels = {NONE_ACTION_ID: NONE_ACTION_NAME}
     for input_kind in ("button", "encoder"):
         labels.update({choice["id"]: choice["label"] for choice in action_choices(catalog, input_kind)})
     return labels
