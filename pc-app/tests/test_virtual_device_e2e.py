@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from streamdeck_companion.core.protocol import MessageType, ProtocolMessage
+from streamdeck_companion.core.protocol_session import RetryPolicy
 from streamdeck_companion.core.session import ProtocolSession
 from streamdeck_companion.virtual_device import VirtualDeviceFaults, VirtualStreamdeckDevice
 
@@ -58,6 +59,27 @@ class VirtualDeviceE2ETests(unittest.TestCase):
         device.set_receiver(session.receive)
         session.send(ProtocolMessage(MessageType.SET_PAGE, {"page_id": "broken"}))
         self.assertEqual(session.pending(), ())
+
+    def test_lost_ack_is_retried_and_then_resolved(self) -> None:
+        now = [0.0]
+        device = VirtualStreamdeckDevice(
+            faults=VirtualDeviceFaults(drop_responses_for={MessageType.PING})
+        )
+        session = ProtocolSession(
+            device,
+            retry_policy=RetryPolicy(timeout_seconds=1.0, max_retries=1),
+        )
+        session.tracker._clock = lambda: now[0]
+        device.set_receiver(session.receive)
+        message = ProtocolMessage(MessageType.PING)
+
+        session.send(message)
+        self.assertEqual(len(session.pending()), 1)
+        device.faults.drop_responses_for.clear()
+        now[0] = 1.1
+        self.assertEqual(session.retry_due(), (message,))
+        self.assertEqual(session.pending(), ())
+        self.assertEqual(device.sent_messages, [message, message])
 
     def test_disconnected_device_rejects_send_and_recovers(self) -> None:
         device = VirtualStreamdeckDevice()
