@@ -43,6 +43,7 @@ from . import icon_server
 from . import profile_watcher
 from . import profiles as profile_utils
 from .device_client import DEFAULT_CONFIG_PATH, DeviceClient, load_config, save_config
+from .v2_device_client import V2DeviceClient
 
 LOG = logging.getLogger("streamdeck_tray")
 
@@ -178,7 +179,7 @@ def main() -> None:
     ensure_config_exists(config_path)
     config = load_config(config_path)
 
-    device_client = DeviceClient(config_path)
+    device_client = V2DeviceClient(config_path)
     client_thread = threading.Thread(target=run_device_client, args=(device_client,), daemon=True)
     client_thread.start()
 
