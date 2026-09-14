@@ -17,6 +17,9 @@ class DashboardV2CatalogTests(unittest.TestCase):
         self.assertIn("navigation", by_id)
         self.assertEqual(by_id["launch"]["fields"][0]["key"], "target")
         self.assertIn("press", by_id["navigation"]["triggers"])
+        self.assertEqual(by_id["multi_action"]["inputs"], ("button",))
+        self.assertEqual(by_id["app_volume"]["inputs"], ("encoder",))
+        self.assertIn("encoder", by_id["keys"]["inputs"])
 
 
 if __name__ == "__main__":
