@@ -28,8 +28,12 @@ def build_runtime_action_registry() -> ActionRegistry:
 
 def runtime_action_definitions() -> tuple[ActionDefinition, ...]:
     return (
-        _definition("keys", "Raccourci clavier", "Windows", "hotkey", "Raccourci", ALL_TRIGGERS, inputs=ALL_INPUTS),
-        _definition("launch", "Lancer une application", "Windows", "path", "Application", ALL_TRIGGERS, inputs=ALL_INPUTS),
+        _definition(
+            "keys", "Raccourci clavier", "Windows", "hotkey", "Raccourci", ALL_TRIGGERS, inputs=ALL_INPUTS
+        ),
+        _definition(
+            "launch", "Lancer une application", "Windows", "path", "Application", ALL_TRIGGERS, inputs=ALL_INPUTS
+        ),
         _definition("url", "Ouvrir un site web", "Windows", "url", "URL", ALL_TRIGGERS, inputs=ALL_INPUTS),
         _definition(
             "media",
