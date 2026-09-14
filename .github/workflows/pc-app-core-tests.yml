@@ -1,0 +1,42 @@
+name: PC App Core Tests
+
+on:
+  push:
+    paths:
+      - "pc-app/streamdeck_companion/core/**"
+      - "pc-app/streamdeck_companion/actions.py"
+      - "pc-app/streamdeck_companion/device_events.py"
+      - "pc-app/streamdeck_companion/navigation_legacy.py"
+      - "pc-app/tests/**"
+      - ".github/workflows/pc-app-core-tests.yml"
+  pull_request:
+    paths:
+      - "pc-app/streamdeck_companion/core/**"
+      - "pc-app/streamdeck_companion/actions.py"
+      - "pc-app/streamdeck_companion/device_events.py"
+      - "pc-app/streamdeck_companion/navigation_legacy.py"
+      - "pc-app/tests/**"
+      - ".github/workflows/pc-app-core-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  core-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run Core and compatibility tests
+        working-directory: pc-app
+        run: python -m unittest discover -s tests -v
