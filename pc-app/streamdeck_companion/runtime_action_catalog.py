@@ -48,6 +48,14 @@ def runtime_action_definitions() -> tuple[ActionDefinition, ...]:
             "Entité / pas",
             ENCODER_TRIGGERS,
         ),
+        _definition(
+            "navigation",
+            "Navigation Streamdeck",
+            "Streamdeck",
+            "navigation",
+            "Commande / cible",
+            ALL_TRIGGERS,
+        ),
     )
 
 
