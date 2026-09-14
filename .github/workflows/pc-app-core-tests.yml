@@ -10,6 +10,8 @@ on:
       - "pc-app/streamdeck_companion/device_protocol.py"
       - "pc-app/streamdeck_companion/navigation_legacy.py"
       - "pc-app/streamdeck_companion/state_adapters.py"
+      - "pc-app/streamdeck_companion/runtime_state.py"
+      - "pc-app/streamdeck_companion/ha_poller.py"
       - "pc-app/tests/**"
       - "pc-app/requirements-dev.txt"
       - "pc-app/pyproject.toml"
@@ -23,6 +25,8 @@ on:
       - "pc-app/streamdeck_companion/device_protocol.py"
       - "pc-app/streamdeck_companion/navigation_legacy.py"
       - "pc-app/streamdeck_companion/state_adapters.py"
+      - "pc-app/streamdeck_companion/runtime_state.py"
+      - "pc-app/streamdeck_companion/ha_poller.py"
       - "pc-app/tests/**"
       - "pc-app/requirements-dev.txt"
       - "pc-app/pyproject.toml"
@@ -61,6 +65,7 @@ jobs:
           streamdeck_companion/device_protocol.py
           streamdeck_companion/navigation_legacy.py
           streamdeck_companion/state_adapters.py
+          streamdeck_companion/runtime_state.py
 
       - name: Type-check V2 Core and adapters
         working-directory: pc-app
@@ -72,6 +77,11 @@ jobs:
           streamdeck_companion/device_protocol.py
           streamdeck_companion/navigation_legacy.py
           streamdeck_companion/state_adapters.py
+          streamdeck_companion/runtime_state.py
+
+      - name: Compile live HA integration
+        working-directory: pc-app
+        run: python -m py_compile streamdeck_companion/ha_poller.py
 
       - name: Run Core and compatibility tests
         working-directory: pc-app
