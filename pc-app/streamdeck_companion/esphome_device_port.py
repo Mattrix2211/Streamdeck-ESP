@@ -34,6 +34,7 @@ class UnsupportedDeviceMessageError(ValueError):
 
 
 PayloadSender = Callable[[dict[str, object]], None]
+AckSender = Callable[[str], None]
 
 
 class ESPHomeDevicePort(DevicePort):
@@ -49,6 +50,7 @@ class ESPHomeDevicePort(DevicePort):
         page_sender: PayloadSender | None = None,
         button_sender: PayloadSender | None = None,
         widget_sender: PayloadSender | None = None,
+        ack_sender: AckSender | None = None,
     ) -> None:
         self._device_client = device_client
         self._state_sender = state_sender
@@ -57,6 +59,7 @@ class ESPHomeDevicePort(DevicePort):
         self._page_sender = page_sender
         self._button_sender = button_sender
         self._widget_sender = widget_sender
+        self._ack_sender = ack_sender
 
     @property
     def descriptor(self) -> DeviceDescriptor:
@@ -67,7 +70,12 @@ class ESPHomeDevicePort(DevicePort):
         return bool(getattr(self._device_client, "connected", False))
 
     def send(self, message: ProtocolMessage) -> None:
-        """Project supported V2 messages onto the current runtime."""
+        """Project supported V2 messages onto the current runtime.
+
+        Control/configuration messages are acknowledged only after their local
+        projection succeeds. UPDATE_STATE remains intentionally unacknowledged
+        because it can be high-frequency telemetry rather than a command.
+        """
         payload = dict(message.payload)
 
         if message.type == MessageType.UPDATE_STATE:
@@ -76,29 +84,47 @@ class ESPHomeDevicePort(DevicePort):
 
         if message.type == MessageType.SET_PROFILE:
             self._send_payload(self._profile_sender, message.type, payload)
+            self._ack(message.message_id)
             return
 
         if message.type == MessageType.SET_PAGE:
             self._send_payload(self._page_sender, message.type, payload)
+            self._ack(message.message_id)
             return
 
         if message.type == MessageType.SET_BUTTON:
             self._send_payload(self._button_sender, message.type, payload)
+            self._ack(message.message_id)
             return
 
         if message.type == MessageType.SET_WIDGET:
             self._send_payload(self._widget_sender, message.type, payload)
+            self._ack(message.message_id)
             return
 
         if message.type == MessageType.SYNC:
             if self._sync_sender is None:
                 raise UnsupportedDeviceMessageError("SYNC sender is not configured")
             self._sync_sender()
+            self._ack(message.message_id)
+            return
+
+        if message.type == MessageType.PING:
+            if self._ack_sender is None:
+                raise UnsupportedDeviceMessageError("PING requires the V2 acknowledgement channel")
+            self._ack(message.message_id)
             return
 
         raise UnsupportedDeviceMessageError(
             f"message {message.type.value!r} is not supported by the current ESPHome transport"
         )
+
+    def _ack(self, message_id: str) -> None:
+        # Older firmware has no acknowledgement entity. Keep configuration
+        # commands backward compatible; callers that request a response will
+        # then naturally exercise timeout/retry through ProtocolSession.
+        if self._ack_sender is not None:
+            self._ack_sender(message_id)
 
     @staticmethod
     def _send_payload(sender: PayloadSender | None, message_type: MessageType, payload: dict[str, object]) -> None:
