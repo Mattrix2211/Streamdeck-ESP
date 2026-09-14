@@ -16,7 +16,7 @@ class StateProtocolBridgeTests(unittest.TestCase):
         store.update("device:streamdeck", status=ActionState.ACTIVE, value=True)
 
         self.assertEqual(len(messages), 1)
-        self.assertEqual(messages[0].message_type, MessageType.UPDATE_STATE)
+        self.assertEqual(messages[0].type, MessageType.UPDATE_STATE)
         self.assertEqual(messages[0].payload["key"], "device:streamdeck")
         self.assertEqual(messages[0].payload["status"], "active")
         self.assertTrue(messages[0].payload["value"])
