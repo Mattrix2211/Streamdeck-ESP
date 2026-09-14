@@ -12,6 +12,7 @@ on:
       - "pc-app/streamdeck_companion/state_adapters.py"
       - "pc-app/streamdeck_companion/runtime_state.py"
       - "pc-app/streamdeck_companion/ha_poller.py"
+      - "pc-app/streamdeck_companion/ha_mqtt.py"
       - "pc-app/tests/**"
       - "pc-app/requirements-dev.txt"
       - "pc-app/pyproject.toml"
@@ -27,6 +28,7 @@ on:
       - "pc-app/streamdeck_companion/state_adapters.py"
       - "pc-app/streamdeck_companion/runtime_state.py"
       - "pc-app/streamdeck_companion/ha_poller.py"
+      - "pc-app/streamdeck_companion/ha_mqtt.py"
       - "pc-app/tests/**"
       - "pc-app/requirements-dev.txt"
       - "pc-app/pyproject.toml"
@@ -79,9 +81,12 @@ jobs:
           streamdeck_companion/state_adapters.py
           streamdeck_companion/runtime_state.py
 
-      - name: Compile live HA integration
+      - name: Compile live Home Assistant integrations
         working-directory: pc-app
-        run: python -m py_compile streamdeck_companion/ha_poller.py
+        run: >-
+          python -m py_compile
+          streamdeck_companion/ha_poller.py
+          streamdeck_companion/ha_mqtt.py
 
       - name: Run Core and compatibility tests
         working-directory: pc-app
