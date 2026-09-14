@@ -4,6 +4,9 @@ import platform
 import subprocess
 import webbrowser
 
+from .core import ActionCommand, ActionDefinition, ActionEngine, UnknownActionError
+from .core.legacy import from_legacy
+
 try:
     import keyboard
 except ImportError:
@@ -23,27 +26,58 @@ _MEDIA_KEYS = {
 }
 
 
+def _target(command: ActionCommand):
+    return command.parameters.get("target")
+
+
+def _require_target(command: ActionCommand) -> None:
+    target = _target(command)
+    if target is None or target == "" or target == []:
+        raise ValueError(f"Cible manquante pour l'action {command.action_id!r}")
+
+
+def _definition(action_id: str, name: str) -> ActionDefinition:
+    return ActionDefinition(
+        id=action_id,
+        name=name,
+        category="system",
+        validator=lambda values: _require_target(ActionCommand(action_id, values)),
+    )
+
+
+def _build_engine() -> ActionEngine:
+    """Construit l'adaptateur runtime des actions locales historiques.
+
+    Le Core connait les definitions et valide les commandes. Les effets
+    concrets restent ici, dans la couche application, afin de conserver
+    l'independance du package ``core`` vis-a-vis de Windows/macOS/Linux.
+    """
+    engine = ActionEngine()
+    engine.register(_definition("keys", "Raccourci clavier"), lambda cmd: _send_keys(_target(cmd)))
+    engine.register(_definition("launch", "Lancer une application"), lambda cmd: _launch(_target(cmd)))
+    engine.register(_definition("url", "Ouvrir une URL"), lambda cmd: webbrowser.open(_target(cmd)))
+    engine.register(_definition("media", "Controle multimedia"), lambda cmd: _media(_target(cmd)))
+    engine.register(_definition("audio_output", "Changer de sortie audio"), lambda cmd: _audio_output(_target(cmd)))
+    engine.register(_definition("app_volume", "Volume d'une application"), lambda cmd: _app_volume(_target(cmd)))
+    engine.register(_definition("app_mute", "Couper le son d'une application"), lambda cmd: _app_mute(_target(cmd)))
+    return engine
+
+
+_ENGINE = _build_engine()
+
+
 def run(action: dict) -> None:
-    """Execute une action decrite par un dict {type, target} depuis config.yaml."""
-    kind = action.get("type")
-    target = action.get("target")
-    if kind == "keys":
-        _send_keys(target)
-    elif kind == "launch":
-        _launch(target)
-    elif kind == "url":
-        webbrowser.open(target)
-    elif kind == "media":
-        _media(target)
-    elif kind == "audio_output":
-        from . import audio_devices
-        audio_devices.set_default_playback_device(target)
-    elif kind == "app_volume":
-        _app_volume(target)
-    elif kind == "app_mute":
-        _app_mute(target)
-    else:
-        raise ValueError(f"Type d'action inconnu: {kind!r}")
+    """Execute une action historique ``{type, target}`` via le Core V2.
+
+    Le format de configuration public reste inchangé pendant la migration.
+    """
+    command = from_legacy(action)
+    if command is None:
+        return
+    try:
+        _ENGINE.execute(command)
+    except UnknownActionError as exc:
+        raise ValueError(f"Type d'action inconnu: {command.action_id!r}") from exc
 
 
 def _send_keys(keys: list) -> None:
@@ -81,6 +115,11 @@ def _media(name: str) -> None:
             "Le module 'keyboard' n'est pas disponible sur cette plateforme"
         )
     keyboard.send(_MEDIA_KEYS[name])
+
+
+def _audio_output(target: str) -> None:
+    from . import audio_devices
+    audio_devices.set_default_playback_device(target)
 
 
 def _app_volume(target: str) -> None:
