@@ -7,6 +7,7 @@ from importlib import import_module
 from types import ModuleType
 
 from .core.plugins import PluginContribution, PluginManifest, PluginRegistry, RegisteredPlugin
+from .security import PluginModulePolicy
 
 
 PluginImporter = Callable[[str], ModuleType]
@@ -17,7 +18,7 @@ class PluginLoadError(RuntimeError):
 
 
 class PluginLoader:
-    """Load trusted Python plugin modules and register their contributions.
+    """Load approved Python plugin modules and register their contributions.
 
     The Core only knows PluginManifest/PluginContribution. Module discovery and
     Python imports are runtime responsibilities and intentionally live here.
@@ -30,27 +31,31 @@ class PluginLoader:
         registry: PluginRegistry,
         *,
         importer: PluginImporter = import_module,
+        module_policy: PluginModulePolicy | None = None,
     ) -> None:
         self.registry = registry
         self._importer = importer
+        self._module_policy = module_policy or PluginModulePolicy()
         self._modules: dict[str, ModuleType] = {}
 
     def load(self, module_name: str) -> RegisteredPlugin:
-        if not module_name or module_name.startswith("."):
-            raise PluginLoadError("plugin module name must be absolute and non-empty")
         try:
-            module = self._importer(module_name)
+            approved_name = self._module_policy.validate(module_name)
+        except (PermissionError, ValueError) as exc:
+            raise PluginLoadError(f"plugin module is not allowed: {module_name!r}") from exc
+        try:
+            module = self._importer(approved_name)
         except Exception as exc:
-            raise PluginLoadError(f"cannot import plugin module {module_name!r}") from exc
+            raise PluginLoadError(f"cannot import plugin module {approved_name!r}") from exc
 
         builder = getattr(module, "build_plugin", None)
         if not callable(builder):
-            raise PluginLoadError(f"plugin module {module_name!r} must expose build_plugin()")
+            raise PluginLoadError(f"plugin module {approved_name!r} must expose build_plugin()")
 
         try:
             built = builder()
         except Exception as exc:
-            raise PluginLoadError(f"plugin builder failed for {module_name!r}") from exc
+            raise PluginLoadError(f"plugin builder failed for {approved_name!r}") from exc
 
         if not isinstance(built, tuple) or len(built) != 2:
             raise PluginLoadError("build_plugin() must return (PluginManifest, PluginContribution)")
