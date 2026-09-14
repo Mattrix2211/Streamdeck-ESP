@@ -28,10 +28,42 @@ def runtime_action_definitions() -> tuple[ActionDefinition, ...]:
         _definition("keys", "Raccourci clavier", "Windows", "hotkey", "Raccourci", BUTTON_TRIGGERS),
         _definition("launch", "Lancer une application", "Windows", "path", "Application", BUTTON_TRIGGERS),
         _definition("url", "Ouvrir un site web", "Windows", "url", "URL", BUTTON_TRIGGERS),
-        _definition("media", "Musique / volume du PC", "Windows", "select", "Commande média", ALL_TRIGGERS),
-        _definition("audio_output", "Changer de haut-parleur", "Windows", "select", "Sortie audio", ALL_TRIGGERS),
-        _definition("app_volume", "Volume d'une application", "Windows", "select", "Application", ENCODER_TRIGGERS),
-        _definition("app_mute", "Couper le son d'une application", "Windows", "select", "Application", ALL_TRIGGERS),
+        _definition(
+            "media",
+            "Musique / volume du PC",
+            "Windows",
+            "select",
+            "Commande média",
+            ALL_TRIGGERS,
+            options_source="media_commands",
+        ),
+        _definition(
+            "audio_output",
+            "Changer de haut-parleur",
+            "Windows",
+            "select",
+            "Sortie audio",
+            ALL_TRIGGERS,
+            options_source="audio_outputs",
+        ),
+        _definition(
+            "app_volume",
+            "Volume d'une application",
+            "Windows",
+            "select",
+            "Application",
+            ENCODER_TRIGGERS,
+            options_source="audio_apps",
+        ),
+        _definition(
+            "app_mute",
+            "Couper le son d'une application",
+            "Windows",
+            "select",
+            "Application",
+            ALL_TRIGGERS,
+            options_source="audio_apps",
+        ),
         _definition(
             "home_assistant",
             "Action Home Assistant",
@@ -74,27 +106,29 @@ def _definition(
     field_type: str,
     label: str,
     triggers: frozenset[Trigger],
+    *,
+    options_source: str | None = None,
 ) -> ActionDefinition:
+    parameter = {
+        "type": field_type,
+        "label": label,
+        "required": True,
+    }
+    field = {
+        "key": "target",
+        "type": field_type,
+        "label": label,
+        "required": True,
+    }
+    if options_source:
+        parameter["options_source"] = options_source
+        field["options_source"] = options_source
+
     return ActionDefinition(
         id=action_id,
         name=name,
         category=category,
-        parameters={
-            "target": {
-                "type": field_type,
-                "label": label,
-                "required": True,
-            }
-        },
+        parameters={"target": parameter},
         supported_triggers=triggers,
-        ui_config={
-            "fields": (
-                {
-                    "key": "target",
-                    "type": field_type,
-                    "label": label,
-                    "required": True,
-                },
-            )
-        },
+        ui_config={"fields": (field,)},
     )
