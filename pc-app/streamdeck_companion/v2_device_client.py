@@ -132,12 +132,6 @@ class V2DeviceClient(DeviceClient):
             raise ValueError("nested multi actions are not supported yet")
         return action_runner.run(legacy)
 
-    async def run_forever(self) -> None:
-        try:
-            await super().run_forever()
-        finally:
-            self._multi_action_runtime.shutdown(wait=False)
-
     @staticmethod
     def _core_page_id(navigator: Navigator, legacy_page_id: str) -> str:
         for page in navigator.profile.pages:
