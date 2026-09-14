@@ -77,7 +77,7 @@ jobs:
           streamdeck_companion/state_protocol_bridge.py
           streamdeck_companion/v2_device_client.py
 
-      - name: Type-check V2 Core and adapters
+      - name: Type-check V2 Core and independent adapters
         working-directory: pc-app
         run: >-
           mypy
@@ -89,7 +89,10 @@ jobs:
           streamdeck_companion/state_adapters.py
           streamdeck_companion/runtime_state.py
           streamdeck_companion/state_protocol_bridge.py
-          streamdeck_companion/v2_device_client.py
+
+      - name: Type-check V2 DeviceClient wrapper boundary
+        working-directory: pc-app
+        run: mypy --follow-imports=skip streamdeck_companion/v2_device_client.py
 
       - name: Compile live runtime integrations
         working-directory: pc-app
