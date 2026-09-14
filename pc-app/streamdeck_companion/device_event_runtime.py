@@ -70,9 +70,9 @@ def resolve_legacy_action(profile: dict, event: InputEvent) -> dict | None:
 
 def _metadata_index(event: InputEvent, key: str) -> int | None:
     value = event.metadata.get(key)
-    if isinstance(value, bool):
+    if isinstance(value, bool) or not isinstance(value, (int, str)):
         return None
     try:
         return int(value)
-    except (TypeError, ValueError):
+    except ValueError:
         return None
