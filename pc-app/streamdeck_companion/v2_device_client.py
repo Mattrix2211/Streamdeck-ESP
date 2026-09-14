@@ -16,6 +16,7 @@ from .device_event_runtime import resolve_esphome_action
 from .navigation_legacy import profile_from_legacy
 from .runtime_state import STATE_STORE
 from .state_adapters import update_device_connection
+from .v2_runtime_actions import register_navigation_action
 
 
 class V2DeviceClient(DeviceClient):
@@ -25,6 +26,7 @@ class V2DeviceClient(DeviceClient):
         super().__init__(*args, **kwargs)
         self._navigator: Navigator | None = None
         self._navigator_source_key: tuple[object, ...] | None = None
+        register_navigation_action(self)
 
     @property
     def connected(self) -> bool:
@@ -46,6 +48,7 @@ class V2DeviceClient(DeviceClient):
             core_profile.id,
             core_profile.home_page_id,
             tuple(page.id for page in core_profile.pages),
+            tuple((folder.id, folder.page_id, folder.parent_id) for folder in core_profile.folders),
         )
         if self._navigator is None:
             self._navigator = Navigator(core_profile)
@@ -97,9 +100,19 @@ class V2DeviceClient(DeviceClient):
         else:
             raise NavigationError(f"unknown navigation command: {command!r}")
 
+        self._refresh_after_navigation()
+        return str(page.metadata.get("legacy_page_id") or profile_pages.HOME_PAGE_ID)
+
+    def open_folder(self, folder_id: str) -> str:
+        """Open a nested folder through the same Navigator used by page actions."""
+        navigator = self._ensure_navigator(self._base_active_profile())
+        page = navigator.open_folder(folder_id)
+        self._refresh_after_navigation()
+        return str(page.metadata.get("legacy_page_id") or profile_pages.HOME_PAGE_ID)
+
+    def _refresh_after_navigation(self) -> None:
         if self.connected:
             self.push_config()
-        return str(page.metadata.get("legacy_page_id") or profile_pages.HOME_PAGE_ID)
 
     @staticmethod
     def _core_page_id(navigator: Navigator, legacy_page_id: str) -> str:
