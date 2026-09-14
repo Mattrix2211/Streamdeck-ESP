@@ -15,6 +15,8 @@ Code in `core/` must not import Flask, Windows APIs, Home Assistant clients, ESP
 - `Trigger`: generic button/encoder interaction vocabulary.
 - `InputEvent` / `TriggerBindings`: generic event-to-action resolution independent from ESPHome event names.
 - `ActionState` / `StateStore`: centralized state vocabulary and observable state storage.
+- `Profile` / `Page` / `Folder`: stable navigation model for multi-page profiles and nested folders.
+- `GridRect` / `Placement`: hardware-independent layout primitives compatible with the current grid approach.
 - `legacy`: reversible adapter for the current `{type, target}` configuration shape.
 
 ## Migration rule
@@ -22,3 +24,5 @@ Code in `core/` must not import Flask, Windows APIs, Home Assistant clients, ESP
 Concrete integrations remain outside `core/`. Existing modules are migrated by registering adapters/executors rather than moving Windows, Home Assistant or hardware code into the domain layer.
 
 The historical dashboard configuration and firmware protocol remain compatible while this migration is in progress. `streamdeck_companion/actions.py` is the first runtime path routed through `ActionEngine`; Home Assistant and device-specific action paths will follow progressively.
+
+`device_events.py` is the first device adapter translating the current ESPHome event vocabulary to generic Core input events without requiring a firmware protocol change.
