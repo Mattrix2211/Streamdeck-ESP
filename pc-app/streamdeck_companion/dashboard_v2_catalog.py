@@ -6,21 +6,23 @@ from typing import Any
 
 from .core.action_library import ActionLibrary
 from .core.property_inspector import PropertyInspector
-from .runtime_action_catalog import build_runtime_action_registry
+from .core.registry import ActionRegistry
+from .runtime_action_catalog import RUNTIME_ACTION_REGISTRY
 
 
-def build_dashboard_action_catalog() -> dict[str, Any]:
+def build_dashboard_action_catalog(registry: ActionRegistry | None = None) -> dict[str, Any]:
     """Return Action Library + Property Inspector metadata for the current UI.
 
-    The existing dashboard can consume this progressively while keeping its
-    legacy constants as a fallback during migration.
+    By default the live shared runtime registry is used. Plugins registering
+    actions into that same registry therefore become visible without changing
+    this module or rebuilding a second catalog.
     """
-    registry = build_runtime_action_registry()
-    library = ActionLibrary(registry)
-    inspector = PropertyInspector(registry)
+    action_registry = registry or RUNTIME_ACTION_REGISTRY
+    library = ActionLibrary(action_registry)
+    inspector = PropertyInspector(action_registry)
 
     actions = []
-    for definition in registry.list():
+    for definition in action_registry.list():
         schema = inspector.schema(definition.id)
         raw_inputs = definition.ui_config.get("inputs", ())
         inputs = tuple(str(value) for value in raw_inputs) if isinstance(raw_inputs, (list, tuple)) else ()
