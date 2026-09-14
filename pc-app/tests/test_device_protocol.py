@@ -1,9 +1,9 @@
-"""Tests for the Core input event -> protocol adapter."""
+"""Tests for Core runtime objects -> protocol adapters."""
 
 import unittest
 
-from streamdeck_companion.core import InputEvent, InputKind, MessageType, Trigger
-from streamdeck_companion.device_protocol import input_event_to_protocol
+from streamdeck_companion.core import ActionState, InputEvent, InputKind, MessageType, StateValue, Trigger
+from streamdeck_companion.device_protocol import input_event_to_protocol, state_value_to_protocol
 
 
 class DeviceProtocolAdapterTests(unittest.TestCase):
@@ -35,6 +35,23 @@ class DeviceProtocolAdapterTests(unittest.TestCase):
         self.assertEqual(message.type, MessageType.TOUCH)
         self.assertEqual(message.payload["x"], 100)
         self.assertEqual(message.payload["y"], 200)
+
+    def test_state_value_maps_to_update_state_message(self):
+        state = StateValue(
+            key="ha:light.bureau",
+            status=ActionState.ON,
+            value="on",
+            attributes={"brightness": 200},
+            updated_at=123.5,
+        )
+        message = state_value_to_protocol(state)
+
+        self.assertEqual(message.type, MessageType.UPDATE_STATE)
+        self.assertEqual(message.payload["key"], "ha:light.bureau")
+        self.assertEqual(message.payload["status"], "on")
+        self.assertEqual(message.payload["value"], "on")
+        self.assertEqual(message.payload["attributes"], {"brightness": 200})
+        self.assertEqual(message.payload["updated_at"], 123.5)
 
 
 if __name__ == "__main__":
