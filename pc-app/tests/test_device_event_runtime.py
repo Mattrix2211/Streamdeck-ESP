@@ -3,7 +3,11 @@
 import unittest
 
 from streamdeck_companion.core import InputEvent, InputKind, Trigger
-from streamdeck_companion.device_event_runtime import resolve_legacy_action
+from streamdeck_companion.device_event_runtime import resolve_esphome_action, resolve_legacy_action
+
+
+ACTION_ENTITY = "Bouton d'action ecran"
+ENCODER_ENTITIES = ["Encodeur 1 - evenement", "Encodeur 2 - evenement", "Encodeur 3 - evenement"]
 
 
 class DeviceEventRuntimeTests(unittest.TestCase):
@@ -44,6 +48,36 @@ class DeviceEventRuntimeTests(unittest.TestCase):
     def test_touch_event_has_no_legacy_action_mapping(self):
         event = InputEvent("touch:main", InputKind.TOUCH, Trigger.PRESS, {"x": 1, "y": 2})
         self.assertIsNone(resolve_legacy_action(self._profile(), event))
+
+    def test_esphome_button_bridge_resolves_same_action(self):
+        action = resolve_esphome_action(
+            self._profile(),
+            ACTION_ENTITY,
+            "action_1",
+            action_entity_name=ACTION_ENTITY,
+            encoder_entity_names=ENCODER_ENTITIES,
+        )
+        self.assertEqual(action, {"type": "url", "target": "https://example.test"})
+
+    def test_esphome_encoder_bridge_resolves_same_action(self):
+        action = resolve_esphome_action(
+            self._profile(),
+            ENCODER_ENTITIES[0],
+            "clockwise",
+            action_entity_name=ACTION_ENTITY,
+            encoder_entity_names=ENCODER_ENTITIES,
+        )
+        self.assertEqual(action, {"type": "media", "target": "vol_up"})
+
+    def test_special_ui_event_does_not_enter_generic_action_path(self):
+        action = resolve_esphome_action(
+            self._profile(),
+            ACTION_ENTITY,
+            "close_ha_popup",
+            action_entity_name=ACTION_ENTITY,
+            encoder_entity_names=ENCODER_ENTITIES,
+        )
+        self.assertIsNone(action)
 
 
 if __name__ == "__main__":
