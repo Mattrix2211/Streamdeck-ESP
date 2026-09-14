@@ -14,6 +14,9 @@ ENCODER_TRIGGERS = frozenset(
     {Trigger.ROTATE_CW, Trigger.ROTATE_CCW, Trigger.PRESS, Trigger.HOLD, Trigger.RELEASE}
 )
 ALL_TRIGGERS = BUTTON_TRIGGERS | ENCODER_TRIGGERS
+BUTTON_INPUT = ("button",)
+ENCODER_INPUT = ("encoder",)
+ALL_INPUTS = ("button", "encoder")
 
 
 def build_runtime_action_registry() -> ActionRegistry:
@@ -25,9 +28,9 @@ def build_runtime_action_registry() -> ActionRegistry:
 
 def runtime_action_definitions() -> tuple[ActionDefinition, ...]:
     return (
-        _definition("keys", "Raccourci clavier", "Windows", "hotkey", "Raccourci", BUTTON_TRIGGERS),
-        _definition("launch", "Lancer une application", "Windows", "path", "Application", BUTTON_TRIGGERS),
-        _definition("url", "Ouvrir un site web", "Windows", "url", "URL", BUTTON_TRIGGERS),
+        _definition("keys", "Raccourci clavier", "Windows", "hotkey", "Raccourci", BUTTON_TRIGGERS, inputs=BUTTON_INPUT),
+        _definition("launch", "Lancer une application", "Windows", "path", "Application", BUTTON_TRIGGERS, inputs=BUTTON_INPUT),
+        _definition("url", "Ouvrir un site web", "Windows", "url", "URL", BUTTON_TRIGGERS, inputs=BUTTON_INPUT),
         _definition(
             "media",
             "Musique / volume du PC",
@@ -35,6 +38,7 @@ def runtime_action_definitions() -> tuple[ActionDefinition, ...]:
             "select",
             "Commande média",
             ALL_TRIGGERS,
+            inputs=ALL_INPUTS,
             options_source="media_commands",
         ),
         _definition(
@@ -44,6 +48,7 @@ def runtime_action_definitions() -> tuple[ActionDefinition, ...]:
             "select",
             "Sortie audio",
             ALL_TRIGGERS,
+            inputs=ALL_INPUTS,
             options_source="audio_outputs",
         ),
         _definition(
@@ -53,6 +58,7 @@ def runtime_action_definitions() -> tuple[ActionDefinition, ...]:
             "select",
             "Application",
             ENCODER_TRIGGERS,
+            inputs=ENCODER_INPUT,
             options_source="audio_apps",
         ),
         _definition(
@@ -62,6 +68,7 @@ def runtime_action_definitions() -> tuple[ActionDefinition, ...]:
             "select",
             "Application",
             ALL_TRIGGERS,
+            inputs=ALL_INPUTS,
             options_source="audio_apps",
         ),
         _definition(
@@ -71,6 +78,7 @@ def runtime_action_definitions() -> tuple[ActionDefinition, ...]:
             "home_assistant_service",
             "Service / entité",
             BUTTON_TRIGGERS,
+            inputs=BUTTON_INPUT,
         ),
         _definition(
             "ha_adjust",
@@ -79,6 +87,7 @@ def runtime_action_definitions() -> tuple[ActionDefinition, ...]:
             "home_assistant_adjust",
             "Entité / pas",
             ENCODER_TRIGGERS,
+            inputs=ENCODER_INPUT,
         ),
         _definition(
             "navigation",
@@ -87,6 +96,7 @@ def runtime_action_definitions() -> tuple[ActionDefinition, ...]:
             "navigation",
             "Commande / cible",
             ALL_TRIGGERS,
+            inputs=ALL_INPUTS,
         ),
         _definition(
             "multi_action",
@@ -95,6 +105,7 @@ def runtime_action_definitions() -> tuple[ActionDefinition, ...]:
             "multi_action",
             "Séquence",
             BUTTON_TRIGGERS,
+            inputs=BUTTON_INPUT,
         ),
     )
 
@@ -107,6 +118,7 @@ def _definition(
     label: str,
     triggers: frozenset[Trigger],
     *,
+    inputs: tuple[str, ...],
     options_source: str | None = None,
 ) -> ActionDefinition:
     parameter = {
@@ -130,5 +142,5 @@ def _definition(
         category=category,
         parameters={"target": parameter},
         supported_triggers=triggers,
-        ui_config={"fields": (field,)},
+        ui_config={"fields": (field,), "inputs": inputs},
     )
