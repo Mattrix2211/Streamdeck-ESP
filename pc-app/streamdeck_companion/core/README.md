@@ -17,14 +17,16 @@ Code in `core/` must not import Flask, Windows APIs, Home Assistant clients, ESP
 - `ActionState` / `StateStore`: centralized state vocabulary and observable state storage.
 - `Profile` / `Page` / `Folder`: stable navigation model for multi-page profiles and nested folders.
 - `GridRect` / `Placement`: hardware-independent layout primitives compatible with the current grid approach.
-- `ProtocolMessage` / `MessageType`: versioned, transport-neutral PC↔device message envelope.
-- `RetryPolicy` / `RequestTracker`: ACK/ERROR correlation, timeout and retry tracking independent from the transport.
+- `DeviceDescriptor` / `DeviceCapability` / `DevicePort`: hardware-independent device contract.
+- `ProtocolMessage` / `MessageType`: versioned transport-neutral PC/device protocol.
 - `legacy`: reversible adapter for the current `{type, target}` configuration shape.
 
 ## Migration rule
 
 Concrete integrations remain outside `core/`. Existing modules are migrated by registering adapters/executors rather than moving Windows, Home Assistant or hardware code into the domain layer.
 
-The historical dashboard configuration and ESPHome transport remain compatible while this migration is in progress. `streamdeck_companion/actions.py` is the first runtime path routed through `ActionEngine`; Home Assistant and device-specific action paths will follow progressively.
+The historical dashboard configuration and firmware protocol remain compatible while this migration is in progress. `streamdeck_companion/actions.py` is the first runtime path routed through `ActionEngine`; Home Assistant and device-specific action paths will follow progressively.
 
-`device_events.py` translates the current ESPHome event vocabulary to generic Core input events. `device_protocol.py` can then project those generic events into the V2 protocol without forcing an immediate firmware rewrite.
+`device_events.py` translates the current ESPHome event vocabulary to generic Core input events without requiring a firmware protocol change. `device_event_runtime.py` resolves those generic events back to the current profile actions during the compatibility phase.
+
+`runtime_state.py` exposes the application-wide `STATE_STORE`. Real Home Assistant producers already feed that store through adapters, while `state_protocol_bridge.py` projects store updates to versioned `UPDATE_STATE` messages without binding state management to a concrete transport. This establishes the path `provider -> StateStore -> protocol -> device` before the existing ESPHome transport is wrapped as a `DevicePort`.
