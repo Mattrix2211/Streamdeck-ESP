@@ -14,6 +14,10 @@ class NavigationRuntime(Protocol):
     def open_folder(self, folder_id: str) -> str: ...
 
 
+class MultiActionSubmitter(Protocol):
+    def submit(self, definition_id: str, *, context: dict | None = None): ...
+
+
 def register_navigation_action(runtime: NavigationRuntime) -> None:
     """Install/replace the navigation executor on the shared application engine."""
     action_id = "navigation"
@@ -26,12 +30,28 @@ def register_navigation_action(runtime: NavigationRuntime) -> None:
             category="Streamdeck",
             parameters={"target": {"type": "text", "required": True}},
         ),
-        lambda command: _execute_navigation(runtime, command),
+        lambda command: execute_navigation_target(runtime, str(command.parameters.get("target") or "")),
     )
 
 
-def _execute_navigation(runtime: NavigationRuntime, command: ActionCommand) -> str:
-    raw = str(command.parameters.get("target") or "").strip()
+def register_multi_action(runtime: MultiActionSubmitter) -> None:
+    """Expose configured Multi Actions through the existing legacy action path."""
+    action_id = "multi_action"
+    if action_id in action_runner._ENGINE.registry:
+        action_runner._ENGINE.unregister(action_id)
+    action_runner._ENGINE.register(
+        ActionDefinition(
+            id=action_id,
+            name="Multi Action",
+            category="Streamdeck",
+            parameters={"target": {"type": "text", "required": True}},
+        ),
+        lambda command: _submit_multi_action(runtime, command),
+    )
+
+
+def execute_navigation_target(runtime: NavigationRuntime, raw_target: str) -> str:
+    raw = raw_target.strip()
     if not raw:
         raise ValueError("navigation target cannot be empty")
     verb, separator, target = raw.partition(":")
@@ -47,3 +67,10 @@ def _execute_navigation(runtime: NavigationRuntime, command: ActionCommand) -> s
     if separator:
         raise ValueError(f"navigation command {normalized!r} does not accept a target")
     return runtime.navigate(normalized)
+
+
+def _submit_multi_action(runtime: MultiActionSubmitter, command: ActionCommand):
+    definition_id = str(command.parameters.get("target") or "").strip()
+    if not definition_id:
+        raise ValueError("multi_action target cannot be empty")
+    return runtime.submit(definition_id)
