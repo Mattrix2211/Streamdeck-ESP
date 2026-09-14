@@ -1,16 +1,44 @@
-"""Runtime adapter from generic Core input events to current profile actions.
+"""Runtime adapters between current ESPHome events and V2 Core events/actions.
 
 This module is deliberately kept outside ``core``: it knows the historical
-profile representation and ``profiles.resolve_slot``.  ``DeviceClient`` can
+profile representation and ``profiles.resolve_slot``. ``DeviceClient`` can
 therefore migrate to generic ``InputEvent`` objects without forcing an
 immediate dashboard_config.yaml migration.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from .core import InputEvent, InputKind
 from . import profiles as profile_utils
-from .device_events import legacy_encoder_direction
+from .device_events import legacy_encoder_direction, translate_esphome_event
+
+
+def resolve_esphome_action(
+    profile: dict,
+    entity_name: str,
+    event_type: str,
+    *,
+    action_entity_name: str,
+    encoder_entity_names: Sequence[str],
+) -> dict | None:
+    """Bridge the current firmware vocabulary through the generic Core model.
+
+    The current ESPHome event is translated once into ``InputEvent`` and then
+    resolved against the existing profile structure. Special UI events that
+    are not generic inputs intentionally return ``None`` and remain handled by
+    ``DeviceClient`` during the compatibility phase.
+    """
+    event = translate_esphome_event(
+        entity_name,
+        event_type,
+        action_entity_name=action_entity_name,
+        encoder_entity_names=encoder_entity_names,
+    )
+    if event is None:
+        return None
+    return resolve_legacy_action(profile, event)
 
 
 def resolve_legacy_action(profile: dict, event: InputEvent) -> dict | None:
