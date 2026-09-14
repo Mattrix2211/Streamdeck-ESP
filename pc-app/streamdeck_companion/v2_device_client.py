@@ -9,14 +9,17 @@ from __future__ import annotations
 
 from typing import Any
 
+from . import actions as action_runner
 from . import profile_pages
+from .core.legacy import to_legacy
 from .core.navigator import NavigationError, Navigator
 from .device_client import ACTION_EVENT_ENTITY, ENCODER_EVENT_ENTITIES, DeviceClient
 from .device_event_runtime import resolve_esphome_action
+from .multi_action_runtime import MultiActionRuntime
 from .navigation_legacy import profile_from_legacy
 from .runtime_state import STATE_STORE
 from .state_adapters import update_device_connection
-from .v2_runtime_actions import register_navigation_action
+from .v2_runtime_actions import execute_navigation_target, register_multi_action, register_navigation_action
 
 
 class V2DeviceClient(DeviceClient):
@@ -26,7 +29,9 @@ class V2DeviceClient(DeviceClient):
         super().__init__(*args, **kwargs)
         self._navigator: Navigator | None = None
         self._navigator_source_key: tuple[object, ...] | None = None
+        self._multi_action_runtime = MultiActionRuntime(lambda: self.config, self._dispatch_multi_action_command)
         register_navigation_action(self)
+        register_multi_action(self._multi_action_runtime)
 
     @property
     def connected(self) -> bool:
@@ -113,6 +118,25 @@ class V2DeviceClient(DeviceClient):
     def _refresh_after_navigation(self) -> None:
         if self.connected:
             self.push_config()
+
+    def _dispatch_multi_action_command(self, command):
+        legacy = to_legacy(command)
+        if command.action_id == "home_assistant":
+            return self._run_home_assistant_action(legacy)
+        if command.action_id == "ha_adjust":
+            return self._run_ha_adjust(legacy)
+        if command.action_id == "navigation":
+            target = str(command.parameters.get("target") or "")
+            return self._run_threadsafe(lambda: execute_navigation_target(self, target), 5.0)
+        if command.action_id == "multi_action":
+            raise ValueError("nested multi actions are not supported yet")
+        return action_runner.run(legacy)
+
+    async def run_forever(self) -> None:
+        try:
+            await super().run_forever()
+        finally:
+            self._multi_action_runtime.shutdown(wait=False)
 
     @staticmethod
     def _core_page_id(navigator: Navigator, legacy_page_id: str) -> str:
