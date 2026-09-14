@@ -47,12 +47,16 @@ class ESPHomeDevicePort(DevicePort):
         sync_sender: Callable[[], None] | None = None,
         profile_sender: PayloadSender | None = None,
         page_sender: PayloadSender | None = None,
+        button_sender: PayloadSender | None = None,
+        widget_sender: PayloadSender | None = None,
     ) -> None:
         self._device_client = device_client
         self._state_sender = state_sender
         self._sync_sender = sync_sender
         self._profile_sender = profile_sender
         self._page_sender = page_sender
+        self._button_sender = button_sender
+        self._widget_sender = widget_sender
 
     @property
     def descriptor(self) -> DeviceDescriptor:
@@ -76,6 +80,14 @@ class ESPHomeDevicePort(DevicePort):
 
         if message.type == MessageType.SET_PAGE:
             self._send_payload(self._page_sender, message.type, payload)
+            return
+
+        if message.type == MessageType.SET_BUTTON:
+            self._send_payload(self._button_sender, message.type, payload)
+            return
+
+        if message.type == MessageType.SET_WIDGET:
+            self._send_payload(self._widget_sender, message.type, payload)
             return
 
         if message.type == MessageType.SYNC:
