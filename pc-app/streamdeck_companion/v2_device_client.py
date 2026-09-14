@@ -108,6 +108,19 @@ class V2DeviceClient(DeviceClient):
         self._refresh_after_navigation()
         return str(page.metadata.get("legacy_page_id") or profile_pages.HOME_PAGE_ID)
 
+    def schedule_navigation(
+        self,
+        command: str,
+        target: str | None = None,
+        timeout: float = 5.0,
+    ) -> str:
+        """Run navigation safely from non-ESPHome threads (protocol/UI workers)."""
+        result: list[str] = []
+        self._run_threadsafe(lambda: result.append(self.navigate(command, target)), timeout)
+        if not result:
+            raise RuntimeError("navigation did not return a page")
+        return result[0]
+
     def open_folder(self, folder_id: str) -> str:
         """Open a nested folder through the same Navigator used by page actions."""
         navigator = self._ensure_navigator(self._base_active_profile())
