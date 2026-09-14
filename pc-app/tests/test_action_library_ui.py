@@ -15,8 +15,8 @@ class ActionLibraryUiTests(unittest.TestCase):
     def test_library_uses_v2_catalog_with_search_filter_and_drag_drop(self) -> None:
         script = (ROOT / "streamdeck_companion" / "static" / "action-library.js").read_text(encoding="utf-8")
         self.assertIn('/api/v2/action-catalog', script)
-        self.assertIn('data-action-library-search', script)
-        self.assertIn('data-action-library-category', script)
+        self.assertIn('dataset.actionLibrarySearch', script)
+        self.assertIn('dataset.actionLibraryCategory', script)
         self.assertIn('application/x-streamdeck-action', script)
         self.assertIn('dragstart', script)
         self.assertIn('drop', script)
