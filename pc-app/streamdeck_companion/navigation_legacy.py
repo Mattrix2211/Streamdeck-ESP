@@ -5,8 +5,8 @@ from __future__ import annotations
 import re
 from typing import Any, Mapping
 
-from . import profile_pages
-from .core import GridRect, Page, Placement, Profile
+from . import profile_folders, profile_pages
+from .core import Folder, GridRect, Page, Placement, Profile
 
 
 def profile_from_legacy(profile: Mapping[str, Any], *, fallback_index: int = 0) -> Profile:
@@ -14,7 +14,8 @@ def profile_from_legacy(profile: Mapping[str, Any], *, fallback_index: int = 0) 
 
     Historical root slots become the home page. Optional extra pages use the
     backward-compatible ``pages`` collection while sharing the same library.
-    The source mapping is never mutated.
+    Optional nested folders point at those pages. The source mapping is never
+    mutated.
     """
     name = str(profile.get("name") or f"Profil {fallback_index + 1}")
     profile_id = str(profile.get("id") or f"profile-{_stable_fragment(name, fallback_index)}")
@@ -58,12 +59,28 @@ def profile_from_legacy(profile: Mapping[str, Any], *, fallback_index: int = 0) 
             )
         )
 
+    folders = tuple(
+        Folder(
+            id=str(raw["id"]),
+            name=str(raw["name"]),
+            page_id=f"{profile_id}:{raw['page_id']}",
+            parent_id=str(raw["parent_id"]) if raw.get("parent_id") else None,
+            icon=str(raw.get("icon") or ""),
+            metadata={
+                "theme": raw.get("theme") or "",
+                "show_back": bool(raw.get("show_back", True)),
+            },
+        )
+        for raw in profile_folders.folder_descriptors(profile)
+    )
+
     home_page_id = f"{profile_id}:{descriptors[0]['id']}"
     return Profile(
         id=profile_id,
         name=name,
         pages=tuple(pages),
         home_page_id=home_page_id,
+        folders=folders,
         trigger=profile.get("trigger"),
         metadata={"legacy_adapter": True},
     )
