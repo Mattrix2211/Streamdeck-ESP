@@ -49,6 +49,7 @@ class ContextEngine:
         self.default_profile_id = default_profile_id
         self.rules = rules
         self.manual_override: str | None = None
+        self.manual_locked = False
         self._automatic_profile = default_profile_id
         self._previous_automatic_profile = default_profile_id
 
@@ -68,18 +69,29 @@ class ContextEngine:
             self._automatic_profile = selected
         return self.active_profile_id
 
-    def set_manual_override(self, profile_id: str) -> str:
+    def set_manual_override(self, profile_id: str, *, locked: bool = False) -> str:
         if not profile_id:
             raise ValueError("profile_id cannot be empty")
         self.manual_override = profile_id
+        self.manual_locked = locked
         return self.active_profile_id
 
-    def clear_manual_override(self) -> str:
+    def set_manual_lock(self, locked: bool) -> str:
+        self.manual_locked = bool(locked) and self.manual_override is not None
+        return self.active_profile_id
+
+    def clear_manual_override(self, *, force: bool = False) -> str:
+        if self.manual_locked and not force:
+            return self.active_profile_id
         self.manual_override = None
+        self.manual_locked = False
         return self._automatic_profile
 
-    def restore_previous_automatic(self) -> str:
+    def restore_previous_automatic(self, *, force: bool = False) -> str:
+        if self.manual_locked and not force:
+            return self.active_profile_id
         self.manual_override = None
+        self.manual_locked = False
         current = self._automatic_profile
         self._automatic_profile = self._previous_automatic_profile
         self._previous_automatic_profile = current
