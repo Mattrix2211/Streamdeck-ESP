@@ -5,50 +5,64 @@ from __future__ import annotations
 import re
 from typing import Any, Mapping
 
+from . import profile_pages
 from .core import GridRect, Page, Placement, Profile
 
 
 def profile_from_legacy(profile: Mapping[str, Any], *, fallback_index: int = 0) -> Profile:
-    """Project one current profile into the V2 model without mutating config.
+    """Project one current/backward-compatible profile into the V2 model.
 
-    The current application has one visible grid per profile. During the
-    migration that grid becomes the profile home page. Folder/page data will
-    be added later while the existing YAML remains readable.
+    Historical root slots become the home page. Optional extra pages use the
+    backward-compatible ``pages`` collection while sharing the same library.
+    The source mapping is never mutated.
     """
     name = str(profile.get("name") or f"Profil {fallback_index + 1}")
     profile_id = str(profile.get("id") or f"profile-{_stable_fragment(name, fallback_index)}")
-    home_page_id = f"{profile_id}:home"
+    descriptors = profile_pages.page_descriptors(profile)
+    source_library = profile.get("library") or []
 
-    placements: list[Placement] = []
-    for index, slot in enumerate(profile.get("slots") or []):
-        library_id = slot.get("library_id")
-        if not library_id:
-            continue
-        grid = slot.get("grid") or {}
-        placements.append(
-            Placement(
-                id=f"{home_page_id}:slot-{index + 1}",
-                content_id=str(library_id),
-                grid=GridRect(
-                    col=int(grid.get("col", 0)),
-                    row=int(grid.get("row", 0)),
-                    colspan=int(grid.get("colspan", 1)),
-                    rowspan=int(grid.get("rowspan", 1)),
-                ),
-                metadata={"legacy_slot_index": index},
+    pages: list[Page] = []
+    for descriptor in descriptors:
+        page_id = str(descriptor["id"])
+        core_page_id = f"{profile_id}:{page_id}"
+        source_slots = profile_pages.page_slots(profile, page_id)
+        placements: list[Placement] = []
+        for index, slot in enumerate(source_slots):
+            library_id = slot.get("library_id")
+            if not library_id:
+                continue
+            grid = slot.get("grid") or {}
+            placements.append(
+                Placement(
+                    id=f"{core_page_id}:slot-{index + 1}",
+                    content_id=str(library_id),
+                    grid=GridRect(
+                        col=int(grid.get("col", 0)),
+                        row=int(grid.get("row", 0)),
+                        colspan=int(grid.get("colspan", 1)),
+                        rowspan=int(grid.get("rowspan", 1)),
+                    ),
+                    metadata={"legacy_slot_index": index},
+                )
+            )
+        pages.append(
+            Page(
+                id=core_page_id,
+                name=str(descriptor["name"]),
+                placements=tuple(placements),
+                metadata={
+                    "legacy_single_page": len(descriptors) == 1,
+                    "legacy_page_id": page_id,
+                    "shared_library_size": len(source_library),
+                },
             )
         )
 
-    home_page = Page(
-        id=home_page_id,
-        name="Accueil",
-        placements=tuple(placements),
-        metadata={"legacy_single_page": True},
-    )
+    home_page_id = f"{profile_id}:{descriptors[0]['id']}"
     return Profile(
         id=profile_id,
         name=name,
-        pages=(home_page,),
+        pages=tuple(pages),
         home_page_id=home_page_id,
         trigger=profile.get("trigger"),
         metadata={"legacy_adapter": True},
