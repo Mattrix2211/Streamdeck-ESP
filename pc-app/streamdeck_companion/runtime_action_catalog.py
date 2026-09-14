@@ -56,6 +56,14 @@ def runtime_action_definitions() -> tuple[ActionDefinition, ...]:
             "Commande / cible",
             ALL_TRIGGERS,
         ),
+        _definition(
+            "multi_action",
+            "Multi Action",
+            "Streamdeck",
+            "multi_action",
+            "Séquence",
+            BUTTON_TRIGGERS,
+        ),
     )
 
 
