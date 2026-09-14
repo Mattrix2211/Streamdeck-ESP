@@ -25,14 +25,15 @@ class InspectorField:
     required: bool = False
     default: Any = None
     options: tuple[str, ...] = ()
+    options_source: str | None = None
 
     def __post_init__(self) -> None:
         if not self.key:
             raise ValueError("field key cannot be empty")
         if not self.label:
             raise ValueError("field label cannot be empty")
-        if self.field_type == FieldType.SELECT and not self.options:
-            raise ValueError("select fields require options")
+        if self.field_type == FieldType.SELECT and not self.options and not self.options_source:
+            raise ValueError("select fields require options or options_source")
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +72,8 @@ class PropertyInspector:
             field_type = FieldType.TEXT
         raw_options = spec.get("options") or ()
         options = tuple(str(option) for option in raw_options) if isinstance(raw_options, (list, tuple)) else ()
+        raw_options_source = spec.get("options_source")
+        options_source = str(raw_options_source) if raw_options_source else None
         return InspectorField(
             key=key,
             label=label,
@@ -78,4 +81,5 @@ class PropertyInspector:
             required=bool(spec.get("required", False)),
             default=spec.get("default"),
             options=options,
+            options_source=options_source,
         )
