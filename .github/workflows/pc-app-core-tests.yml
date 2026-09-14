@@ -15,6 +15,9 @@ on:
       - "pc-app/streamdeck_companion/state_adapters.py"
       - "pc-app/streamdeck_companion/runtime_state.py"
       - "pc-app/streamdeck_companion/state_protocol_bridge.py"
+      - "pc-app/streamdeck_companion/runtime_action_catalog.py"
+      - "pc-app/streamdeck_companion/dashboard_v2_catalog.py"
+      - "pc-app/streamdeck_companion/dashboard_action_choices.py"
       - "pc-app/streamdeck_companion/v2_device_client.py"
       - "pc-app/streamdeck_companion/tray.py"
       - "pc-app/streamdeck_companion/ha_poller.py"
@@ -37,6 +40,9 @@ on:
       - "pc-app/streamdeck_companion/state_adapters.py"
       - "pc-app/streamdeck_companion/runtime_state.py"
       - "pc-app/streamdeck_companion/state_protocol_bridge.py"
+      - "pc-app/streamdeck_companion/runtime_action_catalog.py"
+      - "pc-app/streamdeck_companion/dashboard_v2_catalog.py"
+      - "pc-app/streamdeck_companion/dashboard_action_choices.py"
       - "pc-app/streamdeck_companion/v2_device_client.py"
       - "pc-app/streamdeck_companion/tray.py"
       - "pc-app/streamdeck_companion/ha_poller.py"
@@ -84,6 +90,9 @@ jobs:
           streamdeck_companion/state_adapters.py
           streamdeck_companion/runtime_state.py
           streamdeck_companion/state_protocol_bridge.py
+          streamdeck_companion/runtime_action_catalog.py
+          streamdeck_companion/dashboard_v2_catalog.py
+          streamdeck_companion/dashboard_action_choices.py
           streamdeck_companion/v2_device_client.py
 
       - name: Type-check V2 Core and independent adapters
@@ -101,6 +110,9 @@ jobs:
           streamdeck_companion/state_adapters.py
           streamdeck_companion/runtime_state.py
           streamdeck_companion/state_protocol_bridge.py
+          streamdeck_companion/runtime_action_catalog.py
+          streamdeck_companion/dashboard_v2_catalog.py
+          streamdeck_companion/dashboard_action_choices.py
 
       - name: Type-check V2 DeviceClient wrapper boundary
         working-directory: pc-app
@@ -116,6 +128,9 @@ jobs:
           streamdeck_companion/esphome_device_port.py
           streamdeck_companion/esphome_port_runtime.py
           streamdeck_companion/esphome_slot_projection.py
+          streamdeck_companion/runtime_action_catalog.py
+          streamdeck_companion/dashboard_v2_catalog.py
+          streamdeck_companion/dashboard_action_choices.py
           streamdeck_companion/v2_device_client.py
 
       - name: Run Core and compatibility tests
