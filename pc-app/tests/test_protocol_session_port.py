@@ -30,6 +30,11 @@ class FakePort:
         self.sent.append(message)
 
 
+class FailingPort(FakePort):
+    def send(self, message: ProtocolMessage) -> None:
+        raise ConnectionError("transport failed")
+
+
 class ProtocolSessionTests(unittest.TestCase):
     def test_send_tracks_request(self) -> None:
         port = FakePort()
@@ -56,6 +61,25 @@ class ProtocolSessionTests(unittest.TestCase):
         self.assertIsNotNone(pending)
         self.assertEqual(pending.message, message)
         self.assertEqual(session.tracker.pending(), ())
+
+    def test_synchronous_ack_can_resolve_during_send(self) -> None:
+        port = FakePort()
+        session = ProtocolSession(port)
+
+        def synchronous_send(message: ProtocolMessage) -> None:
+            port.sent.append(message)
+            session.receive(message.ack())
+
+        port.send = synchronous_send
+        message = ProtocolMessage(MessageType.PING, {})
+        session.send(message)
+        self.assertEqual(session.pending(), ())
+
+    def test_transport_failure_discards_pretracked_request(self) -> None:
+        session = ProtocolSession(FailingPort())
+        with self.assertRaises(ConnectionError):
+            session.send(ProtocolMessage(MessageType.PING, {}))
+        self.assertEqual(session.pending(), ())
 
     def test_retry_due_resends_through_same_port(self) -> None:
         now = [0.0]
