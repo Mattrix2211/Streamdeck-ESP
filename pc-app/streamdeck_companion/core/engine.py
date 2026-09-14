@@ -25,7 +25,7 @@ class ActionEngine:
     """Coordinates action definition lookup, validation and execution."""
 
     def __init__(self, registry: ActionRegistry | None = None) -> None:
-        self.registry = registry or ActionRegistry()
+        self.registry = registry if registry is not None else ActionRegistry()
         self._executors: dict[str, ActionExecutor] = {}
 
     def register(self, definition: ActionDefinition, executor: ActionExecutor) -> None:
