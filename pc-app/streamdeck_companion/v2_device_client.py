@@ -8,6 +8,7 @@ class.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from . import actions as action_runner
@@ -16,9 +17,21 @@ from .core.legacy import to_legacy
 from .core.navigator import NavigationError, Navigator
 from .core.protocol import ProtocolMessage
 from .core.session import ProtocolSession
-from .device_client import ACTION_EVENT_ENTITY, ENCODER_EVENT_ENTITIES, DeviceClient
+from .device_client import (
+    ACTION_EVENT_ENTITY,
+    ENCODER_EVENT_ENTITIES,
+    SLOT_COLOR_NAMES,
+    SLOT_GRID_NAMES,
+    SLOT_ICON_NAMES,
+    SLOT_LABEL_NAMES,
+    SLOT_TYPE_NAMES,
+    SLOT_VALUE_NAMES,
+    SLOT_VISIBLE_NAMES,
+    DeviceClient,
+)
 from .device_event_runtime import resolve_esphome_action
 from .esphome_port_runtime import build_esphome_device_port
+from .esphome_slot_projection import SlotProjection, project_button_payload, project_widget_payload
 from .multi_action_runtime import MultiActionRuntime
 from .navigation_legacy import profile_from_legacy
 from .runtime_state import STATE_STORE
@@ -135,6 +148,55 @@ class V2DeviceClient(DeviceClient):
         if not result:
             raise RuntimeError("navigation did not return a page")
         return result[0]
+
+    def schedule_slot_payload(
+        self,
+        kind: str,
+        payload: Mapping[str, Any],
+        timeout: float = 5.0,
+    ) -> None:
+        """Validate a V2 slot payload then apply it on the ESPHome loop."""
+        projection = project_button_payload(payload) if kind == "button" else project_widget_payload(payload)
+        self._run_threadsafe(lambda: self._push_slot_projection(projection), timeout)
+
+    def _push_slot_projection(self, projection: SlotProjection) -> None:
+        """Apply one partial slot update using the current ESPHome entities.
+
+        The firmware exposes each slot property as a separate optimistic
+        entity, so this is intentionally a best-effort sequence rather than an
+        atomic transaction. Full consistency can always be restored with SYNC.
+        """
+        if self.client is None or not self.connected:
+            raise RuntimeError("Pas encore connecte a l'ecran")
+        idx = projection.slot_index
+
+        type_key = self.entity_keys.get(SLOT_TYPE_NAMES[idx])
+        if type_key is not None:
+            self.client.select_command(type_key, projection.slot_type)
+        if projection.label is not None:
+            key = self.entity_keys.get(SLOT_LABEL_NAMES[idx])
+            if key is not None:
+                self.client.text_command(key, projection.label)
+        if projection.icon is not None:
+            key = self.entity_keys.get(SLOT_ICON_NAMES[idx])
+            if key is not None:
+                self.client.text_command(key, projection.icon)
+        if projection.visible is not None:
+            key = self.entity_keys.get(SLOT_VISIBLE_NAMES[idx])
+            if key is not None:
+                self.client.switch_command(key, projection.visible)
+        if projection.grid is not None:
+            key = self.entity_keys.get(SLOT_GRID_NAMES[idx])
+            if key is not None:
+                self.client.text_command(key, projection.grid)
+        if projection.value is not None:
+            key = self.entity_keys.get(SLOT_VALUE_NAMES[idx])
+            if key is not None:
+                self.client.text_command(key, projection.value)
+        if projection.color is not None:
+            key = self.entity_keys.get(SLOT_COLOR_NAMES[idx])
+            if key is not None:
+                self.client.text_command(key, projection.color)
 
     def open_folder(self, folder_id: str) -> str:
         """Open a nested folder through the same Navigator used by page actions."""
