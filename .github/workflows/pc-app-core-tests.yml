@@ -6,30 +6,9 @@ on:
       - "firmware/protocol_v2.yaml"
       - "firmware/streamdeck.yaml"
       - "firmware/ha-device.yaml.example"
-      - "pc-app/streamdeck_companion/core/**"
-      - "pc-app/streamdeck_companion/actions.py"
-      - "pc-app/streamdeck_companion/device_events.py"
-      - "pc-app/streamdeck_companion/device_event_runtime.py"
-      - "pc-app/streamdeck_companion/device_protocol.py"
-      - "pc-app/streamdeck_companion/esphome_device_port.py"
-      - "pc-app/streamdeck_companion/esphome_port_runtime.py"
-      - "pc-app/streamdeck_companion/esphome_slot_projection.py"
-      - "pc-app/streamdeck_companion/protocol_retry_runtime.py"
-      - "pc-app/streamdeck_companion/navigation_legacy.py"
-      - "pc-app/streamdeck_companion/state_adapters.py"
-      - "pc-app/streamdeck_companion/runtime_state.py"
-      - "pc-app/streamdeck_companion/state_protocol_bridge.py"
-      - "pc-app/streamdeck_companion/runtime_action_catalog.py"
-      - "pc-app/streamdeck_companion/dashboard_v2_catalog.py"
-      - "pc-app/streamdeck_companion/dashboard_action_choices.py"
-      - "pc-app/streamdeck_companion/dashboard_v2_api.py"
-      - "pc-app/streamdeck_companion/dashboard_v2_routes.py"
-      - "pc-app/streamdeck_companion/v2_device_client.py"
-      - "pc-app/streamdeck_companion/tray.py"
-      - "pc-app/streamdeck_companion/ha_poller.py"
-      - "pc-app/streamdeck_companion/ha_mqtt.py"
+      - "pc-app/streamdeck_companion/**"
       - "pc-app/tests/**"
-      - "pc-app/requirements-dev.txt"
+      - "pc-app/requirements*.txt"
       - "pc-app/pyproject.toml"
       - ".github/workflows/pc-app-core-tests.yml"
   pull_request:
@@ -37,30 +16,9 @@ on:
       - "firmware/protocol_v2.yaml"
       - "firmware/streamdeck.yaml"
       - "firmware/ha-device.yaml.example"
-      - "pc-app/streamdeck_companion/core/**"
-      - "pc-app/streamdeck_companion/actions.py"
-      - "pc-app/streamdeck_companion/device_events.py"
-      - "pc-app/streamdeck_companion/device_event_runtime.py"
-      - "pc-app/streamdeck_companion/device_protocol.py"
-      - "pc-app/streamdeck_companion/esphome_device_port.py"
-      - "pc-app/streamdeck_companion/esphome_port_runtime.py"
-      - "pc-app/streamdeck_companion/esphome_slot_projection.py"
-      - "pc-app/streamdeck_companion/protocol_retry_runtime.py"
-      - "pc-app/streamdeck_companion/navigation_legacy.py"
-      - "pc-app/streamdeck_companion/state_adapters.py"
-      - "pc-app/streamdeck_companion/runtime_state.py"
-      - "pc-app/streamdeck_companion/state_protocol_bridge.py"
-      - "pc-app/streamdeck_companion/runtime_action_catalog.py"
-      - "pc-app/streamdeck_companion/dashboard_v2_catalog.py"
-      - "pc-app/streamdeck_companion/dashboard_action_choices.py"
-      - "pc-app/streamdeck_companion/dashboard_v2_api.py"
-      - "pc-app/streamdeck_companion/dashboard_v2_routes.py"
-      - "pc-app/streamdeck_companion/v2_device_client.py"
-      - "pc-app/streamdeck_companion/tray.py"
-      - "pc-app/streamdeck_companion/ha_poller.py"
-      - "pc-app/streamdeck_companion/ha_mqtt.py"
+      - "pc-app/streamdeck_companion/**"
       - "pc-app/tests/**"
-      - "pc-app/requirements-dev.txt"
+      - "pc-app/requirements*.txt"
       - "pc-app/pyproject.toml"
       - ".github/workflows/pc-app-core-tests.yml"
 
@@ -136,24 +94,22 @@ jobs:
         working-directory: pc-app
         run: mypy --follow-imports=skip streamdeck_companion/v2_device_client.py
 
-      - name: Compile live runtime integrations
+      - name: Compile complete companion package
         working-directory: pc-app
-        run: >-
-          python -m py_compile
-          streamdeck_companion/ha_poller.py
-          streamdeck_companion/ha_mqtt.py
-          streamdeck_companion/tray.py
-          streamdeck_companion/esphome_device_port.py
-          streamdeck_companion/esphome_port_runtime.py
-          streamdeck_companion/esphome_slot_projection.py
-          streamdeck_companion/protocol_retry_runtime.py
-          streamdeck_companion/runtime_action_catalog.py
-          streamdeck_companion/dashboard_v2_catalog.py
-          streamdeck_companion/dashboard_action_choices.py
-          streamdeck_companion/dashboard_v2_api.py
-          streamdeck_companion/dashboard_v2_routes.py
-          streamdeck_companion/v2_device_client.py
+        run: python -m compileall -q streamdeck_companion
 
-      - name: Run Core and compatibility tests
+      - name: Run complete regression suite
         working-directory: pc-app
         run: python -m unittest discover -s tests -v
+
+  firmware-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate firmware protocol contract files
+        run: |
+          test -s firmware/protocol_v2.yaml
+          test -s firmware/streamdeck.yaml
+          test -s firmware/ha-device.yaml.example
+          grep -q "protocol_v2" firmware/streamdeck.yaml
