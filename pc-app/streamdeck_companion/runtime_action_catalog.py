@@ -148,3 +148,9 @@ def _definition(
         supported_triggers=triggers,
         ui_config={"fields": (field,), "inputs": inputs},
     )
+
+
+# Canonical mutable metadata registry for the running companion app.
+# PluginRegistry instances can receive this exact registry so newly loaded
+# plugin actions become immediately discoverable by the dashboard catalog.
+RUNTIME_ACTION_REGISTRY = build_runtime_action_registry()
