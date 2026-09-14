@@ -1,8 +1,9 @@
 """Progressive V2 runtime wrapper around the historical DeviceClient.
 
 The existing DeviceClient remains the hardware/ESPHome implementation while
-this subclass injects V2 event, state and navigation concepts around it. Special
-UI behavior and existing firmware commands stay in the historical class.
+this subclass injects V2 event, state, navigation and protocol concepts around
+it. Special UI behavior and existing firmware commands stay in the historical
+class.
 """
 
 from __future__ import annotations
@@ -13,8 +14,11 @@ from . import actions as action_runner
 from . import profile_pages
 from .core.legacy import to_legacy
 from .core.navigator import NavigationError, Navigator
+from .core.protocol import ProtocolMessage
+from .core.session import ProtocolSession
 from .device_client import ACTION_EVENT_ENTITY, ENCODER_EVENT_ENTITIES, DeviceClient
 from .device_event_runtime import resolve_esphome_action
+from .esphome_port_runtime import build_esphome_device_port
 from .multi_action_runtime import MultiActionRuntime
 from .navigation_legacy import profile_from_legacy
 from .runtime_state import STATE_STORE
@@ -30,6 +34,8 @@ class V2DeviceClient(DeviceClient):
         self._navigator: Navigator | None = None
         self._navigator_source_key: tuple[object, ...] | None = None
         self._multi_action_runtime = MultiActionRuntime(lambda: self.config, self._dispatch_multi_action_command)
+        self.device_port = build_esphome_device_port(self)
+        self.protocol_session = ProtocolSession(self.device_port)
         register_navigation_action(self)
         register_multi_action(self._multi_action_runtime)
 
@@ -42,6 +48,15 @@ class V2DeviceClient(DeviceClient):
         connected = bool(value)
         self._v2_connected = connected
         update_device_connection(STATE_STORE, connected)
+
+    def send_protocol(self, message: ProtocolMessage, *, expect_response: bool = False) -> None:
+        """Send one V2 message through the live DevicePort.
+
+        Current ESPHome firmware does not emit protocol-level ACK/ERROR yet,
+        so live mapped commands default to fire-and-forget. Callers can opt in
+        to tracking once a transport with acknowledgements is available.
+        """
+        self.protocol_session.send(message, expect_response=expect_response)
 
     def _base_active_profile(self) -> dict:
         return super()._active_profile()
