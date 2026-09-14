@@ -55,6 +55,10 @@ class RequestTracker:
             raise ValueError("control responses must not be tracked as requests")
         self._pending[message.message_id] = PendingRequest(message, self._clock())
 
+    def discard(self, message_id: str) -> PendingRequest | None:
+        """Remove one pending request, typically when transport delivery fails."""
+        return self._pending.pop(message_id, None)
+
     def resolve(self, response: ProtocolMessage) -> PendingRequest | None:
         if response.type not in (MessageType.ACK, MessageType.ERROR):
             return None
