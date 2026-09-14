@@ -22,6 +22,8 @@ def build_dashboard_action_catalog() -> dict[str, Any]:
     actions = []
     for definition in registry.list():
         schema = inspector.schema(definition.id)
+        raw_inputs = definition.ui_config.get("inputs", ())
+        inputs = tuple(str(value) for value in raw_inputs) if isinstance(raw_inputs, (list, tuple)) else ()
         actions.append(
             {
                 "id": definition.id,
@@ -29,6 +31,7 @@ def build_dashboard_action_catalog() -> dict[str, Any]:
                 "category": definition.category,
                 "description": definition.description,
                 "triggers": tuple(sorted(trigger.value for trigger in definition.supported_triggers)),
+                "inputs": inputs,
                 "fields": tuple(
                     {
                         "key": field.key,
