@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping
 
-from .triggers import Trigger
+from .triggers import ActionState, Trigger
 
 
 class ActionValidationError(ValueError):
@@ -20,8 +20,9 @@ class ActionDefinition:
     """Describes one action type exposed by the Core registry.
 
     Concrete execution lives outside the Core. This object only describes
-    metadata, supported triggers and validation rules so the same definition
-    can be consumed by the dashboard, plugins and runtime adapters.
+    metadata, supported triggers/states, validation rules and declarative UI
+    hints so the same definition can be consumed by the dashboard, plugins
+    and runtime adapters.
     """
 
     id: str
@@ -31,6 +32,8 @@ class ActionDefinition:
     icon: str = ""
     parameters: Mapping[str, Any] = field(default_factory=dict)
     supported_triggers: frozenset[Trigger] = field(default_factory=frozenset)
+    supported_states: frozenset[ActionState] = field(default_factory=frozenset)
+    ui_config: Mapping[str, Any] = field(default_factory=dict)
     validator: ActionValidator | None = field(default=None, compare=False, repr=False)
 
     def validate(self, values: Mapping[str, Any]) -> None:
