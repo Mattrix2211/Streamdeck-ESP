@@ -30,9 +30,15 @@ class ProtocolSession:
 
     def send(self, message: ProtocolMessage, *, expect_response: bool = True) -> None:
         with self._lock:
-            self.port.send(message)
-            if expect_response and message.type not in (MessageType.ACK, MessageType.ERROR):
+            should_track = expect_response and message.type not in (MessageType.ACK, MessageType.ERROR)
+            if should_track:
                 self.tracker.track(message)
+            try:
+                self.port.send(message)
+            except Exception:
+                if should_track:
+                    self.tracker.discard(message.message_id)
+                raise
 
     def receive(self, message: ProtocolMessage) -> PendingRequest | None:
         """Resolve an incoming ACK/ERROR against the pending request set."""
