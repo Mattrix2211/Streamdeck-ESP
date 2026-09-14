@@ -9,6 +9,7 @@ on:
       - "pc-app/streamdeck_companion/device_event_runtime.py"
       - "pc-app/streamdeck_companion/device_protocol.py"
       - "pc-app/streamdeck_companion/navigation_legacy.py"
+      - "pc-app/streamdeck_companion/state_adapters.py"
       - "pc-app/tests/**"
       - ".github/workflows/pc-app-core-tests.yml"
   pull_request:
@@ -19,6 +20,7 @@ on:
       - "pc-app/streamdeck_companion/device_event_runtime.py"
       - "pc-app/streamdeck_companion/device_protocol.py"
       - "pc-app/streamdeck_companion/navigation_legacy.py"
+      - "pc-app/streamdeck_companion/state_adapters.py"
       - "pc-app/tests/**"
       - ".github/workflows/pc-app-core-tests.yml"
 
