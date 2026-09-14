@@ -21,9 +21,7 @@ class V2DeviceRuntime(Protocol):
 
     def schedule_navigation(self, command: str, target: str | None = None, timeout: float = 5.0) -> str: ...
 
-
-class RuntimePayloadError(ValueError):
-    """A protocol payload cannot be projected onto the live runtime."""
+    def schedule_slot_payload(self, kind: str, payload: Mapping[str, Any], timeout: float = 5.0) -> None: ...
 
 
 def build_esphome_device_port(runtime: V2DeviceRuntime) -> ESPHomeDevicePort:
@@ -33,6 +31,8 @@ def build_esphome_device_port(runtime: V2DeviceRuntime) -> ESPHomeDevicePort:
         sync_sender=runtime.schedule_push,
         profile_sender=lambda payload: _set_profile(runtime, payload),
         page_sender=lambda payload: _set_page(runtime, payload),
+        button_sender=lambda payload: runtime.schedule_slot_payload("button", payload),
+        widget_sender=lambda payload: runtime.schedule_slot_payload("widget", payload),
     )
 
 
@@ -55,3 +55,7 @@ def _required_text(payload: Mapping[str, Any], key: str, *, fallback_key: str | 
         expected = f"{key!r}" if fallback_key is None else f"{key!r} or {fallback_key!r}"
         raise RuntimePayloadError(f"payload requires {expected}")
     return value
+
+
+class RuntimePayloadError(ValueError):
+    """A protocol payload cannot be projected onto the live runtime."""
