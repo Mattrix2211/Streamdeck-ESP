@@ -11,6 +11,8 @@ on:
       - "pc-app/streamdeck_companion/navigation_legacy.py"
       - "pc-app/streamdeck_companion/state_adapters.py"
       - "pc-app/tests/**"
+      - "pc-app/requirements-dev.txt"
+      - "pc-app/pyproject.toml"
       - ".github/workflows/pc-app-core-tests.yml"
   pull_request:
     paths:
@@ -22,6 +24,8 @@ on:
       - "pc-app/streamdeck_companion/navigation_legacy.py"
       - "pc-app/streamdeck_companion/state_adapters.py"
       - "pc-app/tests/**"
+      - "pc-app/requirements-dev.txt"
+      - "pc-app/pyproject.toml"
       - ".github/workflows/pc-app-core-tests.yml"
 
 permissions:
@@ -42,6 +46,32 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+
+      - name: Install Core quality tooling
+        working-directory: pc-app
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Lint V2 Core and adapters
+        working-directory: pc-app
+        run: >-
+          ruff check
+          streamdeck_companion/core
+          streamdeck_companion/device_events.py
+          streamdeck_companion/device_event_runtime.py
+          streamdeck_companion/device_protocol.py
+          streamdeck_companion/navigation_legacy.py
+          streamdeck_companion/state_adapters.py
+
+      - name: Type-check V2 Core and adapters
+        working-directory: pc-app
+        run: >-
+          mypy
+          streamdeck_companion/core
+          streamdeck_companion/device_events.py
+          streamdeck_companion/device_event_runtime.py
+          streamdeck_companion/device_protocol.py
+          streamdeck_companion/navigation_legacy.py
+          streamdeck_companion/state_adapters.py
 
       - name: Run Core and compatibility tests
         working-directory: pc-app
