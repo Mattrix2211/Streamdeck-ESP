@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Any, Mapping
 
 from .actions import ActionDefinition
+from .engine import ActionEngine, ActionExecutor
 from .providers import ProviderManager, StateProvider
 from .registry import ActionRegistry
 from .widgets import WidgetDefinition
@@ -43,6 +44,7 @@ class PluginManifest:
 @dataclass(frozen=True, slots=True)
 class PluginContribution:
     actions: tuple[ActionDefinition, ...] = ()
+    action_executors: Mapping[str, ActionExecutor] = field(default_factory=dict, compare=False, repr=False)
     widgets: tuple[WidgetDefinition, ...] = ()
     providers: tuple[StateProvider, ...] = ()
     events: tuple[str, ...] = ()
@@ -67,10 +69,14 @@ class PluginRegistry:
         self,
         actions: ActionRegistry,
         *,
+        engine: ActionEngine | None = None,
         providers: ProviderManager | None = None,
         granted_permissions: frozenset[PluginPermission] = frozenset(),
     ) -> None:
+        if engine is not None and engine.registry is not actions:
+            raise ValueError("plugin ActionEngine must use the same ActionRegistry")
         self.actions = actions
+        self.engine = engine
         self.providers = providers
         self.granted_permissions = granted_permissions
         self._plugins: dict[str, RegisteredPlugin] = {}
@@ -91,6 +97,11 @@ class PluginRegistry:
             raise PluginRegistrationError("plugin contains duplicate action ids")
         if len(widget_ids) != len(set(widget_ids)):
             raise PluginRegistrationError("plugin contains duplicate widget ids")
+        unknown_executors = set(contribution.action_executors) - set(action_ids)
+        if unknown_executors:
+            raise PluginRegistrationError("plugin provides executors for unknown actions")
+        if contribution.action_executors and self.engine is None:
+            raise PluginRegistrationError("plugin action executors require an ActionEngine")
         if any(widget_id in self._widgets for widget_id in widget_ids):
             raise PluginRegistrationError("widget id already registered")
         if any(event in self._events for event in contribution.events):
@@ -100,7 +111,11 @@ class PluginRegistry:
         registered_providers: list[str] = []
         try:
             for action in contribution.actions:
-                self.actions.register(action)
+                executor = contribution.action_executors.get(action.id)
+                if executor is not None and self.engine is not None:
+                    self.engine.register(action, executor)
+                else:
+                    self.actions.register(action)
                 registered_actions.append(action.id)
             if contribution.providers and self.providers is None:
                 raise PluginRegistrationError("plugin provides state providers but no ProviderManager is configured")
@@ -116,7 +131,10 @@ class PluginRegistry:
                 self._events[event] = manifest.id
         except Exception:
             for action_id in registered_actions:
-                self.actions.unregister(action_id)
+                if self.engine is not None and action_id in contribution.action_executors:
+                    self.engine.unregister(action_id)
+                else:
+                    self.actions.unregister(action_id)
             if self.providers is not None:
                 for provider_id in registered_providers:
                     self.providers.unregister(provider_id)
@@ -135,7 +153,10 @@ class PluginRegistry:
         if plugin is None:
             return
         for action in plugin.contribution.actions:
-            self.actions.unregister(action.id)
+            if self.engine is not None and action.id in plugin.contribution.action_executors:
+                self.engine.unregister(action.id)
+            else:
+                self.actions.unregister(action.id)
         if self.providers is not None:
             for provider in plugin.contribution.providers:
                 self.providers.unregister(provider.provider_id)
