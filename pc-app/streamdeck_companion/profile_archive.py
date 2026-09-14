@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import json
 from pathlib import Path, PurePosixPath
 from typing import Any, Mapping
@@ -25,15 +26,16 @@ def export_profile(
     path = Path(destination)
     if path.suffix != ".streamdeck":
         path = path.with_suffix(".streamdeck")
+    normalized = migrate_profile(profile)
     manifest = {
         "format": ARCHIVE_FORMAT,
         "version": ARCHIVE_VERSION,
-        "profile_name": str(profile.get("name") or "Profile"),
+        "profile_name": str(normalized.get("name") or "Profile"),
         "assets": sorted((assets or {}).keys()),
     }
     with ZipFile(path, "w", compression=ZIP_DEFLATED) as archive:
         archive.writestr(MANIFEST_NAME, json.dumps(manifest, ensure_ascii=False, indent=2))
-        archive.writestr(PROFILE_NAME, json.dumps(dict(profile), ensure_ascii=False, indent=2))
+        archive.writestr(PROFILE_NAME, json.dumps(normalized, ensure_ascii=False, indent=2))
         for name, content in (assets or {}).items():
             safe_name = _safe_asset_name(name)
             archive.writestr(f"{ASSET_PREFIX}{safe_name}", content)
@@ -58,9 +60,57 @@ def import_profile(source: str | Path) -> tuple[dict[str, Any], dict[str, bytes]
                 relative = name[len(ASSET_PREFIX) :]
                 safe_name = _safe_asset_name(relative)
                 assets[safe_name] = archive.read(name)
-            return profile, assets
+            return migrate_profile(profile), assets
     except (BadZipFile, json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise ProfileArchiveError("invalid .streamdeck archive") from exc
+
+
+def duplicate_profile(
+    profile: Mapping[str, Any],
+    *,
+    existing_names: set[str] | None = None,
+    requested_name: str | None = None,
+) -> dict[str, Any]:
+    """Create an independent profile copy with deterministic name collision handling."""
+    clone = migrate_profile(profile)
+    base = (requested_name or f"{clone['name']} - copie").strip()
+    if not base:
+        raise ProfileArchiveError("duplicated profile name cannot be empty")
+    used = set(existing_names or ())
+    candidate = base
+    suffix = 2
+    while candidate in used:
+        candidate = f"{base} ({suffix})"
+        suffix += 1
+    clone["name"] = candidate
+    return clone
+
+
+def migrate_profile(profile: Mapping[str, Any]) -> dict[str, Any]:
+    """Normalize a shared profile to the current backward-compatible V2 shape.
+
+    Migration stays intentionally additive: legacy root slots remain the home
+    page while optional V2 collections are introduced only when absent. This
+    keeps exports portable between installations without rewriting working
+    historical configuration.
+    """
+    if not isinstance(profile, Mapping):
+        raise ProfileArchiveError("profile must be an object")
+    migrated = deepcopy(dict(profile))
+    name = str(migrated.get("name") or "").strip()
+    if not name:
+        raise ProfileArchiveError("profile name cannot be empty")
+    migrated["name"] = name
+    migrated.setdefault("home_page_id", "home")
+    migrated.setdefault("pages", [])
+    migrated.setdefault("folders", [])
+    migrated.setdefault("library", [])
+    migrated.setdefault("encoders", [])
+    migrated.setdefault("slots", [])
+    for key in ("pages", "folders", "library", "encoders", "slots"):
+        if not isinstance(migrated[key], list):
+            raise ProfileArchiveError(f"profile field {key!r} must be a list")
+    return migrated
 
 
 def _validate_manifest(manifest: object) -> None:
@@ -68,8 +118,11 @@ def _validate_manifest(manifest: object) -> None:
         raise ProfileArchiveError("manifest must be an object")
     if manifest.get("format") != ARCHIVE_FORMAT:
         raise ProfileArchiveError("unsupported archive format")
-    if manifest.get("version") != ARCHIVE_VERSION:
-        raise ProfileArchiveError(f"unsupported archive version: {manifest.get('version')!r}")
+    version = manifest.get("version")
+    if not isinstance(version, int) or version <= 0:
+        raise ProfileArchiveError("invalid archive version")
+    if version > ARCHIVE_VERSION:
+        raise ProfileArchiveError(f"unsupported archive version: {version!r}")
 
 
 def _safe_asset_name(name: str) -> str:
