@@ -7,6 +7,7 @@ ESPHome and any concrete device or GUI implementation.
 from .actions import ActionCommand, ActionDefinition, ActionValidationError
 from .engine import ActionEngine, MissingExecutorError
 from .events import InputEvent, InputKind, TriggerBindings
+from .navigation import Folder, GridRect, Page, Placement, Profile
 from .registry import ActionRegistry, DuplicateActionError, UnknownActionError
 from .state import StateStore, StateValue
 from .triggers import ActionState, Trigger
@@ -19,9 +20,14 @@ __all__ = [
     "ActionState",
     "ActionValidationError",
     "DuplicateActionError",
+    "Folder",
+    "GridRect",
     "InputEvent",
     "InputKind",
     "MissingExecutorError",
+    "Page",
+    "Placement",
+    "Profile",
     "StateStore",
     "StateValue",
     "Trigger",
