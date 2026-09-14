@@ -3,9 +3,9 @@
 # Le PC continue d'appliquer les commandes via les entites ESPHome existantes
 # (slots, profils, pages, etc.). Une fois l'operation locale terminee, il
 # ecrit le message_id dans "Protocole V2 - requete". Le P4 republie le meme
-# identifiant sur le text_sensor d'acquittement, ce qui fournit un vrai aller-
-# retour device -> PC sans introduire de parseur JSON ni casser le transport
-# historique.
+# identifiant dans "Protocole V2 - acquittement", ce qui fournit un vrai
+# aller-retour device -> PC sans introduire de parseur JSON ni casser le
+# transport historique.
 
 text:
   - platform: template
@@ -21,13 +21,15 @@ text:
           condition:
             lambda: 'return !x.empty();'
           then:
-            - text_sensor.template.publish:
+            - text.set:
                 id: protocol_v2_ack_text
-                state: !lambda 'return x;'
+                value: !lambda 'return x;'
 
-text_sensor:
   - platform: template
     id: protocol_v2_ack_text
     name: "Protocole V2 - acquittement"
+    mode: text
+    optimistic: true
+    initial_value: ""
+    max_length: 64
     entity_category: diagnostic
-    update_interval: never
