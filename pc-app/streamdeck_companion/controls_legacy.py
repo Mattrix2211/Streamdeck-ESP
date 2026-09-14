@@ -8,7 +8,7 @@ from . import profiles as profile_utils
 from .core.actions import ActionCommand
 from .core.controls import ControlDefinition
 from .core.events import InputKind
-from .core.legacy import command_from_legacy
+from .core.legacy import from_legacy
 from .core.triggers import Trigger
 
 
@@ -57,7 +57,7 @@ def controls_from_legacy_profile(profile: Mapping[str, Any]) -> tuple[ControlDef
         )
 
     for index, encoder in enumerate(profile.get("encoders") or []):
-        actions = {}
+        actions: dict[Trigger, ActionCommand] = {}
         for key, trigger in _ENCODER_TRIGGER_KEYS.items():
             command = _legacy_command((encoder or {}).get(key))
             if command is not None:
@@ -77,9 +77,7 @@ def controls_from_legacy_profile(profile: Mapping[str, Any]) -> tuple[ControlDef
 def _legacy_command(raw: object) -> ActionCommand | None:
     if not isinstance(raw, Mapping):
         return None
-    if not raw.get("type") or raw.get("type") == "none":
-        return None
-    return command_from_legacy(raw)
+    return from_legacy(raw)
 
 
 def _state_key(slot: Mapping[str, Any]) -> str | None:
