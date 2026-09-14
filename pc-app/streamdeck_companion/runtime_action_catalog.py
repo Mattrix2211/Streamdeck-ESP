@@ -90,7 +90,7 @@ def _definition(
         ui_config={
             "fields": (
                 {
-                    "name": "target",
+                    "key": "target",
                     "type": field_type,
                     "label": label,
                     "required": True,
