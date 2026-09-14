@@ -12,6 +12,10 @@ from typing import Any, Protocol
 from .esphome_device_port import ESPHomeDevicePort
 
 
+PROTOCOL_REQUEST_ENTITY_NAME = "Protocole V2 - requete"
+PROTOCOL_ACK_ENTITY_NAME = "Protocole V2 - acquittement"
+
+
 class V2DeviceRuntime(Protocol):
     connected: bool
 
@@ -23,6 +27,8 @@ class V2DeviceRuntime(Protocol):
 
     def schedule_slot_payload(self, kind: str, payload: Mapping[str, Any], timeout: float = 5.0) -> None: ...
 
+    def schedule_protocol_request(self, message_id: str, timeout: float = 5.0) -> None: ...
+
 
 def build_esphome_device_port(runtime: V2DeviceRuntime) -> ESPHomeDevicePort:
     """Create the concrete DevicePort used by the current ESPHome runtime."""
@@ -33,6 +39,7 @@ def build_esphome_device_port(runtime: V2DeviceRuntime) -> ESPHomeDevicePort:
         page_sender=lambda payload: _set_page(runtime, payload),
         button_sender=lambda payload: runtime.schedule_slot_payload("button", payload),
         widget_sender=lambda payload: runtime.schedule_slot_payload("widget", payload),
+        ack_sender=runtime.schedule_protocol_request,
     )
 
 
