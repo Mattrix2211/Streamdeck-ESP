@@ -1,13 +1,15 @@
-"""Application-layer bridge between Core input events and protocol messages.
+"""Application-layer bridge between Core runtime objects and protocol messages.
 
 This adapter keeps firmware/ESPHome vocabulary outside the Core while allowing
-DeviceClient migration to happen in two small steps: ESPHome -> InputEvent
-(`device_events.py`), then InputEvent -> versioned ProtocolMessage (this file).
+DeviceClient migration to happen progressively: ESPHome -> InputEvent
+(`device_events.py`), then InputEvent -> versioned ProtocolMessage. Dynamic
+Core state can likewise be projected to UPDATE_STATE messages without making
+StateStore depend on any transport.
 """
 
 from __future__ import annotations
 
-from .core import InputEvent, InputKind, MessageType, ProtocolMessage, Trigger
+from .core import InputEvent, InputKind, MessageType, ProtocolMessage, StateValue, Trigger
 
 
 def input_event_to_protocol(event: InputEvent) -> ProtocolMessage:
@@ -35,3 +37,17 @@ def input_event_to_protocol(event: InputEvent) -> ProtocolMessage:
         raise ValueError(f"Unsupported input kind: {event.kind!r}")
 
     return ProtocolMessage(message_type, payload)
+
+
+def state_value_to_protocol(state: StateValue) -> ProtocolMessage:
+    """Convert one synchronized Core state into a PC->device UPDATE_STATE."""
+    return ProtocolMessage(
+        MessageType.UPDATE_STATE,
+        {
+            "key": state.key,
+            "status": state.status.value,
+            "value": state.value,
+            "attributes": dict(state.attributes),
+            "updated_at": state.updated_at,
+        },
+    )
