@@ -28,6 +28,8 @@ import threading
 from . import ha_client as ha
 from . import profiles as profile_utils
 from .device_client import DeviceClient
+from .runtime_state import STATE_STORE
+from .state_adapters import update_home_assistant_entity
 
 LOG = logging.getLogger("streamdeck_ha_mqtt")
 
@@ -140,10 +142,15 @@ class MqttBridge:
         timer.start()
 
     def _push_entity(self, entity_id: str, state: dict) -> None:
-        """Meme logique de correspondance emplacement<->entite que
-        ha_poller.py::poll_once, mais pour une seule entite et poussee une
-        fois la rafale de messages (voir _schedule_push) retombee."""
+        """Publie l'etat reconstruit puis conserve le push ecran historique.
+
+        Le StateStore est alimente meme si le Stream Deck est deconnecte :
+        l'etat applicatif ne doit pas dependre de la disponibilite du renderer.
+        La logique d'affichage existante reste ensuite strictement conditionnee
+        par ``device_client.connected`` comme avant.
+        """
         self._pending_timers.pop(entity_id, None)
+        update_home_assistant_entity(STATE_STORE, entity_id, state)
         if not self.device_client.connected:
             return
         active = self.device_client.active_profile()

@@ -43,3 +43,4 @@ ota:
 
 packages:
   hardware_and_ui: !include package.yaml
+  protocol_v2: !include protocol_v2.yaml

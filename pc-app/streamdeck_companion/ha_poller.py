@@ -17,6 +17,8 @@ from . import icons
 from . import profiles as profile_utils
 from . import weather as weather_module
 from .device_client import DeviceClient
+from .runtime_state import STATE_STORE
+from .state_adapters import update_home_assistant_entity
 
 LOG = logging.getLogger("streamdeck_ha_poller")
 
@@ -35,9 +37,13 @@ _fail_counts: dict[str, int] = {}
 
 
 def _read_state_or_offline(client: ha.HomeAssistantClient, entity_id: str) -> tuple[dict | None, bool]:
-    """Lit l'etat HA de `entity_id`, en trackant les echecs consecutifs
-    (voir STALE_AFTER) - retourne (etat ou None, True si l'entite vient de
-    depasser le seuil d'echecs et doit etre affichee comme hors ligne)."""
+    """Lit l'etat HA de `entity_id`, en trackant les echecs consecutifs.
+
+    En plus du comportement historique d'affichage, alimente le StateStore V2
+    partage. Une lecture reussie publie immediatement l'etat reel ; une entite
+    n'est publiee DISCONNECTED qu'apres STALE_AFTER echecs consecutifs afin de
+    conserver exactement la tolerance reseau deja utilisee par les widgets.
+    """
     try:
         state = client.get_state(entity_id)
     except Exception:
@@ -45,9 +51,13 @@ def _read_state_or_offline(client: ha.HomeAssistantClient, entity_id: str) -> tu
         state = None
     if state is not None:
         _fail_counts[entity_id] = 0
+        update_home_assistant_entity(STATE_STORE, entity_id, state)
         return state, False
     _fail_counts[entity_id] = _fail_counts.get(entity_id, 0) + 1
-    return None, _fail_counts[entity_id] >= STALE_AFTER
+    offline = _fail_counts[entity_id] >= STALE_AFTER
+    if offline:
+        update_home_assistant_entity(STATE_STORE, entity_id, None)
+    return None, offline
 
 
 def poll_once(device_client: DeviceClient) -> dict[int, str]:

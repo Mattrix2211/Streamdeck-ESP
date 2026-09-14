@@ -41,12 +41,18 @@ ota:
   - platform: esphome
     password: "REMPLACER_PAR_UN_MOT_DE_PASSE_OTA"
 
-# Recupere tout le hardware + l'UI depuis GitHub a chaque compilation.
-# `ref:` pointe la branche de dev actuelle - a changer pour "main" une fois
-# le travail merge si vous voulez suivre la branche stable a la place.
+# Recupere le hardware/UI et le canal d'acquittement V2 depuis GitHub a
+# chaque compilation. `ref:` pointe la branche de dev actuelle - a changer
+# pour "main" une fois le travail merge si vous voulez suivre la branche
+# stable a la place.
 packages:
   hardware_and_ui:
     url: https://github.com/Mattrix2211/Streamdeck-ESP
     file: firmware/package.yaml
-    ref: claude/stream-deck-pc-home-assistant-7l8pc9
+    ref: chatgpt/p0-core-foundation
+    refresh: 0s
+  protocol_v2:
+    url: https://github.com/Mattrix2211/Streamdeck-ESP
+    file: firmware/protocol_v2.yaml
+    ref: chatgpt/p0-core-foundation
     refresh: 0s
