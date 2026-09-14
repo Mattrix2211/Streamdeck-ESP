@@ -30,6 +30,9 @@ class FakeRuntime:
         self.calls.append(("navigation", command, target, timeout))
         return target or command
 
+    def schedule_slot_payload(self, kind: str, payload: dict, timeout: float = 5.0) -> None:
+        self.calls.append(("slot", kind, dict(payload), timeout))
+
 
 class ESPHomePortRuntimeTests(unittest.TestCase):
     def test_set_profile_routes_to_thread_safe_runtime(self) -> None:
@@ -49,6 +52,20 @@ class ESPHomePortRuntimeTests(unittest.TestCase):
         port = build_esphome_device_port(runtime)
         port.send(ProtocolMessage(MessageType.SET_PAGE, {"page_id": "media"}))
         self.assertEqual(runtime.calls, [("navigation", "go_to", "media", 5.0)])
+
+    def test_set_button_routes_to_slot_runtime(self) -> None:
+        runtime = FakeRuntime()
+        port = build_esphome_device_port(runtime)
+        payload = {"slot_index": 2, "label": "OBS", "visible": True}
+        port.send(ProtocolMessage(MessageType.SET_BUTTON, payload))
+        self.assertEqual(runtime.calls, [("slot", "button", payload, 5.0)])
+
+    def test_set_widget_routes_to_slot_runtime(self) -> None:
+        runtime = FakeRuntime()
+        port = build_esphome_device_port(runtime)
+        payload = {"slot_index": 3, "type": "barre", "value": "50"}
+        port.send(ProtocolMessage(MessageType.SET_WIDGET, payload))
+        self.assertEqual(runtime.calls, [("slot", "widget", payload, 5.0)])
 
     def test_sync_reuses_existing_full_push(self) -> None:
         runtime = FakeRuntime()
