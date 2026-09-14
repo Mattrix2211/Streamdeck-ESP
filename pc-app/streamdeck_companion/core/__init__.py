@@ -5,6 +5,7 @@ ESPHome and any concrete device or GUI implementation.
 """
 
 from .actions import ActionCommand, ActionDefinition, ActionValidationError
+from .device import DeviceCapability, DeviceDescriptor, DevicePort, DisplaySpec
 from .engine import ActionEngine, MissingExecutorError
 from .events import InputEvent, InputKind, TriggerBindings
 from .navigation import Folder, GridRect, Page, Placement, Profile
@@ -20,6 +21,10 @@ __all__ = [
     "ActionRegistry",
     "ActionState",
     "ActionValidationError",
+    "DeviceCapability",
+    "DeviceDescriptor",
+    "DevicePort",
+    "DisplaySpec",
     "DuplicateActionError",
     "Folder",
     "GridRect",
