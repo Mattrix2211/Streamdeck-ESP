@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping, Any
+from typing import Any, Mapping
 
 SLOT_COUNT = 36
 BUTTON_KIND = "bouton"
@@ -41,11 +41,11 @@ def _project(
     allowed_types: frozenset[str],
 ) -> SlotProjection:
     raw_index = payload.get("slot_index")
-    if isinstance(raw_index, bool):
+    if isinstance(raw_index, bool) or not isinstance(raw_index, (int, str)):
         raise SlotProjectionError("slot_index must be an integer from 0 to 35")
     try:
         slot_index = int(raw_index)
-    except (TypeError, ValueError) as exc:
+    except ValueError as exc:
         raise SlotProjectionError("slot_index must be an integer from 0 to 35") from exc
     if not 0 <= slot_index < SLOT_COUNT:
         raise SlotProjectionError("slot_index must be between 0 and 35")
@@ -70,14 +70,14 @@ def _project(
         raw_grid = payload["grid"]
         if not isinstance(raw_grid, Mapping):
             raise SlotProjectionError("grid must be a mapping")
-        values = []
+        values: list[int] = []
         for key, default in (("col", 0), ("row", 0), ("colspan", 1), ("rowspan", 1)):
             raw = raw_grid.get(key, default)
-            if isinstance(raw, bool):
+            if isinstance(raw, bool) or not isinstance(raw, (int, str)):
                 raise SlotProjectionError(f"grid.{key} must be an integer")
             try:
                 values.append(int(raw))
-            except (TypeError, ValueError) as exc:
+            except ValueError as exc:
                 raise SlotProjectionError(f"grid.{key} must be an integer") from exc
         col, row, colspan, rowspan = values
         if col < 0 or row < 0 or colspan < 1 or rowspan < 1:
