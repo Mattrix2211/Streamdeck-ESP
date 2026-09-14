@@ -1,7 +1,7 @@
 """Runtime adapters between current ESPHome events and V2 Core events/actions.
 
 This module is deliberately kept outside ``core``: it knows the historical
-profile representation and ``profiles.resolve_slot``. ``DeviceClient`` can
+profile representation and page compatibility helpers. ``DeviceClient`` can
 therefore migrate to generic ``InputEvent`` objects without forcing an
 immediate dashboard_config.yaml migration.
 """
@@ -10,8 +10,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from .core import InputEvent, InputKind
+from . import profile_pages
 from . import profiles as profile_utils
+from .core import InputEvent, InputKind
 from .device_events import legacy_encoder_direction, translate_esphome_event
 
 
@@ -22,6 +23,7 @@ def resolve_esphome_action(
     *,
     action_entity_name: str,
     encoder_entity_names: Sequence[str],
+    page_id: str | None = None,
 ) -> dict | None:
     """Bridge the current firmware vocabulary through the generic Core model.
 
@@ -38,22 +40,31 @@ def resolve_esphome_action(
     )
     if event is None:
         return None
-    return resolve_legacy_action(profile, event)
+    return resolve_legacy_action(profile, event, page_id=page_id)
 
 
-def resolve_legacy_action(profile: dict, event: InputEvent) -> dict | None:
+def resolve_legacy_action(
+    profile: dict,
+    event: InputEvent,
+    *,
+    page_id: str | None = None,
+) -> dict | None:
     """Resolve the configured legacy action for a generic input event.
 
-    Button events use ``slot_index`` metadata produced by ``device_events``.
-    Encoder events use ``encoder_index`` plus the Core trigger converted back
-    to the current encoder direction key during the compatibility phase.
-    Unknown/incomplete events simply resolve to ``None``.
+    Button events optionally resolve against a V2-compatible page while
+    encoders remain profile-scoped. Unknown/incomplete events simply resolve
+    to ``None``.
     """
     if event.kind == InputKind.BUTTON:
         index = _metadata_index(event, "slot_index")
         if index is None or not (0 <= index < profile_utils.SLOT_COUNT):
             return None
-        return profile_utils.resolve_slot(profile, index).get("action")
+        slot = (
+            profile_pages.resolve_page_slot(profile, page_id, index)
+            if page_id is not None
+            else profile_utils.resolve_slot(profile, index)
+        )
+        return slot.get("action")
 
     if event.kind == InputKind.ENCODER:
         index = _metadata_index(event, "encoder_index")
