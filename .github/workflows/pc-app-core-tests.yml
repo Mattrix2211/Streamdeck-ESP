@@ -66,6 +66,7 @@ jobs:
           streamdeck_companion/dashboard_action_choices.py
           streamdeck_companion/dashboard_v2_api.py
           streamdeck_companion/dashboard_v2_routes.py
+          streamdeck_companion/virtual_device.py
           streamdeck_companion/v2_device_client.py
 
       - name: Type-check V2 Core and independent adapters
@@ -89,6 +90,7 @@ jobs:
           streamdeck_companion/dashboard_action_choices.py
           streamdeck_companion/dashboard_v2_api.py
           streamdeck_companion/dashboard_v2_routes.py
+          streamdeck_companion/virtual_device.py
 
       - name: Type-check V2 DeviceClient wrapper boundary
         working-directory: pc-app
@@ -101,6 +103,13 @@ jobs:
       - name: Run complete regression suite
         working-directory: pc-app
         run: python -m unittest discover -s tests -v
+
+      - name: Measure Core coverage
+        if: matrix.python-version == '3.12'
+        working-directory: pc-app
+        run: |
+          coverage run --source=streamdeck_companion/core -m unittest discover -s tests
+          coverage report --show-missing
 
   firmware-contract:
     runs-on: ubuntu-latest
