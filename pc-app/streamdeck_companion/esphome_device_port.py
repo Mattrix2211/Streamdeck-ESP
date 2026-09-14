@@ -1,9 +1,8 @@
 """ESPHome-backed DevicePort for the current Streamdeck-ESP hardware.
 
 This adapter exposes the existing runtime through the transport-neutral V2
-DevicePort contract. It intentionally supports only the protocol messages that
-can be represented safely with the current ESPHome entities; unsupported V2
-messages fail explicitly instead of being silently dropped.
+DevicePort contract. It supports only protocol messages that can be projected
+safely onto current runtime semantics; unsupported messages fail explicitly.
 """
 
 from __future__ import annotations
@@ -34,6 +33,9 @@ class UnsupportedDeviceMessageError(ValueError):
     """Raised when the legacy ESPHome transport cannot represent a V2 message."""
 
 
+PayloadSender = Callable[[dict[str, object]], None]
+
+
 class ESPHomeDevicePort(DevicePort):
     """Expose a live DeviceClient through the V2 DevicePort contract."""
 
@@ -41,12 +43,16 @@ class ESPHomeDevicePort(DevicePort):
         self,
         device_client: object,
         *,
-        state_sender: Callable[[dict[str, object]], None] | None = None,
+        state_sender: PayloadSender | None = None,
         sync_sender: Callable[[], None] | None = None,
+        profile_sender: PayloadSender | None = None,
+        page_sender: PayloadSender | None = None,
     ) -> None:
         self._device_client = device_client
         self._state_sender = state_sender
         self._sync_sender = sync_sender
+        self._profile_sender = profile_sender
+        self._page_sender = page_sender
 
     @property
     def descriptor(self) -> DeviceDescriptor:
@@ -57,17 +63,19 @@ class ESPHomeDevicePort(DevicePort):
         return bool(getattr(self._device_client, "connected", False))
 
     def send(self, message: ProtocolMessage) -> None:
-        """Project supported V2 messages onto the current runtime.
+        """Project supported V2 messages onto the current runtime."""
+        payload = dict(message.payload)
 
-        The current firmware does not yet consume a generic protocol envelope.
-        During migration we only bridge the two semantics already available in
-        the runtime: UPDATE_STATE and SYNC. Other message types remain explicit
-        migration work and raise UnsupportedDeviceMessageError.
-        """
         if message.type == MessageType.UPDATE_STATE:
-            if self._state_sender is None:
-                raise UnsupportedDeviceMessageError("UPDATE_STATE sender is not configured")
-            self._state_sender(dict(message.payload))
+            self._send_payload(self._state_sender, message.type, payload)
+            return
+
+        if message.type == MessageType.SET_PROFILE:
+            self._send_payload(self._profile_sender, message.type, payload)
+            return
+
+        if message.type == MessageType.SET_PAGE:
+            self._send_payload(self._page_sender, message.type, payload)
             return
 
         if message.type == MessageType.SYNC:
@@ -79,3 +87,9 @@ class ESPHomeDevicePort(DevicePort):
         raise UnsupportedDeviceMessageError(
             f"message {message.type.value!r} is not supported by the current ESPHome transport"
         )
+
+    @staticmethod
+    def _send_payload(sender: PayloadSender | None, message_type: MessageType, payload: dict[str, object]) -> None:
+        if sender is None:
+            raise UnsupportedDeviceMessageError(f"{message_type.value} sender is not configured")
+        sender(payload)
