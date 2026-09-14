@@ -15,7 +15,7 @@ from . import actions as action_runner
 from . import profile_pages
 from .core.legacy import to_legacy
 from .core.navigator import NavigationError, Navigator
-from .core.protocol import ProtocolMessage
+from .core.protocol import MessageType, ProtocolMessage
 from .core.session import ProtocolSession
 from .device_client import (
     ACTION_EVENT_ENTITY,
@@ -30,17 +30,34 @@ from .device_client import (
     DeviceClient,
 )
 from .device_event_runtime import resolve_esphome_action
-from .esphome_port_runtime import build_esphome_device_port
+from .esphome_port_runtime import (
+    PROTOCOL_ACK_ENTITY_NAME,
+    PROTOCOL_REQUEST_ENTITY_NAME,
+    build_esphome_device_port,
+)
 from .esphome_slot_projection import SlotProjection, project_button_payload, project_widget_payload
 from .multi_action_runtime import MultiActionRuntime
 from .navigation_legacy import profile_from_legacy
+from .protocol_retry_runtime import ProtocolRetryRuntime
 from .runtime_state import STATE_STORE
 from .state_adapters import update_device_connection
 from .v2_runtime_actions import execute_navigation_target, register_multi_action, register_navigation_action
 
 
+_ACKED_PROTOCOL_TYPES = frozenset(
+    {
+        MessageType.SET_PROFILE,
+        MessageType.SET_PAGE,
+        MessageType.SET_BUTTON,
+        MessageType.SET_WIDGET,
+        MessageType.SYNC,
+        MessageType.PING,
+    }
+)
+
+
 class V2DeviceClient(DeviceClient):
-    """DeviceClient using V2 adapters without changing the ESPHome transport."""
+    """DeviceClient using V2 adapters without changing legacy ESPHome behavior."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -49,8 +66,27 @@ class V2DeviceClient(DeviceClient):
         self._multi_action_runtime = MultiActionRuntime(lambda: self.config, self._dispatch_multi_action_command)
         self.device_port = build_esphome_device_port(self)
         self.protocol_session = ProtocolSession(self.device_port)
+        self._protocol_retry_runtime = ProtocolRetryRuntime(self.protocol_session)
+        self._protocol_retry_runtime.start()
         register_navigation_action(self)
         register_multi_action(self._multi_action_runtime)
+
+    async def connect(self) -> None:
+        """Connect legacy runtime, then discover the optional V2 ACK entities."""
+        await super().connect()
+        if self.client is None:
+            return
+        entities, _services = await self.client.list_entities_services()
+        for entity in entities:
+            name = getattr(entity, "name", "")
+            key = getattr(entity, "key", None)
+            if key is None:
+                continue
+            if name == PROTOCOL_REQUEST_ENTITY_NAME:
+                self.entity_keys[name] = key
+            elif name == PROTOCOL_ACK_ENTITY_NAME:
+                self.entity_keys[name] = key
+                self.key_to_entity_name[key] = name
 
     @property
     def connected(self) -> bool:
@@ -61,15 +97,45 @@ class V2DeviceClient(DeviceClient):
         connected = bool(value)
         self._v2_connected = connected
         update_device_connection(STATE_STORE, connected)
+        if not connected and hasattr(self, "protocol_session"):
+            self.protocol_session.clear()
 
-    def send_protocol(self, message: ProtocolMessage, *, expect_response: bool = False) -> None:
+    def send_protocol(self, message: ProtocolMessage, *, expect_response: bool | None = None) -> None:
         """Send one V2 message through the live DevicePort.
 
-        Current ESPHome firmware does not emit protocol-level ACK/ERROR yet,
-        so live mapped commands default to fire-and-forget. Callers can opt in
-        to tracking once a transport with acknowledgements is available.
+        Configuration/control messages use the firmware ACK channel by default.
+        UPDATE_STATE remains fire-and-forget to avoid acknowledgement traffic for
+        high-frequency state propagation. Older firmware remains compatible: if
+        the ACK entities are absent, tracked requests naturally retry then time
+        out instead of pretending that the device confirmed the command.
         """
+        if expect_response is None:
+            expect_response = message.type in _ACKED_PROTOCOL_TYPES
         self.protocol_session.send(message, expect_response=expect_response)
+
+    def schedule_protocol_request(self, message_id: str, timeout: float = 5.0) -> None:
+        """Push a message id through the P4 acknowledgement round-trip entity."""
+
+        def _send_request() -> None:
+            if self.client is None or not self.connected:
+                raise RuntimeError("Pas encore connecte a l'ecran")
+            key = self.entity_keys.get(PROTOCOL_REQUEST_ENTITY_NAME)
+            if key is None:
+                # Backward compatibility with firmware flashed before the V2
+                # ACK channel. ProtocolSession will retry/timeout when tracking.
+                return
+            self.client.text_command(key, message_id[:64])
+
+        self._run_threadsafe(_send_request, timeout)
+
+    def on_state(self, state) -> None:
+        entity_name = self.key_to_entity_name.get(getattr(state, "key", None))
+        if entity_name == PROTOCOL_ACK_ENTITY_NAME:
+            reply_to = str(getattr(state, "state", "") or "").strip()
+            if reply_to:
+                self.protocol_session.receive(ProtocolMessage(MessageType.ACK, reply_to=reply_to))
+            return
+        super().on_state(state)
 
     def _base_active_profile(self) -> dict:
         return super()._active_profile()
