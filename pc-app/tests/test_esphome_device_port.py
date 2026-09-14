@@ -31,21 +31,42 @@ class ESPHomeDevicePortTests(unittest.TestCase):
         client.connected = False
         self.assertFalse(port.connected)
 
-    def test_update_state_uses_injected_sender(self) -> None:
+    def test_update_state_uses_injected_sender_without_ack_traffic(self) -> None:
         sent: list[dict[str, object]] = []
-        port = ESPHomeDevicePort(FakeClient(), state_sender=sent.append)
+        acks: list[str] = []
+        port = ESPHomeDevicePort(FakeClient(), state_sender=sent.append, ack_sender=acks.append)
         message = ProtocolMessage(
             MessageType.UPDATE_STATE,
             {"state_id": "device:streamdeck", "value": True},
         )
         port.send(message)
         self.assertEqual(sent, [{"state_id": "device:streamdeck", "value": True}])
+        self.assertEqual(acks, [])
 
-    def test_sync_uses_injected_sender(self) -> None:
+    def test_sync_acknowledges_only_after_sender_succeeds(self) -> None:
         calls: list[str] = []
-        port = ESPHomeDevicePort(FakeClient(), sync_sender=lambda: calls.append("sync"))
-        port.send(ProtocolMessage(MessageType.SYNC, {}))
+        acks: list[str] = []
+        message = ProtocolMessage(MessageType.SYNC, {})
+        port = ESPHomeDevicePort(
+            FakeClient(),
+            sync_sender=lambda: calls.append("sync"),
+            ack_sender=acks.append,
+        )
+        port.send(message)
         self.assertEqual(calls, ["sync"])
+        self.assertEqual(acks, [message.message_id])
+
+    def test_ping_is_device_roundtrip_marker(self) -> None:
+        acks: list[str] = []
+        message = ProtocolMessage(MessageType.PING)
+        port = ESPHomeDevicePort(FakeClient(), ack_sender=acks.append)
+        port.send(message)
+        self.assertEqual(acks, [message.message_id])
+
+    def test_ping_without_ack_channel_fails_explicitly(self) -> None:
+        port = ESPHomeDevicePort(FakeClient())
+        with self.assertRaises(UnsupportedDeviceMessageError):
+            port.send(ProtocolMessage(MessageType.PING))
 
     def test_unsupported_message_fails_explicitly(self) -> None:
         port = ESPHomeDevicePort(FakeClient())
