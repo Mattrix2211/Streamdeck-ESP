@@ -11,8 +11,14 @@ Code in `core/` must not import Flask, Windows APIs, Home Assistant clients, ESP
 - `ActionDefinition`: metadata and validation contract for an action type.
 - `ActionCommand`: configured action instance.
 - `ActionRegistry`: extension point used to register action definitions.
+- `ActionEngine`: validates commands and delegates concrete effects to injected executors.
 - `Trigger`: generic button/encoder interaction vocabulary.
-- `ActionState`: generic synchronized state vocabulary.
+- `InputEvent` / `TriggerBindings`: generic event-to-action resolution independent from ESPHome event names.
+- `ActionState` / `StateStore`: centralized state vocabulary and observable state storage.
 - `legacy`: reversible adapter for the current `{type, target}` configuration shape.
 
-Concrete execution remains in the existing application modules for now. The V2 migration will move those implementations behind adapters/providers incrementally, keeping the current dashboard config and firmware compatible.
+## Migration rule
+
+Concrete integrations remain outside `core/`. Existing modules are migrated by registering adapters/executors rather than moving Windows, Home Assistant or hardware code into the domain layer.
+
+The historical dashboard configuration and firmware protocol remain compatible while this migration is in progress. `streamdeck_companion/actions.py` is the first runtime path routed through `ActionEngine`; Home Assistant and device-specific action paths will follow progressively.
