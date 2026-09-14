@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from zipfile import ZipFile
 
-from streamdeck_companion.profile_archive import ProfileArchiveError, export_profile, import_profile
+from streamdeck_companion.profile_archive import ProfileArchiveError, export_profile, import_profile, migrate_profile
 
 
 class ProfileArchiveTests(unittest.TestCase):
@@ -25,7 +25,7 @@ class ProfileArchiveTests(unittest.TestCase):
             destination = Path(tmp) / "gaming.streamdeck"
             exported = export_profile(profile, destination, assets=assets)
             imported, imported_assets = import_profile(exported)
-        self.assertEqual(imported, profile)
+        self.assertEqual(imported, migrate_profile(profile))
         self.assertEqual(imported_assets, assets)
 
     def test_extension_is_added_automatically(self) -> None:
