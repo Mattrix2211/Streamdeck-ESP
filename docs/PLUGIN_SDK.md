@@ -86,4 +86,10 @@ Plugins may register event IDs for integration-specific events. Event IDs are ow
 - Breaking plugin API changes require a new `PLUGIN_API_VERSION`.
 - Secrets belong in host-side configuration; they must not be embedded in firmware or committed to the repository.
 
-See `pc-app/streamdeck_companion/example_plugins.py` for three example contributions.
+Reference implementations live in `pc-app/streamdeck_companion/example_plugins/`:
+
+- `system_plugin.py` — system actions with injected launch/hotkey executors;
+- `home_assistant_plugin.py` — Home Assistant actions plus a state provider;
+- `obs_plugin.py` — OBS actions with injected runtime callbacks.
+
+`pc-app/tests/test_example_plugins.py` registers all three in the same `PluginRegistry`, executes representative actions through the shared `ActionEngine`, and refreshes the Home Assistant provider. This is the regression proof that integrations can be added without editing the Core.
